@@ -1,0 +1,197 @@
+#include "common.h"
+
+void llist_c::InsertHead(kv_t _kv)
+{
+	node_c* _next = head;
+	head = new node_c;
+	if (!head)
+		Error("Ran out of memory!");
+
+	len++;
+	head->next = _next;
+	head->kv = _kv;
+}
+
+void llist_c::RemoveHead()
+{
+	node_c* remove;
+
+	if (!head)
+		return;
+
+	len--;
+	remove = head;
+	head = head->next;
+	delete remove;
+}
+
+void llist_c::Insert(node_c* prev, kv_t _kv)
+{
+	node_c* ins;
+	ins = new node_c;
+
+	if (!ins)
+		Error("Ran out of memory!");
+
+	if (!head)
+	{
+		InsertHead(_kv);
+		return;
+	}
+
+	if (prev)
+	{
+		ins->next = prev->next;
+		prev->next = ins;	
+	}
+	else //place it at the end
+	{
+		node_c* curs = head;
+		while (curs->next)
+			curs = curs->next;
+
+		curs->next = ins;
+		ins->next = NULL;
+	}
+
+	ins->kv = _kv;
+	len++;
+}
+
+void llist_c::Remove(node_c* prev)
+{
+	node_c* remove;
+
+	if (prev)
+	{
+		remove = prev->next;
+
+		if (!remove)
+			return;
+			//Error("Tried to remove NULL node!");
+
+		prev->next = remove->next;
+	}
+	else
+	{
+		node_c* _prev = NULL;
+		remove = head;
+
+		if (!remove)
+			return;
+
+		if (!remove->next)
+		{
+			RemoveHead();
+			return;
+		}
+
+		while (remove->next)
+		{
+			_prev = remove;
+			remove = remove->next;
+		}
+
+		_prev->next = NULL;
+	}
+
+	len--;
+	delete remove;
+}
+
+void llist_c::Disp()
+{
+	node_c* curs = head;
+
+	if (!curs)
+	{
+		printf("Empty list\n");
+		return;
+	}
+
+	for (; curs; curs = curs->next)
+	{
+		printf("%c%s%c%i%c\n", 0xB2, curs->kv.K(), 0xB1, curs->kv.V(), 0xB0);
+	}
+	printf("\n");
+}
+
+node_c* llist_c::Search(const char* key)
+{
+	node_c* curs = head;
+
+	if (!key)
+		return NULL;
+
+	while (curs)
+	{
+		if (!strcmp(curs->kv.K(), key))
+			return curs;
+		curs = curs->next;
+	}
+
+	return NULL;
+}
+
+node_c* llist_c::Offset(int ofs)
+{
+	node_c* curs = head;
+
+	for (int i = 0; i < ofs; i++, curs = curs->next)
+	{
+		if (!curs)
+			return NULL;
+
+	}
+
+	return curs;
+}
+
+void llist_c::Clear()
+{
+	while (head)
+		RemoveHead();
+}
+
+
+
+
+//kv_c
+kv_c& kv_c::operator=(const kv_t& kv)
+{
+	int cnt;
+	int thiscnt;
+
+	if (!*kv.k) //don't bother with null keyvalues
+		return *this;
+
+	for (cnt = 0; kv.k[cnt]; cnt++) {}
+	cnt++;
+
+	if (!k)
+	{
+		k = new char[cnt];
+		memset(k, 0, cnt * sizeof(char));
+	}
+	else
+	{
+		for (thiscnt = 0; k[thiscnt]; thiscnt++) {}
+		thiscnt++;
+
+		if (thiscnt >= cnt)
+		{
+			memset(k, 0, thiscnt * sizeof(char));
+		}
+		else
+		{
+			delete[] k;
+			k = new char[cnt];
+			memset(k, 0, cnt * sizeof(char));
+		}
+	}
+
+	strcpy_s(k, cnt, kv.k);
+	v = kv.v;
+
+	return *this;
+}

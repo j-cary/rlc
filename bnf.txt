@@ -1,0 +1,65 @@
+Reserved words:
+start, inl,
+func, ans,
+byte, word, ptr, array, struct,
+repeat, until, while, for,
+type, 
+//conditional stuff
+if, else, 
+eq, neq, lt, gt, le, ge,
+//instrs
+ld, cp, bcp, call, ret,
+add, sub, adc?, sbc?, mult, div, inc, dec,
+and, or, xor, 
+rlc, rrc, rl, rr, sla, sra, sll, srl, res, set, flp
+in, out,
+im,
+//block instrs
+ldm, cpm, inm, outm
+
+Reserved chars:
+( ) [ ] { }
+# . , " ' ;
+= + - * / ^
+
+<statement> ::= <preprocessing_statement> | <instr_statement>
+<instr_statement> ::= <add_instr> | <ld_instr> | <jp_instr>
+<preprocessing_statement> ::= @ <preprocessing_include> | <preprocessing_insert>
+
+<declaration-specifier> ::= <type-specifier> <type-usage-specifier> <identifier>
+<type-usage-specifier> ::= { ptr | array }
+<type-specifier> ::= byte | word | label
+
+
+
+<preprocessing_include> ::= include <string>
+<preprocessing_insert> ::= insert <string>
+
+<string> ::= "*"
+<identifier> ::= [a-zA-Z][a-zA-Z0-9]*
+<hex_number> ::= $ [0-9A-Fa-f]+
+<dec_number> ::= [0-9]+
+<bin_number> ::= % [0-1]+
+
+//instructions
+<add_instr> ::= add <add_operands>
+<add_operands> ::= <lvalue> , <rvalue> { , <rvalue> }+
+<ld_instr> ::= ld <ld_operands>
+<ld_operands> ::= <lvalue> , <rvalue>
+<jp_instr> ::= jp <jp_operands>
+<jp_operands> ::= 
+
+<rvalue_list> ::= 
+
+<rvalue> ::=
+
+<expression> ::= 
+
+
+
+
+//online tool - https://bnfplayground.pauliankline.com/
+<declaration_specifier> ::= <type_specifier> " " <type_usage_specifier> " " <identifier>
+<type_usage_specifier> ::=  "ptr" | "array" 
+<type_specifier> ::= "byte" | "word"
+<identifier> ::= [a-z]*
