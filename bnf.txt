@@ -1,17 +1,17 @@
 Reserved words:
 start, inl,
 func, ans,
-byte, word, ptr, array, struct,
+byte, word, ptr, array, struct, type,
 repeat, until, while, for,
-type, 
 //conditional stuff
 if, else, 
 eq, neq, lt, gt, le, ge,
 //instrs
-ld, cp, bcp, call, ret,
-add, sub, adc?, sbc?, mult, div, inc, dec,
+ld, call, ret,
+add, sub, mul, div, inc, dec,
 and, or, xor, 
-rlc, rrc, rl, rr, sla, sra, sll, srl, res, set, flp
+//rlc, rrc, rl, rr, sla, sra, sll, srl, res, set, flp
+rl, rr, sl, sr, res, set, flp
 in, out,
 im,
 //block instrs
@@ -22,44 +22,166 @@ Reserved chars:
 # . , " ' ;
 = + - * / ^
 
-<statement> ::= <preprocessing_statement> | <instr_statement>
-<instr_statement> ::= <add_instr> | <ld_instr> | <jp_instr>
-<preprocessing_statement> ::= @ <preprocessing_include> | <preprocessing_insert>
+<unit> ::= { <external_declaration> }*
+<external_declaration> ::= <function_definition> | <declaration>
+//<function_definition> ::= { <declaration_specifier> }* <declarator> { <declaration> }* <compound_statement>
+<function_definition> ::= { <declaration_specifier> }* <identifier> ( ) <compound_statement>
 
-<declaration-specifier> ::= <type-specifier> <type-usage-specifier> <identifier>
-<type-usage-specifier> ::= { ptr | array }
-<type-specifier> ::= byte | word | label
+<declaration_specifier> ::= <storage_specifier> | <type_specifier>
+<storage_specifier> ::= stack | heap
+<type_specifier> ::= byte | word | label | db | dbp | dba | dw | dwp | dwa | <struct_specifier> | <typedef_name>
+
+<struct_specifier> ::= struct {
+					<identifier> '{' { <struct_declaration> }+ '}' |
+					'{' { <struct_declaration> }+ '}' |
+					<identifier>
+					}
+<struct_declaration> ::= { <type_specifier> }* <struct_declarator_list>
+<struct_declarator_list> ::= <struct_declarator> | <struct_declarator_list> , <struct_declarator>
+<struct_declarator> ::= <declarator> | <declarator> : <const_expression> | : <const_expression>
+<declarator> ::= <direct_declarator> 
+<direct_declarator> ::= <identifier>
+                      | ( <declarator> )
+                      | <direct_declarator> [ {<constant_expression>}? ]
+                      | <direct_declarator> ( <parameter_type_list> )
+                      | <direct_declarator> ( {<identifier>}* )
+
+<constant_expression> ::= <conditional_expression>
+<conditional_expression> ::= <logical_or_expression>
+<logical_or_expression> ::= <logical_and_expression> | <logical_or_expression> || <logical_and_expression>
+<logical_and_expression> ::= <inclusive_or_expression> | <logical_and_expression> && <inclusive_or_expression>
+<or_expression> ::= <xor_expression> | <or_expression> '|' <xor_expression>
+<xor_expression> ::= <and_expression> | <xor_expression> ^ <and_expression>
+<and_expression> ::= <equality_expression> | <and_expression> & <equality_expression> 
+<equality_expression> ::= <relational_expression>
+                        | <equality_expression> == <relational_expression>
+                        | <equality_expression> != <relational_expression>
+<relational_expression> ::= <shift_expression>
+                          | <relational_expression> < <shift_expression>
+                          | <relational_expression> > <shift_expression>
+                          | <relational_expression> <= <shift_expression>
+                          | <relational_expression> >= <shift_expression>
+<shift_expression> ::= <additive-expression>
+                     | <shift_expression> << <additive_expression>
+                     | <shift_expression> >> <additive_expression>
+<additive_expression> ::= <multiplicative_expression>
+                        | <additive_expression> + <multiplicative_expression>
+                        | <additive_expression> - <multiplicative_expression>
+
+<multiplicative_expression> ::= <cast-expression>
+                              | <multiplicative_expression> * <cast_expression>
+                              | <multiplicative_expression> / <cast_expression>
+                              | <multiplicative_expression> % <cast_expression>
+<unary_expression> ::= <postfix_expression> | sizeof <unary_expression> | sizeof <type_name>
+<postfix_expression> ::= <primary_expression> | <postfix_expression> . <identifier> | <postfix_expression> .. <identifier>
+<primary_expression> ::= <identifier> | <constant> | <string> | ( <expression> )
+<expression> ::= <assignment_expression> | <expression> , <assignment_expression>
+<assignment_expression> ::= <conditional_expression> | <unary_expression> <assignment_operator> <assignment_expression>
 
 
+<assignment-operator> ::= = | *= | /= | %= | += | -= | <<= | >>= | &= | ^= | |=
+<unary_operator> ::= & | * | + | - | ~ | !
+<type_name> ::= 
 
-<preprocessing_include> ::= include <string>
-<preprocessing_insert> ::= insert <string>
+<declaration> ::= {<declaration_specifier>}+ { <init_declarator> }* ;
+<init_declarator> ::= <declarator> | <declarator> = <initializer>
+<initializer> ::= <assignment_expression> | { <initializer_list> } | { <initializer_list> , }
+<initializer_list> ::= <initializer> | <initializer_list> , <initializer>
 
+
+<compound_statement> ::= { { <declaration> }* { <statement> }* }
+/*
+<statement> ::= { <instr_statement> | <compound_statement> | <selection_statement> | <iteration_statement> }
+
+
+<instr_statement> ::= { <instr_add> | <instr_ld> | <instr_jp> } ;
+<selection_statement> ::= if ( <expression> ) <statement> | if ( <expression> ) <statement> else <statement>
+<iteration_statement> ::= while ( <expression> ) <statement> | 
+							repeat <statement> until ( <expression> ) ; | 
+							for ( <expression> { ; <expression>* ; <instr_statement>* } ) <statement>
+*/
+<statement> ::= <open_statement> | <closed_statement>
+//at least one if not paired with an else
+<open_statement> ::= <selection_clause> <statement> |
+						<selection_clause> <closed_statement> else <open_statement> |
+						<while_clause> <open_statement> |
+						<for_clause> <open_statement>
+//either no if or an if paired with an else
+<closed_statement> ::= <simple_statement> |
+						<selection_clause> <closed_statement> else <closed_statement> |
+						<while_clause> <closed_statement> |
+						<for_clause> <closed_statement>
+//Do NOT end with a statement/selection_statement
+<simple_statement> ::= repeat <statement> until ( <expression> ) ; |
+						<instr_statement> |
+						{ <simple_statement>* } ????????
+
+<instr_statement> ::= { <instr_add> | <instr_ld> | <instr_jp> } ;
+
+<selection_clause> ::= if ( <expression> )
+<for_clause> ::= for ( <expression> { ;  <expression>  ; <instr_statement> { , <instr_statement> }* }? )
+<while_clause> ::= while ( <expression> )
+
+
+<instr_ld> ::= ld <lvalue> , <rvalue>
+<instr_jp> ::= jp <identifier> { + <whole_constant> | - <whole_constant> }*
+<instr_call> ::= call <identifier>
+<instr_ret> ::= ret <expression>
+
+<instr_add> ::= add <identifier> , <rvalue> <rvalue_list>
+<instr_sub> ::= sub <lvalue> <mandatory_first_rvalue_list>
+<instr_mul> ::= mul <lvalue> <mandatory_first_rvalue_list>
+<instr_div> ::= div <lvalue> <mandatory_first_rvalue_list>
+<instr_mod> ::= mod <lvalue> <mandatory_first_rvalue_list>
+<instr_inc> ::= inc <lvalue>
+<instr_dec> ::= dec <lvalue>
+<instr_expr> ::= expr <expression>
+
+<instr_or> ::= or <lvalue> <mandatory_first_rvalue_list>
+<instr_and> ::= and <lvalue> <mandatory_first_rvalue_list>
+<instr_xor> ::= xor <lvalue> <mandatory_first_rvalue_list>
+
+<instr_rl> ::= rl { , <rvalue> }
+<instr_rr> ::= rr { , <rvalue> }
+<instr_sl> ::= sl <lvalue> { , <boolean_constant> , <rvalue> }? // sl var1, 1, 2; - shifts var1 left twice, putting one in bit 0 both times
+<instr_sr> ::= sr <lvalue> { , <boolean_constant> , <rvalue> }? // sr var1, 1, 3; - shifts var1 right thrice, doesn't change bit 7. 0 would zero out bit 7
+<instr_res> ::= res <lvalue> , <rvalue>
+<instr_set> ::= set <lvalue> , <rvalue>
+<instr_flp> ::= flp <lvalue> , <rvalue>
+
+<instr_in> ::= in <lvalue> , <rvalue>
+<instr_out> ::= out <rvalue> , <rvalue>
+
+<instr_im> ::= im <rvalue>
+
+<instr_ldm> ::= ldm <lvalue> , <rvalue> { + <whole_constant> | - <whole_constant> }* , <rvalue> { + <whole_constant> | - <whole_constant> }*
+<instr_cpm> ::= 
+<instr_inm> ::= inm <lvalue> , <rvalue> , <rvalue> { + <whole_constant> | - <whole_constant> }* // inm ptr1, 1, 32; - Writes 32 bytes from port1 to the 32 bytes following ptr1
+<instr_outm> ::= outm <lvalue> , <rvalue> , <rvalue> { + <whole_constant> | - <whole_constant> }*
+
+<constant> ::= <boolean_constant> | <integer_constant> | <whole_constant> | <fixed_constant> | <character_constant>
+<identifier> ::= 
+<mandatory_first_rvalue_list> ::= { , <rvalue> }+
+<rvalue_list> ::= { , <rvalue> }*
+<rvalue> ::= <identifier> | <number>
+<lvalue> ::= 
+//This should take byte vs. word stuff into account... word[0] is not just an identifier!
+
+//lexer stuff
 <string> ::= "*"
 <identifier> ::= [a-zA-Z][a-zA-Z0-9]*
 <hex_number> ::= $ [0-9A-Fa-f]+
 <dec_number> ::= [0-9]+
 <bin_number> ::= % [0-1]+
 
-//instructions
-<add_instr> ::= add <add_operands>
-<add_operands> ::= <lvalue> , <rvalue> { , <rvalue> }+
-<ld_instr> ::= ld <ld_operands>
-<ld_operands> ::= <lvalue> , <rvalue>
-<jp_instr> ::= jp <jp_operands>
-<jp_operands> ::= 
-
-<rvalue_list> ::= 
-
-<rvalue> ::=
-
-<expression> ::= 
 
 
 
 
-//online tool - https://bnfplayground.pauliankline.com/
-<declaration_specifier> ::= <type_specifier> " " <type_usage_specifier> " " <identifier>
-<type_usage_specifier> ::=  "ptr" | "array" 
-<type_specifier> ::= "byte" | "word"
-<identifier> ::= [a-z]*
+
+
+
+
+
+<function_definition> ::= { <declaration_specifier> }* <identifier> ( ) <compound_statement>
+<function_declaration> ::= { <declaration_specifier> }* <identifier> ( ) ;

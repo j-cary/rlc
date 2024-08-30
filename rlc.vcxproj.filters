@@ -30,6 +30,9 @@
     <ClCompile Include="tree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="preprocessor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h">
@@ -41,9 +44,21 @@
     <ClInclude Include="parse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="preprocessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="bnf.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="description.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="example.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="preprocessing_bnf.txt">
       <Filter>Resource Files</Filter>
     </Text>
   </ItemGroup>

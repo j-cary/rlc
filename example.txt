@@ -1,0 +1,78 @@
+@include "header.h"
+@define def1 123 //replaces 'def1' with 123. Like C.
+@macro macro1(x, y, z)	ld x, y; add x, z;
+
+dba array1[123]; //uninitialized array
+byte array array2 = {0, 1, 2, 3}; //implicit size of 4
+byte array array3[5] = {0, 1, 2, 3}; //explicit size of 5. First four bytes are initialized
+byte array array4 = "Test string"; //implicit size of string + null terminator
+byte ptr ptr1 = array1;
+
+dw word1 = $0001; //hex initialization
+dwp wptr = &word1; //C-style dereferencing
+dwa warray1 = {$0001, $0002};
+
+label lbl1; //labels are forward declared and are only constants once initialized
+label lbl2 = $1234; // <= illegal; labels cannot be initalized in this manner
+
+struct type1
+{
+	word membervar1;
+	label membervar2;
+};
+
+byte Func1(byte arg1, word arg2);
+
+func main() //entry function, just like C
+{
+	byte byte1 = 3;
+	ld (curRow), $0000; //OS pointer to cursor position
+	Func1 byte1, word1; //word1 is global and is still in scope here. byte1 and word1 are the operands to func1
+	PutC ans; //ans is the returned value from the last executed function. PutC places a char and advances the OS cursor
+	//the above call will output whatever ascii character 4/ans
+
+	//for loop. This condensed version of the loop mirrors the z80's hardware instructions. 
+	//iterator, in this case, is decremented all the way from 10 to 1, and at 0 this loop ends.
+	//for(byte iterator = 10; iterator > 0; dec iterator) is equivalent syntax 
+	for(byte iterator = 10)
+	{
+		if (iterator == 5)
+			PutS "Five";
+		else if (iterator < 5)
+			PutC "Less than five";
+		else
+		{
+			Disp iterator; //displays the character that corresponds to iterator. i.e. if iterator = 1, '1' is output;
+			PutS "is greater than 5";
+			NewLine;
+		}
+	}
+
+
+	byte condition = 0;
+	while(condition != 5)
+	{
+		disp condition;
+		inc condition;
+	}
+
+	//do-while in C
+	ld condition, 1;
+	repeat
+	{
+		disp condition;
+	} until(condition); //single execution in this case
+
+	ld byte1, word1[0]; //load the lo-byte of word1 into byte1
+	ld byte1, word1[1]; //hi-byte
+
+	ld byte, warray1[0][1]; //the hi-byte of the 0th element of warray1
+
+	ret;
+}
+
+byte Func1(byte arg1, word arg2)
+{
+	add arg2, arg1;
+	ret arg2;
+}

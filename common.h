@@ -18,6 +18,16 @@ enum CODES
 
 	//words
 	CODE_START, CODE_INLINE, CODE_FUNC, CODE_ANS,
+	CODE_BYTE, CODE_WORD, CODE_PTR, CODE_ARRAY, CODE_STRUCT, CODE_TYPE,
+	CODE_STACK, CODE_HEAP,
+	CODE_REPEAT, CODE_UNTIL, CODE_WHILE, CODE_FOR,
+	CODE_IF, CODE_ELSE, CODE_EQ, CODE_NEQ, CODE_LT, CODE_GT, CODE_LE, CODE_GE,
+	CODE_LD, CODE_JP, CODE_CALL, CODE_RET, 
+	CODE_ADD, CODE_SUB, CODE_MUL, CODE_DIV, CODE_MOD, CODE_INC, CODE_DEC, CODE_EXPR,
+	CODE_AND, CODE_OR, CODE_XOR,
+	CODE_RLC, CODE_RRC, CODE_RL, CODE_RR, CODE_SLA, CODE_SRA, CODE_SLL, CODE_SRL, CODE_RES, CODE_SET, CODE_FLP,
+	CODE_IN, CODE_OUT, CODE_IM,
+	CODE_LDM, CODE_CPM, CODE_INM, CODE_OUTM,
 	//preprocessing directives
 	CODE_PP_INCLUDE, CODE_PP_INSERT, CODE_PP_DEFINE,
 
@@ -33,6 +43,8 @@ typedef struct kv_s
 	char k[KEY_MAX_LEN] = {};
 	int v;
 } kv_t;
+
+const kv_t nullkv = { "NULL", CODE_NONE };
 
 //more compact version for characters
 typedef struct ckv_s
@@ -50,8 +62,11 @@ private:
 public:
 	kv_c& operator=(const kv_t& kv);
 
-	inline const char* K() { return k; };
-	inline int V() { return v; };
+	inline const char* K() const { return k; };
+	inline int V() const { return v; };
+	inline const kv_c* KV() { return this; };
+
+	kv_c& Copy(const kv_c* src);
 
 	kv_c()
 	{
@@ -72,11 +87,18 @@ class node_c
 private:
 public:
 	node_c* next;
-	union
+	union 
 	{
 		//kv_t kv;
 		kv_c kv;
 		int i;
+	};
+
+	const kv_c* KV() 
+	{ 
+		//if (!next)
+		//	return NULL;
+		return &kv;
 	};
 
 	node_c()
@@ -108,9 +130,11 @@ private:
 	node_c* head;
 	int len;
 public:
-	void InsertHead(kv_t _kv);
+
+	void InsertHead(const kv_t _kv);
 	void RemoveHead();
 	void Insert(node_c* prev, kv_t _kv);
+	void Insert(node_c* prev, const kv_c* _kv);
 	void Remove(node_c* prev);
 
 	void Disp();
@@ -119,7 +143,17 @@ public:
 	node_c* Search(const char* key);
 	node_c* Offset(int ofs);
 
-	void Clear(); //make this a destructor, too
+	void Clear();
+
+	//For parsing
+	const kv_c* Peek();
+	kv_c* Pop(kv_c* kv);
+	const kv_c* Get();
+	void Push(const kv_c* _kv);
+	void Push(kv_t _kv);
+	void Push(const kv_c _kv);
+	llist_c* Save();
+	void Restore(llist_c* save);
 
 	llist_c()
 	{

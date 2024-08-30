@@ -130,6 +130,7 @@
     <ClCompile Include="lex.cpp" />
     <ClCompile Include="llist.cpp" />
     <ClCompile Include="parse.cpp" />
+    <ClCompile Include="preprocessor.cpp" />
     <ClCompile Include="rlc.cpp" />
     <ClCompile Include="tree.cpp" />
   </ItemGroup>
@@ -137,9 +138,13 @@
     <ClInclude Include="common.h" />
     <ClInclude Include="lex.h" />
     <ClInclude Include="parse.h" />
+    <ClInclude Include="preprocessor.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="bnf.txt" />
+    <Text Include="description.txt" />
+    <Text Include="example.txt" />
+    <Text Include="preprocessing_bnf.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

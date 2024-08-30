@@ -2,10 +2,12 @@
 #include "common.h"
 #include "lex.h"
 #include "parse.h"
+#include "preprocessor.h"
 
 const char tmp_filename[] = "c:/ti83/rl/test.rls";
 lex_c lex;
 parse_c parse;
+preprocessor_c preproc;
 
 //TODO:
 //preprocessing
@@ -34,12 +36,22 @@ int main()
 		if (feof(fin))
 			break;
 
-		for (; *line; line++) {}; //find the new end of the string
+		if (preproc.ParseLine(line))
+		{
+			for (; *line; line++) {}; //find the new end of the string and add this line
+
+		}
+		else
+		{
+			for (char* erase = line; *erase; erase++) 
+				*erase = '\0';
+
+		}
 	}
 
+	printf("%s\n", program);
 	lex.Lex(program, &list);
-	//preprocessing here
-	//parse.Parse(&list);
+	parse.Parse(&list);
 
 	return 0;
 }

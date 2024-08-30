@@ -35,6 +35,66 @@ kv_t reservedwords[] =
 	"func",		CODE_FUNC,
 	"ans",		CODE_ANS,
 
+	"byte",		CODE_BYTE,
+	"word",		CODE_WORD,
+	"ptr",		CODE_PTR,
+	"array",	CODE_ARRAY,
+	"struct",	CODE_STRUCT,
+	"type",		CODE_TYPE,
+
+	"stack",	CODE_STACK,
+	"heap",		CODE_HEAP,
+
+	"repeat",	CODE_REPEAT,
+	"until",	CODE_UNTIL,
+	"while",	CODE_WHILE,
+	"for",		CODE_FOR,
+
+	"if",		CODE_IF,
+	"else",		CODE_ELSE,
+	"eq",		CODE_EQ,
+	"neq",		CODE_NEQ,
+	"lt",		CODE_LT,
+	"gt",		CODE_GT,
+	"le",		CODE_LE,
+	"ge",		CODE_GE,
+
+	"ld",		CODE_LD,
+	"jp",		CODE_JP,
+	"call",		CODE_CALL,
+	"ret",		CODE_RET,
+
+	"add",		CODE_ADD,
+	"sub",		CODE_SUB,
+	"mul",		CODE_MUL,
+	"div",		CODE_DIV,
+	"mod",		CODE_MOD,
+	"inc",		CODE_INC,
+	"dec",		CODE_DEC,
+	"expr",		CODE_EXPR,
+
+	"rlc",		CODE_RLC,
+	"rrc",		CODE_RRC,
+	"rl",		CODE_RL,
+	"rr",		CODE_RR,
+	"sla",		CODE_SLA,
+	"sra",		CODE_SRA,
+	"sll",		CODE_SLL,
+	"srl",		CODE_SRL,
+	"res",		CODE_RES,
+	"set",		CODE_SET,
+	"flp",		CODE_FLP,
+
+	"in",		CODE_IN,
+	"out",		CODE_OUT,
+	"im",		CODE_IM,
+
+	"ldm",		CODE_LDM,
+	"cpm",		CODE_CPM,
+	"inm",		CODE_INM,
+	"outm",		CODE_OUTM,
+
+	//preprocessing
 	"include",	CODE_PP_INCLUDE,
 	"insert",	CODE_PP_INSERT,
 	"define",	CODE_PP_DEFINE,
@@ -144,6 +204,7 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 		memset(text, 0, TEXT_MAX_LEN);
 	}
 
+	list->Insert(NULL, nullkv); //null terminator
 	list->Disp();
 
 	printf("");

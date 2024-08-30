@@ -1,0 +1,45 @@
+RLS (Register-Less Assembly) Tentative Description
+
+Syntax is meant to be very similar to regular z80 assembly. In addition, however, it has higher-level constructs like block-statements,
+if-statements, and type-checking. This is just a quick set of examples and noteable features as to not waste time.
+
+BNF:
+<instruction_statement> ::= <operator> {, <operand> }*
+An operator may be a reserved word, a user-defined function or an OS function. 
+
+this rule does not fully implement a lot of stuff including: labels, arrays, and initialization
+<variable_declaration> ::= <data_type> {<data_qualifier>} <text_constant> ;
+<data_type> ::= byte | word | label | dword | fixed
+<data_qualifier> ::= ptr | array
+
+C-like conditional expressions. Conditionals in assembly are very hard to read so these should be simplified.
+
+Assembly-like arithmetic expressions. This CPU does not have hardware multiplication, division, modulus, etc., so, in my opinion,
+high level expressions are too abstract. Take the expression v1 = ((v2 * v3 + v4) * v5) % v6;. This is fairly simple to look at
+but this simplicity hides how computationally heavy it really is. This could be expressed as the following RLS statements:
+mul v1, v2, v3; //software instruction
+add v1, v4; //hardware instruction
+mul v1, v5; //note: the above mul does v1 = v2 * v3, this one does v1 *= v5;
+mod v1, v6; //software instruction
+
+Bit instructions:
+
+
+Reserved words:
+inl, func, ans, //ans is the return value from the last function
+byte, word, ptr, array, struct, type,
+repeat, until, while, for, skip, escape,
+if, else, 
+//instrs
+ld, call, ret,
+add, sub, mul, div, mod, inc, dec, //mul, div, and mod are software instructions
+and, or, xor, //bit logic
+//rlc, rrc, rl, rr, sla, sra, sll, srl, res, set, flp //bit shifts and manipulation
+rl, rr, sl, sr, res, set, flp
+in, out, //port i/o
+im, //interrupt mode
+ldm, cpm, inm, outm //block ld, cp, in, out instructions
+
+//!!!FIXME - need some way to fit cpm into if/else structures
+//!!!FIXME - implement new shifts & rotates
+//!!!FIXME - implement skip/escape loop control keywords
