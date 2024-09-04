@@ -111,7 +111,7 @@ Reserved chars:
 						<selection_clause> <closed_statement> else <closed_statement> |
 						<while_clause> <closed_statement> |
 						<for_clause> <closed_statement>
-//Do NOT end with a statement/selection_statement
+//Does NOT end with a statement/selection_statement
 <simple_statement> ::= repeat <statement> until ( <expression> ) ; |
 						<instr_statement> |
 						{ <simple_statement>* } ????????

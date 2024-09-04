@@ -600,9 +600,8 @@ GF_DEF(OPEN_STATEMENT)
 	if (CL(SELECTION_CLAUSE, false) == RC_PASS)
 	{// <selection_clause>
 		CL(SELECTION_CLAUSE, true);
-		saved2 = list->Save();
+		saved2 = list->Save(); //save the rest of the list without the above clause for the second possible production
 
-		//This needs to be checked first
  		if (CL(CLOSED_STATEMENT, false) == RC_PASS)
 		{// <closed_statement>
 			CL(CLOSED_STATEMENT, true);
