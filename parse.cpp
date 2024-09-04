@@ -585,6 +585,8 @@ GF_DEF(STATEMENT)
 		return RC_PASS;
 	}
 
+	
+
 	return RC_FAIL;
 }
 
@@ -625,9 +627,34 @@ GF_DEF(OPEN_STATEMENT)
 			list->Restore(saved2);
 			//saved = list->Save();
 		}
-#if 1
+
 		if (CL(STATEMENT, false) == RC_PASS)
 		{// <statement>
+			CL(STATEMENT, true);
+
+			if (GETCP(CODE_ELSE))
+			{
+				/* Given the following if else block
+					if (cond)
+						instr;
+					else
+						instr;
+					
+					if(cond) instr will be seen as an open statement and then parsing will fail at the else. 
+					This lookahead prevents that
+				*/
+				list->Restore(saved);
+				return RC_FAIL;
+			}
+
+			if (advance)
+				delete saved;
+			else
+				list->Restore(saved);
+
+			return RC_PASS;
+
+			/*
 			if (advance)
 			{
 				delete saved;
@@ -635,9 +662,10 @@ GF_DEF(OPEN_STATEMENT)
 			}
 			else
 				list->Restore(saved);
+			*/
 			return RC_PASS;
 		}
-#endif
+
 		list->Restore(saved);
 		//saved = list->Save();
 

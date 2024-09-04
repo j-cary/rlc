@@ -90,16 +90,8 @@ Reserved chars:
 
 
 <compound_statement> ::= { { <declaration> }* { <statement> }* }
-/*
-<statement> ::= { <instr_statement> | <compound_statement> | <selection_statement> | <iteration_statement> }
 
 
-<instr_statement> ::= { <instr_add> | <instr_ld> | <instr_jp> } ;
-<selection_statement> ::= if ( <expression> ) <statement> | if ( <expression> ) <statement> else <statement>
-<iteration_statement> ::= while ( <expression> ) <statement> | 
-							repeat <statement> until ( <expression> ) ; | 
-							for ( <expression> { ; <expression>* ; <instr_statement>* } ) <statement>
-*/
 <statement> ::= <open_statement> | <closed_statement>
 //at least one if not paired with an else
 <open_statement> ::= <selection_clause> <statement> |
@@ -185,3 +177,17 @@ Reserved chars:
 
 <function_definition> ::= { <declaration_specifier> }* <identifier> ( ) <compound_statement>
 <function_declaration> ::= { <declaration_specifier> }* <identifier> ( ) ;
+
+
+
+old statement stuff
+/*
+<statement> ::= { <instr_statement> | <compound_statement> | <selection_statement> | <iteration_statement> }
+
+
+<instr_statement> ::= { <instr_add> | <instr_ld> | <instr_jp> } ;
+<selection_statement> ::= if ( <expression> ) <statement> | if ( <expression> ) <statement> else <statement>
+<iteration_statement> ::= while ( <expression> ) <statement> | 
+							repeat <statement> until ( <expression> ) ; | 
+							for ( <expression> { ; <expression>* ; <instr_statement>* } ) <statement>
+*/
