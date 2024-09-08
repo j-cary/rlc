@@ -152,8 +152,10 @@ public:
 	void Push(const kv_c* _kv);
 	void Push(kv_t _kv);
 	void Push(const kv_c _kv);
-	llist_c* Save();
-	void Restore(llist_c* save);
+
+	node_c* Save();
+	void Restore(node_c* save);
+
 
 	llist_c()
 	{

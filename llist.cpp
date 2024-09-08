@@ -177,7 +177,8 @@ const kv_c* llist_c::Peek()
 		return NULL;
 	return curs->KV();
 }
-
+#if 0
+//deletes nodes as they are popped
 kv_c* llist_c::Pop(kv_c* kv)
 {
 	const kv_c* tmp;
@@ -192,6 +193,25 @@ kv_c* llist_c::Pop(kv_c* kv)
 
 	return kv;
 }
+#endif
+
+kv_c* llist_c::Pop(kv_c* kv)
+{
+	const kv_c* tmp;
+
+	if (kv)
+	{
+		tmp = head->KV();
+		kv->Copy(tmp);
+	}
+
+	if (!head)
+		exit(124);
+	head = head->next;
+
+	return kv;
+}
+
 
 const kv_c* llist_c::Get()
 {
@@ -209,7 +229,6 @@ void llist_c::Push(kv_t kv)
 void llist_c::Push(const kv_c kv)
 {
 	Push(&kv);
-	printf("");
 }
 
 void llist_c::Push(const kv_c* _kv)
@@ -227,46 +246,14 @@ void llist_c::Push(const kv_c* _kv)
 	InsertHead(kv);
 }
 
-llist_c* llist_c::Save()
+node_c* llist_c::Save()
 {
-	llist_c* save = new llist_c;
-	node_c* curs = head;
-	kv_t terminator;
-
-	save->len = 0;
-
-	while (curs)
-	{
-		//save->Push(curs->KV());
-		save->Insert(NULL, curs->KV());
-		curs = curs->next;
-	}
-
-	//save->Insert(NULL, nullkv);
-
-	return save;
+	return head;
 }
 
-void llist_c::Restore(llist_c* save)
+void llist_c::Restore(node_c* save)
 {
-	node_c* curs = save->head;
-	const kv_c* _kv;
-
-	if (!save)
-		return;
-
-	Clear();
-
-	while (curs)
-	{
-		Insert(NULL, curs->KV());
-		curs = curs->next;
-	}
-	//Insert(NULL, nullkv);
-	
-	delete save;
-
-	//todo: make this default assignment op
+	head = save;
 }
 
 //kv_c

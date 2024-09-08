@@ -25,6 +25,7 @@ private:
 	} fstrans_t;
 
 	//Grammar functions
+
 	rcode_t UNIT(GF_ARGS);
 	rcode_t EXTERNAL_DECLARATION(GF_ARGS);
 	rcode_t FUNCTION_DEFINITION(GF_ARGS);
@@ -136,6 +137,7 @@ private:
 
 	fstrans_t fs[26] =
 	{
+
 		& parse_c::UNIT,					"Unit",
 		& parse_c::EXTERNAL_DECLARATION,	"External decl",
 		& parse_c::FUNCTION_DEFINITION,		"Function def",
@@ -175,6 +177,7 @@ private:
 		& parse_c::IDENTIFIER,				"Identifier",
 		& parse_c::RVALUE,					"R-value",
 		& parse_c::RVALUE_LIST,				"R-value list",
+
 	};
 
 public:

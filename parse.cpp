@@ -36,7 +36,7 @@ parse_c::rcode_t parse_c::UNIT(GF_ARGS)
 	return RC_PASS;
 #if 0
 	kv_t tmp;
-	llist_c* save;
+	node_c* save;
 
 	//save = list->Save();
 
@@ -79,7 +79,7 @@ parse_c::rcode_t parse_c::EXTERNAL_DECLARATION(GF_ARGS)
 
 parse_c::rcode_t parse_c::FUNCTION_DEFINITION(GF_ARGS)
 {// { <declaration_specifier> }* <identifier> ( ) <compound_statement>
-	llist_c* saved;
+	node_c* saved;
 
 	saved = list->Save();
 #if 0
@@ -243,7 +243,7 @@ parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
 	//| <direct_declarator> ({ <identifier> }*)
 
 	kv_c save1,  save2;
-	llist_c* saved;
+	node_c* saved;
 
 	saved = list->Save();
 
@@ -276,8 +276,6 @@ parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
 
 		if (advance)
 			list->Restore(saved);
-		else
-			delete saved;
 
 		return RC_PASS;
 	}
@@ -339,7 +337,7 @@ parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
 
 GF_DEF(EXPRESSION)
 {//TMPTMPTMP <identifier> = = <identifier>
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 
 	if (CL(IDENTIFIER, false) == RC_PASS)
 	{
@@ -356,10 +354,7 @@ GF_DEF(EXPRESSION)
 				if (CL(IDENTIFIER, false) == RC_PASS)
 				{
 					if (advance)
-					{
 						CL(IDENTIFIER, true);
-						delete saved;
-					}
 					else
 						list->Restore(saved);
 
@@ -370,8 +365,6 @@ GF_DEF(EXPRESSION)
 
 		list->Restore(saved);
 	}
-	else
-		delete saved;
 
 	return RC_FAIL;
 }
@@ -379,7 +372,7 @@ GF_DEF(EXPRESSION)
 
 parse_c::rcode_t parse_c::DECLARATION(GF_ARGS)
 {//{<declaration_specifier>}+ { <init_declarator> }* ;
-	llist_c* saved;
+	node_c* saved;
 
 	saved = list->Save();
 
@@ -402,9 +395,7 @@ parse_c::rcode_t parse_c::DECLARATION(GF_ARGS)
 		CL(INIT_DECLARATOR, true);
 	}
 
-	if (advance)
-		delete saved;
-	else
+	if(!advance)
 		list->Restore(saved);
 
 	return RC_PASS;
@@ -429,7 +420,7 @@ parse_c::rcode_t parse_c::INITIALIZER_LIST(GF_ARGS)
 
 parse_c::rcode_t parse_c::COMPOUND_STATEMENT(GF_ARGS)
 {//{ { <declaration> }* { <statement> }* }
-	llist_c* saved;
+	node_c* saved;
 
 	saved = list->Save();
 
@@ -460,10 +451,7 @@ parse_c::rcode_t parse_c::COMPOUND_STATEMENT(GF_ARGS)
 	if (!advance)
 		list->Restore(saved);
 	else
-	{
 		list->Pop(NULL); //get the last bracket
-		delete saved;
-	}
 
 	return RC_PASS;
 }
@@ -501,7 +489,7 @@ parse_c::rcode_t parse_c::STATEMENT(GF_ARGS)
 
 parse_c::rcode_t parse_c::INSTRUCTION_STATEMENT(GF_ARGS)
 { //{ <instr_add> | <instr_ld> | <instr_jp> };
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 
 	if (CL(INSTRUCTION_ADD, false) == RC_SUCCESS)
 	{// <instr_add>
@@ -531,7 +519,7 @@ parse_c::rcode_t parse_c::INSTRUCTION_STATEMENT(GF_ARGS)
 
 parse_c::rcode_t parse_c::SELECTION_STATEMENT(GF_ARGS)
 {// if ( <expression> ) <statement> | if ( <expression> ) <statement> else <statement>
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 
 	if (!GETCP(CODE_IF)) //if
 		return RC_FAILURE;
@@ -596,8 +584,8 @@ GF_DEF(OPEN_STATEMENT)
 //	<while_clause> <open_statement> |
 //	<for_clause> <open_statement>
 
-	llist_c* saved = list->Save();
-	llist_c* saved2;
+	node_c* saved = list->Save();
+	node_c* saved2;
 
 	if (CL(SELECTION_CLAUSE, false) == RC_PASS)
 	{// <selection_clause>
@@ -610,14 +598,10 @@ GF_DEF(OPEN_STATEMENT)
 			if (GETCP(CODE_ELSE))
 			{// else
 				list->Pop(NULL);
-				//!!!Problem: this only allows else ifs! A simple statement after an else doesn't work here. Would work in the closed statement func...
 				if (CL(OPEN_STATEMENT, false) == RC_PASS)
 				{// <open_statement>
 					if (advance)
-					{
 						CL(OPEN_STATEMENT, true);
-						delete saved;
-					}
 					else
 						list->Restore(saved);
 					return RC_PASS;
@@ -647,29 +631,13 @@ GF_DEF(OPEN_STATEMENT)
 				return RC_FAIL;
 			}
 
-			if (advance)
-				delete saved;
-			else
+			if (!advance)
 				list->Restore(saved);
 
-			return RC_PASS;
-
-			/*
-			if (advance)
-			{
-				delete saved;
-				CL(STATEMENT, true);
-			}
-			else
-				list->Restore(saved);
-			*/
 			return RC_PASS;
 		}
 
 		list->Restore(saved);
-		//saved = list->Save();
-
-		return RC_FAIL;
 	}
 #if !PARANOID_TEST
 	if (CL(WHILE_CLAUSE, false) == RC_PASS)
@@ -678,10 +646,7 @@ GF_DEF(OPEN_STATEMENT)
 		if (CL(OPEN_STATEMENT, false), RC_PASS)
 		{// <open_statement>
 			if (advance)
-			{
 				CL(OPEN_STATEMENT, true);
-				delete saved;
-			}
 			else
 				list->Restore(saved);
 			return RC_PASS;
@@ -697,10 +662,7 @@ GF_DEF(OPEN_STATEMENT)
 		if (CL(OPEN_STATEMENT, false), RC_PASS)
 		{// <open_statement>
 			if (advance)
-			{
 				CL(OPEN_STATEMENT, true);
-				delete saved;
-			}
 			else
 				list->Restore(saved);
 			return RC_PASS;
@@ -710,7 +672,6 @@ GF_DEF(OPEN_STATEMENT)
 		saved = list->Save();
 	}
 #endif
-	//delete saved;
 	return RC_FAIL;
 }
 
@@ -720,15 +681,12 @@ GF_DEF(CLOSED_STATEMENT)
 //	<while_clause> <closed_statement> |
 //	<for_clause> <closed_statement>
 
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 
 	if (CL(SIMPLE_STATEMENT, false) == RC_PASS)
 	{// <simple_statement>
 		if (advance)
-		{
 			CL(SIMPLE_STATEMENT, true);
-			delete saved;
-		}
 		else
 			list->Restore(saved);
 		return RC_PASS;
@@ -747,10 +705,7 @@ GF_DEF(CLOSED_STATEMENT)
 				if (CL(CLOSED_STATEMENT, false) == RC_PASS)
 				{// <closed_statement>
 					if (advance)
-					{
 						CL(CLOSED_STATEMENT, true);
-						delete saved;
-					}
 					else
 						list->Restore(saved);
 					return RC_PASS;
@@ -794,7 +749,6 @@ GF_DEF(CLOSED_STATEMENT)
 		}
 	}
 #endif
-	delete saved;
 	return RC_FAIL;
 }
 
@@ -802,7 +756,7 @@ GF_DEF(SIMPLE_STATEMENT)
 {// repeat <statement> until ( <expression> ) ; |
 //	<instr_statement>
 
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 
 	if (GETCP(CODE_REPEAT))
 	{// repeat
@@ -831,10 +785,7 @@ GF_DEF(SIMPLE_STATEMENT)
 							{// ;
 
 								if (advance)
-								{
-									delete saved;
 									list->Pop(NULL);
-								}
 								else
 									list->Restore(saved);
 								return RC_PASS;
@@ -852,23 +803,19 @@ GF_DEF(SIMPLE_STATEMENT)
 	if (CL(INSTR_STATEMENT, false) == RC_PASS)
 	{
 		if (advance)
-		{
 			CL(INSTR_STATEMENT, true);
-			delete saved;
-		}
 		else
 			list->Restore(saved);
 
 		return RC_PASS;
 	}
 
-	delete saved;
 	return RC_FAIL;
 }
 
 GF_DEF(INSTR_STATEMENT)
 {//{ <instr_add> | <instr_ld> | <instr_jp> };
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 	//!!!MEMLEAK
 	if (CL(INSTRUCTION_ADD, false) == RC_PASS)
 	{// <instr_add>
@@ -890,15 +837,13 @@ GF_DEF(INSTR_STATEMENT)
 
 	if (advance)
 		list->Restore(saved);
-	else
-		delete saved;
 
 	return RC_PASS;
 }
 
 GF_DEF(SELECTION_CLAUSE)
 {// if ( <expression> )
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 
 	if (GETCP(CODE_IF))
 	{// if
@@ -914,10 +859,7 @@ GF_DEF(SELECTION_CLAUSE)
 				if (GETCP(CODE_RPAREN))
 				{// )
 					if (advance)
-					{
 						list->Pop(NULL);
-						delete saved;
-					}
 					else
 						list->Restore(saved);
 
@@ -928,8 +870,6 @@ GF_DEF(SELECTION_CLAUSE)
 
 		list->Restore(saved); //Popped at least one thing off
 	}
-	else
-		delete saved; //haven't deleted anything from the list yet
 
 	return RC_FAIL;
 }
@@ -948,12 +888,11 @@ GF_DEF(WHILE_CLAUSE)
 
 parse_c::rcode_t parse_c::INSTRUCTION_ADD(GF_ARGS)
 {// add <identifier> , <rvalue> { , <rvalue> }*
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 	kv_c* saved_comma = NULL;
 
 	if (!GETCP(CODE_ADD))
 	{// add
-		delete saved;
 		return RC_FAIL;
 	}
 	list->Pop(NULL);
@@ -989,14 +928,9 @@ parse_c::rcode_t parse_c::INSTRUCTION_ADD(GF_ARGS)
 	{
 		if(saved_comma) //restore any lone commas
 			list->Push(saved_comma);
-
-		delete saved;
 	}
 	else
-	{
 		list->Restore(saved);
-		//delete saved2;
-	}
 
 	return RC_PASS;
 }
@@ -1037,7 +971,7 @@ parse_c::rcode_t parse_c::RVALUE(GF_ARGS)
 
 GF_DEF(RVALUE_LIST)
 {// {, <rvalue> }*
-	llist_c* saved = list->Save();
+	node_c* saved = list->Save();
 	kv_c* saved_comma = NULL;
 
 	//FIXME: Does saved_comma have to be deleted in any of these cases?
@@ -1058,6 +992,7 @@ GF_DEF(RVALUE_LIST)
 
 	return RC_FAIL;
 }
+
 
 
 parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
@@ -1093,7 +1028,6 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 
 	return rc;
 }
-
 
 
 #undef PEEKCP
