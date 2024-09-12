@@ -235,6 +235,7 @@ public:
 
 	void Delete(); //Delete this sub-tree, including the root
 	void Clear(); //Delete this sub-tree, minus the root
+	void Remove(tnode_c* _root); //Delete a single node
 
 	//Getting children
 	tnode_c* GetL();
@@ -262,14 +263,7 @@ public:
 	~tnode_c()
 	{
 		kv.~kv_c();
-
-		if (leaf) //this should also be caught in the condition below
-			return;
-
-		for (std::vector<tnode_c*>::iterator it = children.begin(); it != this->children.end(); it++)
-			delete* it; 
-
-		children.clear();//Hopefully clear the list...
+		Clear();
 	}
 };
 

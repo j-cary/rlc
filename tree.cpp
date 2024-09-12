@@ -108,6 +108,29 @@ tnode_c* tnode_c::Get(int idx)
 	return children.at(idx);
 }
 
+void tnode_c::Delete()
+{
+	//call clear and then remove
+}
+
+void tnode_c::Clear()
+{//clear out the list below, but not including, the root
+	if (leaf) //this should also be caught in the condition below
+		return;
+
+	for (std::vector<tnode_c*>::iterator it = children.begin(); it != this->children.end(); it++)
+		delete* it;
+
+	children.clear();//Hopefully clear the list...
+}
+
+void tnode_c::Remove(tnode_c* _root)
+{
+
+	//somehow have to navigate to this node from the root itself.
+	//Keep track of the parent of this node so the removed node can be removed from its' parent's child list
+}
+
 char g_tabstr[DEPTH_MAX * 2];
 int g_tabs;
 

@@ -19,7 +19,7 @@ void parse_c::Parse(llist_c* _list)
 {
 	list = _list;
 
-	UNIT(false, &root);
+	//UNIT(false, &root);
 
 	root.Disp();
 
@@ -47,6 +47,9 @@ void parse_c::Parse(llist_c* _list)
 
 	printf("");
 
+	root.Disp();
+
+	tn->Clear();
 	root.Disp();
 #endif
 }
