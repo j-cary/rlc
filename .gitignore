@@ -34,3 +34,8 @@
 #folders
 x64
 .vs
+
+/x64/Debug
+/.vs/rlc/v17
+/.vs/rlc/FileContentIndex
+

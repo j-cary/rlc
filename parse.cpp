@@ -2,21 +2,58 @@
 
 #define PEEKCP(x)	(list->Peek()->V() == x)
 #define GETCP(x)	(list->Get()->V() == x)
-#define CL(x, y)	(Call(&parse_c::x, y))
+//#define CL(x, y)	(Call(&parse_c::x, y, NULL))
+#define CL(x,y,z)	(Call(&parse_c::x, y, z))
 
 //GUIDELINES:
 //The list should only really be incremented if the function succeeds AND advance is set. Otherwise, return it like it was
+//Tree stuff:	A function should only pass a node when advancing.
+//				A function should pass a newly inserted node related to itself for sub-functions.
+//				FUNCTION_DEFINITION looks tough... insl or insr? how do you add the identifier? probably need a save/restore system for the tree
+//				ex. DECLARATION_SPECIFIER should create a new leaf identifying itself to STORAGE_SPECIFIER iff there is certainly a STORAGE_SPECIFIER
+
+//Should this whole system be re-written?
+//Ex. Run a function, returns yes or no and also the index in the list, try the next func, so on.
 
 void parse_c::Parse(llist_c* _list)
 {
 	list = _list;
-	UNIT(false);
+
+	UNIT(false, &root);
+
+	root.Disp();
+
+#if 0
+	kv_c kv("TEST", CODE_NONE);
+	kv_t kvt, kvtr;
+	tnode_c* tn;
+
+	root.Set(&kv);
+
+	strcpy_s(kvt.k, "TESTL");
+	kvt.v = CODE_NONE;
+	strcpy_s(kvtr.k, "TESTR");
+	kvtr.v = CODE_NONE;
+
+	root.InsL(kvt);
+	root.InsR(kvtr);
+
+	strcpy_s(kvt.k, "TESTLL");
+	tn = root.GetL();
+	tn->InsL(kvt);
+
+	strcpy_s(kvt.k, "TESTLR");
+	tn->InsR(kvt);
+
+	printf("");
+
+	root.Disp();
+#endif
 }
 
 parse_c::rcode_t parse_c::UNIT(GF_ARGS)
 {//{ <external_declaration> }*
-	const kv_c* kv;
-	rcode_t rcode = {};
+
 
 	if (GETCP(CODE_NONE))
 	{
@@ -24,7 +61,10 @@ parse_c::rcode_t parse_c::UNIT(GF_ARGS)
 		return RC_FAIL;
 	}
 
-	while (CL(EXTERNAL_DECLARATION, true) == RC_PASS){}
+	subroot->Set("UNIT", NT_UNIT);
+
+	//fix the logic for this loop
+	while (CL(EXTERNAL_DECLARATION, true, subroot) == RC_PASS){}
 
 	if (!GETCP(CODE_NONE))
 	{//no more external declarations, but the program list is not empty
@@ -34,43 +74,17 @@ parse_c::rcode_t parse_c::UNIT(GF_ARGS)
 
 	printf("\n================\n\nValid translation unit\n\n================\n");
 	return RC_PASS;
-#if 0
-	kv_t tmp;
-	node_c* save;
-
-	//save = list->Save();
-
-	strcpy_s(tmp.k, "TEST");
-	tmp.v = 123;
-	kv_c kvc;
-
-	kvc = tmp;
-
-	//savestack.Push(list->Get());
-	savestack.Push(list->Pop(&kvc));
-	list->Push(savestack.Pop(&kvc));
-
-	//list->Push(tmp);
-	kvc = tmp;
-	//list->Restore(save);
-	
-	while ((kv = list->Get()))
-	{
-		if (!kv)
-			break;
-		printf("%c%s%c%i%c\n", 0xB2, kv->K(), 0xB1, kv->V(), 0xB0);
-		list->Pop(NULL);
-	}
-	return rcode;
-#endif
 }
 
 parse_c::rcode_t parse_c::EXTERNAL_DECLARATION(GF_ARGS)
 {//<function_definition> | <declaration>
 	rcode_t rcode = RC_FAIL;
 
-	if (CL(FUNCTION_DEFINITION, advance) == RC_PASS)
+	if (CL(FUNCTION_DEFINITION, false, NULL) == RC_PASS)
+	{
+		CL(FUNCTION_DEFINITION, true, subroot->InsL("EXTERNAL_DECL", NT_EXTERNAL_DECL));
 		return RC_PASS;
+	}
 	//if (DECLARATION() == RC_SUCCESS)
 	//	return RC_SUCCESS;
 
@@ -85,34 +99,34 @@ parse_c::rcode_t parse_c::FUNCTION_DEFINITION(GF_ARGS)
 #if 0
 	while (1) 
 	{
-		if (CL(DECLARATION_SPECIFIER ,false) == RC_FAILURE) //{ <declaration_specifier> }*
+		if (CL(DECLARATION_SPECIFIER ,false, NULL) == RC_FAILURE) //{ <declaration_specifier> }*
 			break;
-		CL(DECLARATION_SPECIFIER, true);
+		CL(DECLARATION_SPECIFIER, true, NULL);
 	}
 
-	if (CL(DECLARATOR, false) == RC_FAILURE)
+	if (CL(DECLARATOR, false, NULL) == RC_FAILURE)
 	{//<declarator>
 		list->Restore(saved);
 		return RC_FAILURE;
 	}
-	CL(DECLARATOR, true);
+	CL(DECLARATOR, true, NULL);
 
 	while (1)
 	{
-		if (CL(DECLARATION, false) == RC_FAILURE) //{ <declaration> }*
+		if (CL(DECLARATION, false, NULL) == RC_FAILURE) //{ <declaration> }*
 			break;
-		DECLARATION(true);
+		DECLARATION(true, NULL);
 	}
 
 	//<compound_statement>
-	if (CL(COMPOUND_STATEMENT, false) == RC_FAILURE)
+	if (CL(COMPOUND_STATEMENT, false, NULL) == RC_FAILURE)
 	{
 		list->Restore(saved);
 		return RC_FAILURE;
 	}
 
 	if (advance)
-		CL(COMPOUND_STATEMENT, true);
+		CL(COMPOUND_STATEMENT, true, NULL);
 	else
 		list->Restore(saved);
 
@@ -120,17 +134,17 @@ parse_c::rcode_t parse_c::FUNCTION_DEFINITION(GF_ARGS)
 #else
 	while (1)
 	{
-		if (CL(DECLARATION_SPECIFIER, false) == RC_FAIL) //{ <declaration_specifier> }*
+		if (CL(DECLARATION_SPECIFIER, false, NULL) == RC_FAIL) //{ <declaration_specifier> }*
 			break;
-		CL(DECLARATION_SPECIFIER, true);
+		CL(DECLARATION_SPECIFIER, true, NULL);
 	}
 
-	if (CL(IDENTIFIER, false) == RC_FAIL)
+	if (CL(IDENTIFIER, false, NULL) == RC_FAIL)
 	{
 		list->Restore(saved);
 		return RC_FAIL;
 	}
-	CL(IDENTIFIER, true);// <identifier>
+	CL(IDENTIFIER, true, NULL);// <identifier>
 
 	if (!GETCP(CODE_LPAREN))
 	{
@@ -146,14 +160,14 @@ parse_c::rcode_t parse_c::FUNCTION_DEFINITION(GF_ARGS)
 	}
 	list->Pop(NULL); // )
 
-	if (CL(COMPOUND_STATEMENT, false) == RC_FAIL)
+	if (CL(COMPOUND_STATEMENT, false, NULL) == RC_FAIL)
 	{
 		list->Restore(saved);
 		return RC_FAIL;
 	}
 
 	if (advance)
-		CL(COMPOUND_STATEMENT, true); // <compound_statement>
+		CL(COMPOUND_STATEMENT, true, NULL); // <compound_statement>
 	else
 		list->Restore(saved);
 
@@ -167,17 +181,17 @@ parse_c::rcode_t parse_c::DECLARATION_SPECIFIER(GF_ARGS)
 {//<storage_specifier> | <type_specifier>
 	rcode_t rcode = RC_FAIL;
 
-	if (CL(STORAGE_SPECIFIER, false) == RC_PASS)
+	if (CL(STORAGE_SPECIFIER, false, NULL) == RC_PASS)
 	{
 		if(advance)
-			CL(STORAGE_SPECIFIER, true);
+			CL(STORAGE_SPECIFIER, true, NULL);
 		return RC_PASS;
 	}
 
-	if (CL(TYPE_SPECIFIER, false) == RC_PASS)
+	if (CL(TYPE_SPECIFIER, false, NULL) == RC_PASS)
 	{
 		if(advance)
-			CL(TYPE_SPECIFIER, true);
+			CL(TYPE_SPECIFIER, true, NULL);
 		return RC_PASS;
 	}
 
@@ -233,7 +247,7 @@ parse_c::rcode_t parse_c::TYPE_SPECIFIER(GF_ARGS)
 parse_c::rcode_t parse_c::DECLARATOR(GF_ARGS)
 {//<direct_declarator>
 
-	return CL(DIRECT_DECLARATOR, advance);
+	return CL(DIRECT_DECLARATOR, advance, NULL);
 }
 
 parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
@@ -260,13 +274,13 @@ parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
 		
 		list->Pop(NULL);
 
-		if (CL(DECLARATOR, false) != RC_PASS)
+		if (CL(DECLARATOR, false, NULL) != RC_PASS)
 		{
 			list->Restore(saved);
 			return RC_FAIL;
 		}
 
-		CL(DECLARATOR, true);
+		CL(DECLARATOR, true, NULL);
 
 		if (!GETCP(CODE_RPAREN))
 		{
@@ -281,9 +295,9 @@ parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
 	}
 
 
-	if (CL(DIRECT_DECLARATOR, false) == RC_FAIL)
+	if (CL(DIRECT_DECLARATOR, false, NULL) == RC_FAIL)
 		return RC_FAIL; //<direct_declarator>
-	CL(DIRECT_DECLARATOR, true);
+	CL(DIRECT_DECLARATOR, true, NULL);
 
 	//[{<constant_expression>} ? ]
 
@@ -339,9 +353,9 @@ GF_DEF(EXPRESSION)
 {//TMPTMPTMP <identifier> = = <identifier>
 	node_c* saved = list->Save();
 
-	if (CL(IDENTIFIER, false) == RC_PASS)
+	if (CL(IDENTIFIER, false, NULL) == RC_PASS)
 	{
-		CL(IDENTIFIER, true);
+		CL(IDENTIFIER, true, NULL);
 
 		if (GETCP(CODE_EQUALS))
 		{
@@ -351,10 +365,10 @@ GF_DEF(EXPRESSION)
 			{
 				list->Pop(NULL);
 
-				if (CL(IDENTIFIER, false) == RC_PASS)
+				if (CL(IDENTIFIER, false, NULL) == RC_PASS)
 				{
 					if (advance)
-						CL(IDENTIFIER, true);
+						CL(IDENTIFIER, true, NULL);
 					else
 						list->Restore(saved);
 
@@ -377,22 +391,22 @@ parse_c::rcode_t parse_c::DECLARATION(GF_ARGS)
 	saved = list->Save();
 
 	//{<declaration_specifier>}
-	if (CL(DECLARATION_SPECIFIER, false) == RC_FAIL)
+	if (CL(DECLARATION_SPECIFIER, false, NULL) == RC_FAIL)
 		return RC_FAIL;
-	CL(DECLARATION_SPECIFIER, true);
+	CL(DECLARATION_SPECIFIER, true, NULL);
 
 	while (1)
 	{//+
-		if (CL(DECLARATION_SPECIFIER, false) == RC_FAIL)
+		if (CL(DECLARATION_SPECIFIER, false, NULL) == RC_FAIL)
 			break;
-		CL(DECLARATION_SPECIFIER, true);
+		CL(DECLARATION_SPECIFIER, true, NULL);
 	}
 
 	while (1)
 	{//{ <init_declarator> }*
-		if (CL(INIT_DECLARATOR, false) == RC_FAIL)
+		if (CL(INIT_DECLARATOR, false, NULL) == RC_FAIL)
 			break;
-		CL(INIT_DECLARATOR, true);
+		CL(INIT_DECLARATOR, true, NULL);
 	}
 
 	if(!advance)
@@ -430,16 +444,16 @@ parse_c::rcode_t parse_c::COMPOUND_STATEMENT(GF_ARGS)
 
 	while (1)
 	{//{ <declaration> }*
-		if (CL(DECLARATION, false) == RC_FAIL)
+		if (CL(DECLARATION, false, NULL) == RC_FAIL)
 			break;
-		CL(DECLARATION, true);
+		CL(DECLARATION, true, NULL);
 	}
 
 	while (1)
 	{//{ <statement> }*
-		if (CL(STATEMENT, false) == RC_FAIL)
+		if (CL(STATEMENT, false, NULL) == RC_FAIL)
 			break;
-		CL(STATEMENT, true);
+		CL(STATEMENT, true, NULL);
 	}
 
 	if (!GETCP(CODE_RBRACKET))
@@ -459,28 +473,28 @@ parse_c::rcode_t parse_c::COMPOUND_STATEMENT(GF_ARGS)
 #if 0
 parse_c::rcode_t parse_c::STATEMENT(GF_ARGS)
 {// { <instr_statement> | <compound_statement> | <selection_statement> | <iteration_statement> }
-	if (CL(INSTRUCTION_STATEMENT, false) == RC_SUCCESS)
+	if (CL(INSTRUCTION_STATEMENT, false, NULL) == RC_SUCCESS)
 	{// { <instr_statement>
 		if (advance)
-			CL(INSTRUCTION_STATEMENT, true);
+			CL(INSTRUCTION_STATEMENT, true, NULL);
 		return RC_SUCCESS;
 	}
-	else if (CL(COMPOUND_STATEMENT, false) == RC_SUCCESS)
+	else if (CL(COMPOUND_STATEMENT, false, NULL) == RC_SUCCESS)
 	{// <compound_statement>
 		if (advance)
-			CL(COMPOUND_STATEMENT, true);
+			CL(COMPOUND_STATEMENT, true, NULL);
 		return RC_SUCCESS;
 	}
-	else if (CL(SELECTION_STATEMENT, false) == RC_SUCCESS)
+	else if (CL(SELECTION_STATEMENT, false, NULL) == RC_SUCCESS)
 	{
 		if (advance)
-			CL(SELECTION_STATEMENT, true);
+			CL(SELECTION_STATEMENT, true, NULL);
 		return RC_SUCCESS;
 	}
-	else if (CL(ITERATION_STATEMENT, false) == RC_SUCCESS)
+	else if (CL(ITERATION_STATEMENT, false, NULL) == RC_SUCCESS)
 	{
 		if (advance)
-			CL(ITERATION_STATEMENT, true);
+			CL(ITERATION_STATEMENT, true, NULL);
 		return RC_SUCCESS;
 	}
 
@@ -491,10 +505,10 @@ parse_c::rcode_t parse_c::INSTRUCTION_STATEMENT(GF_ARGS)
 { //{ <instr_add> | <instr_ld> | <instr_jp> };
 	node_c* saved = list->Save();
 
-	if (CL(INSTRUCTION_ADD, false) == RC_SUCCESS)
+	if (CL(INSTRUCTION_ADD, false, NULL) == RC_SUCCESS)
 	{// <instr_add>
 		//if (advance)
-		CL(INSTRUCTION_ADD, true);
+		CL(INSTRUCTION_ADD, true, NULL);
 
 		if (!GETCP(CODE_SEMICOLON))
 		{
@@ -532,12 +546,12 @@ parse_c::rcode_t parse_c::SELECTION_STATEMENT(GF_ARGS)
 	}
 	list->Pop(NULL);
 
-	//if (CL(EXPRESSION, false) == RC_FAILURE)
+	//if (CL(EXPRESSION, false, NULL) == RC_FAILURE)
 	{// <expression>
 		list->Restore(saved);
 		return RC_FAILURE;
 	}
-	//CL(EXPRESSION, false);
+	//CL(EXPRESSION, false, NULL);
 
 	if (!GETCP(CODE_RPAREN))
 	{// )
@@ -561,15 +575,15 @@ parse_c::rcode_t parse_c::ITERATION_STATEMENT(GF_ARGS)
 
 GF_DEF(STATEMENT)
 {// <open_statement> | <closed_statement>
-	if (CL(OPEN_STATEMENT, false) == RC_PASS)
+	if (CL(OPEN_STATEMENT, false, NULL) == RC_PASS)
 	{
-		CL(OPEN_STATEMENT, true);
+		CL(OPEN_STATEMENT, true, NULL);
 		return RC_PASS;
 	}
 
-	if (CL(CLOSED_STATEMENT, false) == RC_PASS)
+	if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
 	{
-		CL(CLOSED_STATEMENT, true);
+		CL(CLOSED_STATEMENT, true, NULL);
 		return RC_PASS;
 	}
 
@@ -587,21 +601,21 @@ GF_DEF(OPEN_STATEMENT)
 	node_c* saved = list->Save();
 	node_c* saved2;
 
-	if (CL(SELECTION_CLAUSE, false) == RC_PASS)
+	if (CL(SELECTION_CLAUSE, false, NULL) == RC_PASS)
 	{// <selection_clause>
-		CL(SELECTION_CLAUSE, true);
+		CL(SELECTION_CLAUSE, true, NULL);
 		saved2 = list->Save(); //save the rest of the list without the above clause for the second possible production
 
- 		if (CL(CLOSED_STATEMENT, false) == RC_PASS)
+ 		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
 		{// <closed_statement>
-			CL(CLOSED_STATEMENT, true);
+			CL(CLOSED_STATEMENT, true, NULL);
 			if (GETCP(CODE_ELSE))
 			{// else
 				list->Pop(NULL);
-				if (CL(OPEN_STATEMENT, false) == RC_PASS)
+				if (CL(OPEN_STATEMENT, false, NULL) == RC_PASS)
 				{// <open_statement>
 					if (advance)
-						CL(OPEN_STATEMENT, true);
+						CL(OPEN_STATEMENT, true, NULL);
 					else
 						list->Restore(saved);
 					return RC_PASS;
@@ -612,9 +626,9 @@ GF_DEF(OPEN_STATEMENT)
 			//saved = list->Save();
 		}
 
-		if (CL(STATEMENT, false) == RC_PASS)
+		if (CL(STATEMENT, false, NULL) == RC_PASS)
 		{// <statement>
-			CL(STATEMENT, true);
+			CL(STATEMENT, true, NULL);
 
 			if (GETCP(CODE_ELSE))
 			{
@@ -640,13 +654,13 @@ GF_DEF(OPEN_STATEMENT)
 		list->Restore(saved);
 	}
 #if !PARANOID_TEST
-	if (CL(WHILE_CLAUSE, false) == RC_PASS)
+	if (CL(WHILE_CLAUSE, false, NULL) == RC_PASS)
 	{// <while_clause>
-		CL(WHILE_CLAUSE, true);
-		if (CL(OPEN_STATEMENT, false), RC_PASS)
+		CL(WHILE_CLAUSE, true, NULL);
+		if (CL(OPEN_STATEMENT, false, NULL), RC_PASS)
 		{// <open_statement>
 			if (advance)
-				CL(OPEN_STATEMENT, true);
+				CL(OPEN_STATEMENT, true, NULL);
 			else
 				list->Restore(saved);
 			return RC_PASS;
@@ -656,13 +670,13 @@ GF_DEF(OPEN_STATEMENT)
 		saved = list->Save();
 	}
 	
-	if (CL(FOR_CLAUSE, false) == RC_PASS)
+	if (CL(FOR_CLAUSE, false, NULL) == RC_PASS)
 	{// <for_clause>
-		CL(FOR_CLAUSE, true);
-		if (CL(OPEN_STATEMENT, false), RC_PASS)
+		CL(FOR_CLAUSE, true, NULL);
+		if (CL(OPEN_STATEMENT, false, NULL), RC_PASS)
 		{// <open_statement>
 			if (advance)
-				CL(OPEN_STATEMENT, true);
+				CL(OPEN_STATEMENT, true, NULL);
 			else
 				list->Restore(saved);
 			return RC_PASS;
@@ -683,29 +697,29 @@ GF_DEF(CLOSED_STATEMENT)
 
 	node_c* saved = list->Save();
 
-	if (CL(SIMPLE_STATEMENT, false) == RC_PASS)
+	if (CL(SIMPLE_STATEMENT, false, NULL) == RC_PASS)
 	{// <simple_statement>
 		if (advance)
-			CL(SIMPLE_STATEMENT, true);
+			CL(SIMPLE_STATEMENT, true, NULL);
 		else
 			list->Restore(saved);
 		return RC_PASS;
 	}
 
-	if (CL(SELECTION_CLAUSE, false) == RC_PASS)
+	if (CL(SELECTION_CLAUSE, false, NULL) == RC_PASS)
 	{// <selection_clause>
-		CL(SELECTION_CLAUSE, true);
+		CL(SELECTION_CLAUSE, true, NULL);
 
-		if (CL(CLOSED_STATEMENT, false) == RC_PASS)
+		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
 		{// <closed_statement>
-			CL(CLOSED_STATEMENT, true);
+			CL(CLOSED_STATEMENT, true, NULL);
 			if (GETCP(CODE_ELSE))
 			{// else
 				list->Pop(NULL);
-				if (CL(CLOSED_STATEMENT, false) == RC_PASS)
+				if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
 				{// <closed_statement>
 					if (advance)
-						CL(CLOSED_STATEMENT, true);
+						CL(CLOSED_STATEMENT, true, NULL);
 					else
 						list->Restore(saved);
 					return RC_PASS;
@@ -717,14 +731,14 @@ GF_DEF(CLOSED_STATEMENT)
 		return RC_FAIL;
 	}
 #if !PARANOID_TEST
-	if (CL(WHILE_CLAUSE, false) == RC_PASS)
+	if (CL(WHILE_CLAUSE, false, NULL) == RC_PASS)
 	{// <while_clause>
-		CL(WHILE_CLAUSE, true);
-		if (CL(CLOSED_STATEMENT, false) == RC_PASS)
+		CL(WHILE_CLAUSE, true, NULL);
+		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
 		{
 			if (advance)
 			{
-				CL(CLOSED_STATEMENT, true);
+				CL(CLOSED_STATEMENT, true, NULL);
 				delete saved;
 			}
 			else
@@ -733,14 +747,14 @@ GF_DEF(CLOSED_STATEMENT)
 		}
 	}
 
-	if (CL(FOR_CLAUSE, false) == RC_PASS)
+	if (CL(FOR_CLAUSE, false, NULL) == RC_PASS)
 	{// <for_clause>
-		CL(FOR_CLAUSE, true);
-		if (CL(CLOSED_STATEMENT, false) == RC_PASS)
+		CL(FOR_CLAUSE, true, NULL);
+		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
 		{
 			if (advance)
 			{
-				CL(CLOSED_STATEMENT, true);
+				CL(CLOSED_STATEMENT, true, NULL);
 				delete saved;
 			}
 			else
@@ -761,9 +775,9 @@ GF_DEF(SIMPLE_STATEMENT)
 	if (GETCP(CODE_REPEAT))
 	{// repeat
 		list->Pop(NULL);
-		if (CL(STATEMENT, false) == RC_PASS)
+		if (CL(STATEMENT, false, NULL) == RC_PASS)
 		{// <statement>
-			CL(STATEMENT, true);
+			CL(STATEMENT, true, NULL);
 
 			if (GETCP(CODE_UNTIL))
 			{// until
@@ -773,9 +787,9 @@ GF_DEF(SIMPLE_STATEMENT)
 				{// (
 					list->Pop(NULL);
 
-					if (CL(EXPRESSION, false) == RC_PASS)
+					if (CL(EXPRESSION, false, NULL) == RC_PASS)
 					{// <expression>
-						CL(EXPRESSION, true);
+						CL(EXPRESSION, true, NULL);
 
 						if (GETCP(CODE_RPAREN))
 						{// )
@@ -800,10 +814,10 @@ GF_DEF(SIMPLE_STATEMENT)
 		saved = list->Save();
 	}
 
-	if (CL(INSTR_STATEMENT, false) == RC_PASS)
+	if (CL(INSTR_STATEMENT, false, NULL) == RC_PASS)
 	{
 		if (advance)
-			CL(INSTR_STATEMENT, true);
+			CL(INSTR_STATEMENT, true, NULL);
 		else
 			list->Restore(saved);
 
@@ -817,10 +831,10 @@ GF_DEF(INSTR_STATEMENT)
 {//{ <instr_add> | <instr_ld> | <instr_jp> };
 	node_c* saved = list->Save();
 	//!!!MEMLEAK
-	if (CL(INSTRUCTION_ADD, false) == RC_PASS)
+	if (CL(INSTRUCTION_ADD, false, NULL) == RC_PASS)
 	{// <instr_add>
 		//if (advance)
-		CL(INSTRUCTION_ADD, true);
+		CL(INSTRUCTION_ADD, true, NULL);
 
 		if (!GETCP(CODE_SEMICOLON))
 		{
@@ -852,9 +866,9 @@ GF_DEF(SELECTION_CLAUSE)
 		{// (
 			list->Pop(NULL);
 
-			if (CL(EXPRESSION, false) == RC_PASS)
+			if (CL(EXPRESSION, false, NULL) == RC_PASS)
 			{// <expression>
-				CL(EXPRESSION, true);
+				CL(EXPRESSION, true, NULL);
 
 				if (GETCP(CODE_RPAREN))
 				{// )
@@ -897,12 +911,12 @@ parse_c::rcode_t parse_c::INSTRUCTION_ADD(GF_ARGS)
 	}
 	list->Pop(NULL);
 
-	if (CL(IDENTIFIER, false) == RC_FAIL)
+	if (CL(IDENTIFIER, false, NULL) == RC_FAIL)
 	{// <identifier>
 		list->Restore(saved);
 		return RC_FAIL;
 	}
-	CL(IDENTIFIER, true);
+	CL(IDENTIFIER, true, NULL);
 
 	if (!GETCP(CODE_COMMA))
 	{// ,
@@ -911,17 +925,17 @@ parse_c::rcode_t parse_c::INSTRUCTION_ADD(GF_ARGS)
 	}
 	list->Pop(NULL);
 
-	if (CL(RVALUE, false) == RC_FAIL)
+	if (CL(RVALUE, false, NULL) == RC_FAIL)
 	{// <rvalue>
 		list->Restore(saved);
 		return RC_FAIL;
 	}
-	CL(RVALUE, true);
+	CL(RVALUE, true, NULL);
 
 
-	if (CL(RVALUE_LIST, false) == RC_PASS)
+	if (CL(RVALUE_LIST, false, NULL) == RC_PASS)
 	{// <rvalue_list>
-		CL(RVALUE_LIST, true);
+		CL(RVALUE_LIST, true, NULL);
 	}
 
 	if (advance)
@@ -952,10 +966,10 @@ parse_c::rcode_t parse_c::RVALUE(GF_ARGS)
 {// <identifier> | <number>
 	//NOT DONE. Subject to possible name change
 
-	if (CL(IDENTIFIER, false) == RC_PASS)
+	if (CL(IDENTIFIER, false, NULL) == RC_PASS)
 	{
 		if (advance)
-			CL(IDENTIFIER, true);
+			CL(IDENTIFIER, true, NULL);
 		return RC_PASS;
 	}
 
@@ -982,12 +996,12 @@ GF_DEF(RVALUE_LIST)
 			break;
 		list->Pop(saved_comma); //could just set saved_comma manually but this is easier
 
-		if (CL(RVALUE, false) == RC_FAIL)
+		if (CL(RVALUE, false, NULL) == RC_FAIL)
 		{//comma without following rval
 			list->Restore(saved);
 			return RC_FAIL;
 		}
-		CL(RVALUE, true);
+		CL(RVALUE, true, NULL);
 	}
 
 	return RC_FAIL;
@@ -1021,10 +1035,10 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 		printf(" ADV");
 	printf("\n");
 
-	rc = (this->*func)(advance);
+	rc = (this->*func)(advance, subroot);
 
-	tabstr[tabs--] = '\0';
-	tabstr[tabs--] = '\0';
+	tabstr[--tabs] = '\0';
+	tabstr[--tabs] = '\0';
 
 	return rc;
 }

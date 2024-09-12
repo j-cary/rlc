@@ -11,6 +11,8 @@ preprocessor_c preproc;
 
 //TODO:
 //preprocessing
+//Reconfigure the 'CL' Macro, start passing tree nodes. Actually read the book first, this might be the wrong thing to do.
+//check some of the logic in grammar functions that were implemented early
 
 int main()
 {
@@ -62,7 +64,6 @@ void Warning(const char* msg, ...)
 	HANDLE cons;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	va_list args;
-	char buf[512];
 
 	cons = GetStdHandle(STD_OUTPUT_HANDLE);
 	GetConsoleScreenBufferInfo(cons, &csbi);
@@ -81,7 +82,6 @@ void Error(const char* msg, ...)
 	HANDLE cons;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	va_list args;
-	char buf[512];
 
 	cons = GetStdHandle(STD_OUTPUT_HANDLE);
 	GetConsoleScreenBufferInfo(cons, &csbi);

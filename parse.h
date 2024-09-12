@@ -7,10 +7,9 @@ enum RETURNCODES
 	RC_NULL	= 0, RC_PASS, RC_FAIL, RC_WARNING
 };
 
-#define GF_ARGS	bool advance
+#define GF_ARGS	bool advance, tnode_c* subroot
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
 #define GF_DEF(x)	parse_c::rcode_t parse_c::x(GF_ARGS)
-#define DEPTH_MAX	128 //FIXME!!! this needs to be dynamic. Used for the tab string
 #define DBG_STR_MAX	32
 
 class parse_c
@@ -131,6 +130,7 @@ private:
 	//
 
 	llist_c* list;
+	tnode_c root;
 
 	char tabstr[DEPTH_MAX * 2] = {};
 	int tabs = 0;
@@ -182,4 +182,9 @@ private:
 
 public:
 	void Parse(llist_c* _list);
+	parse_c()
+	{
+		list = NULL;
+		root.tnode_c::tnode_c();
+	}
 };

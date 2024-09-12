@@ -298,16 +298,23 @@ kv_c& kv_c::operator=(const kv_t& kv)
 
 kv_c& kv_c::Copy(const kv_c* src)
 {
-	int cnt;
-	int thiscnt;
-
 	if (this == src || !src)
 		return *this; //fixme: return src?
 
 	if (!*(src->k)) //don't bother with null keyvalues
 		return *this;
 
-	for (cnt = 0; src->k[cnt]; cnt++) {}
+	Set(src->k, src->v);
+
+	return *this;
+}
+
+void kv_c::Set(const char* _k, int _v)
+{
+	int cnt;
+	int thiscnt;
+
+	for (cnt = 0; _k[cnt]; cnt++) {}
 	cnt++;
 
 	if (!k)
@@ -332,8 +339,6 @@ kv_c& kv_c::Copy(const kv_c* src)
 		}
 	}
 
-	strcpy_s(k, cnt, src->k);
-	v = src->v;
-
-	return *this;
+	strcpy_s(k, cnt, _k);
+	v = _v;
 }

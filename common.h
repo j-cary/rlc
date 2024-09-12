@@ -8,6 +8,9 @@
 #define TEXT_MAX_LEN	64
 #define LINES_MAX_CNT	1024
 
+#define DEPTH_MAX	128 //FIXME!!! this needs to be dynamic. Used for the tab string
+
+
 enum CODES
 {
 	CODE_NONE = 0, 
@@ -35,7 +38,7 @@ enum CODES
 
 
 	//NON-TERMINALS
-	NT_STATEMENT
+	NT_UNIT, NT_EXTERNAL_DECL, NT_FUNC_DEF, 
 };
 
 typedef struct kv_s
@@ -67,11 +70,26 @@ public:
 	inline const kv_c* KV() { return this; };
 
 	kv_c& Copy(const kv_c* src);
+	void Set(const char* _k, int _v);
 
 	kv_c()
 	{
 		k = NULL;
 		v = CODE_NONE;
+	}
+
+	kv_c(const char* _k, int _v)
+	{
+		int cnt;
+
+		for (cnt = 0; _k[cnt]; cnt++) {}
+		cnt++;
+
+		k = new char[cnt];
+		memset(k, 0, cnt * sizeof(char)); //to make sure strcpy works
+
+		strcpy_s(k, cnt, _k);
+		v = _v;
 	}
 
 	~kv_c()
@@ -197,17 +215,39 @@ private:
 	bool leaf;
 	kv_c kv;
 	std::vector<tnode_c*> children;
+
+	void R_Disp();
+	tnode_c* _InsL(tnode_c* t);
+	tnode_c* _InsR(tnode_c* t);
 public:
 
-	void InsR(kv_t _kv);
-	void InsL(kv_t _kv);
-	void Ins(kv_t _kv, int idx);
+	//need to have copies of these for a kv_c* and a const char/int pair
+	tnode_c* InsR(kv_c* _kv);
+	tnode_c* InsR(const char* str, int code);
+	tnode_c* InsR(kv_t _kv);
+	tnode_c* InsL(kv_c* _kv);
+	tnode_c* InsL(const char* str, int code);
+	tnode_c* InsL(kv_t _kv);
+	void Ins(kv_t _kv, int idx); //needs work. Currently will only add a child if the list is not empty
 
+	tnode_c* Save(); //make copy of current sub-tree
+	void Restore(tnode_c* saved);
+
+	void Delete(); //Delete this sub-tree, including the root
+	void Clear(); //Delete this sub-tree, minus the root
+
+	//Getting children
 	tnode_c* GetL();
 	tnode_c* GetR();
-	tnode_c* Get(int idx);
+	tnode_c* Get(int idx); //rename this
 
+	void Set(const kv_c* _kv) { kv.Copy(_kv); }
+	void Set(const char* str, int code) { kv.Set(str, code); }
+	const kv_c* GetMine()		{	return &kv;	}//rename this
+	 
 	bool IsLeaf() { return leaf; }
+
+	void Disp();
 
 	tnode_c()
 	{
@@ -221,31 +261,16 @@ public:
 	}
 	~tnode_c()
 	{
-		kv.kv_c::~kv_c();
+		kv.~kv_c();
 
 		if (leaf) //this should also be caught in the condition below
 			return;
 
-		for (int i = 0, cnt = children.size(); i < cnt; i++)
-		{
-			//printf("Deleting %s %i\n", children[i]->kv.K(), children[i]->kv.V());
-			delete children[i];
-		}
+		for (std::vector<tnode_c*>::iterator it = children.begin(); it != this->children.end(); it++)
+			delete* it; 
+
+		children.clear();//Hopefully clear the list...
 	}
-};
-
-class tree_c
-{
-private:
-	tnode_c* head;
-public:
-	void InsertLNode();
-	void InsertRNode();
-	void InsertNode();
-
-	void DispInorder();
-
-	~tree_c();
 };
 
 void Warning(const char* msg, ...);
