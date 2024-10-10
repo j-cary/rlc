@@ -162,7 +162,7 @@ node_c* llist_c::Offset(int ofs)
 	return curs;
 }
 
-void llist_c::Clear()
+void llist_c::KillAllChildren()
 {
 	while (head)
 		RemoveHead();

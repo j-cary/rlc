@@ -20,7 +20,7 @@ enum CODES
 	CODE_EQUALS, CODE_PLUS, CODE_MINUS, CODE_STAR, CODE_FSLASH, //arithmetic
 
 	//words
-	CODE_START, CODE_INLINE, CODE_FUNC, CODE_ANS,
+	CODE_START, CODE_INLINE, CODE_SUBR, CODE_ANS,
 	CODE_BYTE, CODE_WORD, CODE_PTR, CODE_ARRAY, CODE_STRUCT, CODE_TYPE,
 	CODE_STACK, CODE_HEAP,
 	CODE_REPEAT, CODE_UNTIL, CODE_WHILE, CODE_FOR,
@@ -38,7 +38,19 @@ enum CODES
 
 
 	//NON-TERMINALS
-	NT_UNIT, NT_EXTERNAL_DECL, NT_FUNC_DEF, 
+	NT_UNIT, NT_EXTERNAL_DECL, NT_FUNC_DEF, NT_FUNC_DECL,
+	NT_DECL_SPEC, NT_STORAGE_SPEC, NT_TYPE_SPEC,
+	NT_DATA_DECL,
+
+	//data
+	NT_DATA_TYPE,
+
+	//misc
+	NT_PARAMETER, NT_PARAMETER_LIST,
+	NT_IDENT,
+
+	NT_COMPOUND_STMT, NT_STMT, NT_OPEN_STMT, NT_CLOSED_STMT, NT_SIMPLE_STMT,
+
 };
 
 typedef struct kv_s
@@ -161,7 +173,7 @@ public:
 	node_c* Search(const char* key);
 	node_c* Offset(int ofs);
 
-	void Clear();
+	void KillAllChildren();
 
 	//For parsing
 	const kv_c* Peek();
@@ -182,7 +194,7 @@ public:
 	}
 	~llist_c()
 	{
-		Clear();
+		KillAllChildren();
 	}
 
 #if 0
@@ -234,8 +246,8 @@ public:
 	void Restore(tnode_c* saved);
 
 	void Delete(); //Delete this sub-tree, including the root
-	void Clear(); //Delete this sub-tree, minus the root
-	void Remove(tnode_c* _root); //Delete a single node
+	void KillAllChildren(); //Delete this sub-tree, minus the root
+	bool KillChild(tnode_c* removee); //Delete a single node. Must be called from an ancestor node
 
 	//Getting children
 	tnode_c* GetL();
@@ -263,7 +275,7 @@ public:
 	~tnode_c()
 	{
 		kv.~kv_c();
-		Clear();
+		KillAllChildren();
 	}
 };
 

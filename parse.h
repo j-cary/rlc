@@ -7,10 +7,13 @@ enum RETURNCODES
 	RC_NULL	= 0, RC_PASS, RC_FAIL, RC_WARNING
 };
 
-#define GF_ARGS	bool advance, tnode_c* subroot
+#define GF_ARGS	bool advance, tnode_c* parent
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
 #define GF_DEF(x)	parse_c::rcode_t parse_c::x(GF_ARGS)
+#define FS_ENTRY(func, string)	&parse_c::func,string
 #define DBG_STR_MAX	32
+
+#define NEW	1
 
 class parse_c
 {
@@ -25,6 +28,31 @@ private:
 
 	//Grammar functions
 
+#if NEW
+	//
+	//Main program control
+	//
+	GF_DECL(TRANSLATION_UNIT);
+	GF_DECL(EXTERNAL_DECL);
+
+	GF_DECL(FUNC);
+	GF_DECL(DATA_DECL);
+
+	//
+	//Data types
+	//
+	GF_DECL(DATA_TYPE);
+
+	//
+	//Misc
+	//
+
+	GF_DECL(PARAMETER);
+	GF_DECL(PARAMETER_LIST);
+
+	GF_DECL(IDENTIFIER);
+
+#else
 	rcode_t UNIT(GF_ARGS);
 	rcode_t EXTERNAL_DECLARATION(GF_ARGS);
 	rcode_t FUNCTION_DEFINITION(GF_ARGS);
@@ -125,7 +153,7 @@ private:
 	rcode_t IDENTIFIER(GF_ARGS);
 	GF_DECL(RVALUE);
 	GF_DECL(RVALUE_LIST);
-
+#endif
 	rcode_t Call(gfunc_t func, GF_ARGS);
 	//
 
@@ -137,7 +165,26 @@ private:
 
 	fstrans_t fs[26] =
 	{
+#if NEW
+		//main prog
+		FS_ENTRY(TRANSLATION_UNIT, "Translation unit"),
+		FS_ENTRY(EXTERNAL_DECL, "External declaration"),
 
+		FS_ENTRY(FUNC, "Function"),
+		FS_ENTRY(DATA_DECL, "Data declaration"),
+
+		//data
+		FS_ENTRY(DATA_TYPE, "Data"),
+
+		//misc
+
+		FS_ENTRY(PARAMETER, "Parameter"),
+		FS_ENTRY(PARAMETER_LIST, "Parameter list"),
+
+		FS_ENTRY(IDENTIFIER, "Ident"),
+
+
+#else
 		& parse_c::UNIT,					"Unit",
 		& parse_c::EXTERNAL_DECLARATION,	"External decl",
 		& parse_c::FUNCTION_DEFINITION,		"Function def",
@@ -177,7 +224,7 @@ private:
 		& parse_c::IDENTIFIER,				"Identifier",
 		& parse_c::RVALUE,					"R-value",
 		& parse_c::RVALUE_LIST,				"R-value list",
-
+#endif
 	};
 
 public:

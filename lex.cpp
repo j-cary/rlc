@@ -32,7 +32,7 @@ kv_t reservedwords[] =
 {
 	"start",	CODE_START,
 	"inline",	CODE_INLINE,
-	"func",		CODE_FUNC,
+	"subr",		CODE_SUBR,
 	"ans",		CODE_ANS,
 
 	"byte",		CODE_BYTE,

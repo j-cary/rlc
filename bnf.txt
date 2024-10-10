@@ -22,6 +22,104 @@ Reserved chars:
 # . , " ' ;
 = + - * / ^
 
+
+new bnf:
+//
+//	MAIN PROG CONTROL
+//
+
+<translation_unit> ::= <external_decl>*
+<external_decl> ::= <function_decl> | <function_def> | <data_decl> | <type_decl>
+
+<function_def> ::= 'subr' <identifier> '(' <parameter_list>+ ')' ';'
+<function_decl> ::= 'subr' <identifier> '(' <parameter_list>+ ')' <compound_statement>
+<data_decl> ::= <data_type> <identifier> '=' <initializer> ';' |
+				<data_type> <identifier> ';' |
+				<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
+				<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' }+ ';' 
+<type_decl> ::= 'type' '{' <data_decl>* '}' <identifier> ';'
+
+//
+//	DATA TYPES
+//
+
+<unitializeable_data_type> ::= label
+<data_type> ::= fxd | db | dw | ptr
+<array_data_type> ::= dba | dwa
+
+//
+//	STATEMENTS
+//
+
+<compound_statement> ::= '{' <statement>* '}'
+<statement> ::= <compound_statement> |
+				<data_decl> |
+
+
+//
+//	MISC
+//
+
+<initializer> ::= <assignment_expression>
+<initializer_list> ::= 
+
+<parameter> ::= <data_type> <identifier>			//labels and arrays CANNOT be passed to a function!
+<parameter_list> ::= <parameter> { ',' <parameter> }*
+
+<identifier> ::= 
+<constant> ::= 
+
+
+//
+//	EXPRESSIONS - some of these need to be dropped!
+//
+
+<constant_expression> ::= <conditional_expression>
+<conditional_expression> ::= <logical_or_expression>
+<logical_or_expression> ::= <logical_and_expression> | <logical_or_expression> || <logical_and_expression>
+<logical_and_expression> ::= <inclusive_or_expression> | <logical_and_expression> && <inclusive_or_expression>
+<or_expression> ::= <xor_expression> | <or_expression> '|' <xor_expression>
+<xor_expression> ::= <and_expression> | <xor_expression> ^ <and_expression>
+<and_expression> ::= <equality_expression> | <and_expression> & <equality_expression> 
+<equality_expression> ::= <relational_expression>
+                        | <equality_expression> == <relational_expression>
+                        | <equality_expression> != <relational_expression>
+<relational_expression> ::= <shift_expression>
+                          | <relational_expression> < <shift_expression>
+                          | <relational_expression> > <shift_expression>
+                          | <relational_expression> <= <shift_expression>
+                          | <relational_expression> >= <shift_expression>
+<shift_expression> ::= <additive-expression>
+                     | <shift_expression> << <additive_expression>
+                     | <shift_expression> >> <additive_expression>
+<additive_expression> ::= <multiplicative_expression>
+                        | <additive_expression> + <multiplicative_expression>
+                        | <additive_expression> - <multiplicative_expression>
+
+<multiplicative_expression> ::= <cast-expression>
+                              | <multiplicative_expression> * <cast_expression>
+                              | <multiplicative_expression> / <cast_expression>
+                              | <multiplicative_expression> % <cast_expression>
+<unary_expression> ::= <postfix_expression> | sizeof <unary_expression> | sizeof <type_name>
+<postfix_expression> ::= <primary_expression> | <postfix_expression> . <identifier> | <postfix_expression> .. <identifier>
+<primary_expression> ::= <identifier> | <constant> | <string> | ( <expression> )
+<expression> ::= <assignment_expression> | <expression> , <assignment_expression>
+<assignment_expression> ::= <conditional_expression> | <unary_expression> <assignment_operator> <assignment_expression>
+
+
+
+
+
+
+
+
+
+
+
+
+
+old bnf:
+
 <unit> ::= { <external_declaration> }*
 <external_declaration> ::= <function_definition> | <declaration>
 //<function_definition> ::= { <declaration_specifier> }* <declarator> { <declaration> }* <compound_statement>

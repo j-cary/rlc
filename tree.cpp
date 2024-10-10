@@ -113,7 +113,7 @@ void tnode_c::Delete()
 	//call clear and then remove
 }
 
-void tnode_c::Clear()
+void tnode_c::KillAllChildren()
 {//clear out the list below, but not including, the root
 	if (leaf) //this should also be caught in the condition below
 		return;
@@ -124,11 +124,27 @@ void tnode_c::Clear()
 	children.clear();//Hopefully clear the list...
 }
 
-void tnode_c::Remove(tnode_c* _root)
+bool tnode_c::KillChild(tnode_c* removee)
 {
+	//recursively look through all the child nodes, delete removee
+	std::vector<tnode_c*>::iterator it = children.begin();
 
-	//somehow have to navigate to this node from the root itself.
-	//Keep track of the parent of this node so the removed node can be removed from its' parent's child list
+	if (this == removee)
+	{
+		delete this;
+		return true;
+	}
+
+	for (; it != this->children.end(); it++)
+	{
+		if ((*it)->KillChild(removee))
+		{//deleted it
+			children.erase(it);
+			return false;
+		}
+	}
+
+	return false;
 }
 
 char g_tabstr[DEPTH_MAX * 2];

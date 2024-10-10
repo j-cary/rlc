@@ -11,8 +11,9 @@ preprocessor_c preproc;
 
 //TODO:
 //preprocessing
-//Reconfigure the 'CL' Macro, start passing tree nodes. Actually read the book first, this might be the wrong thing to do.
-//check some of the logic in grammar functions that were implemented early
+
+//FIXME:
+//can't use an underscore for whatever reason
 
 int main()
 {
