@@ -37,11 +37,22 @@ private:
 
 	GF_DECL(FUNC);
 	GF_DECL(DATA_DECL);
+	GF_DECL(SINGLE_DATA_DECL);
 
 	//
 	//Data types
 	//
 	GF_DECL(DATA_TYPE);
+
+	//
+	//Statements
+	//
+	GF_DECL(COMPOUND_STATEMENT);
+	GF_DECL(STATEMENT);
+	GF_DECL(OPEN_STATEMENT);
+	GF_DECL(CLOSED_STATEMENT);
+	GF_DECL(SIMPLE_STATEMENT);
+	GF_DECL(SELECTION_CLAUSE);
 
 	//
 	//Misc
@@ -172,9 +183,18 @@ private:
 
 		FS_ENTRY(FUNC, "Function"),
 		FS_ENTRY(DATA_DECL, "Data declaration"),
+		FS_ENTRY(SINGLE_DATA_DECL, "Single data declaration"),
 
 		//data
 		FS_ENTRY(DATA_TYPE, "Data"),
+
+		//statements
+		FS_ENTRY(COMPOUND_STATEMENT, "Compound statement"),
+		FS_ENTRY(STATEMENT, "Statement"),
+		FS_ENTRY(OPEN_STATEMENT, "Open statement"),
+		FS_ENTRY(CLOSED_STATEMENT, "Closed statement"),
+		FS_ENTRY(SIMPLE_STATEMENT, "Simple statement"),
+		FS_ENTRY(SELECTION_CLAUSE, "Selection Clause"),
 
 		//misc
 

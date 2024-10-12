@@ -11,8 +11,6 @@
 //				A function should pass a newly inserted node related to itself for sub-functions.
 //				Upon failure, a function will kill its associated node (and all its children). This is done from the passed parent node
 
-//adding tree stuff to statements is up next. The remove at the end of the statment func is acting a little strange... hopefully it will just work itself out when fixing the lower level funcs
-
 void parse_c::Parse(llist_c* _list)
 {
 	list = _list;
@@ -39,9 +37,9 @@ void parse_c::Parse(llist_c* _list)
 
 #if NEW
 
-//
+//============================================================================
 //Main prog control
-//
+//============================================================================
 
 GF_DEF(TRANSLATION_UNIT)
 {
@@ -121,8 +119,13 @@ GF_DEF(FUNC)
 
 						return true;
 					}
-					//else if CL(COMPOUND_STATEMENT, false, NULL)
+					else if CL(COMPOUND_STATEMENT, false, NULL)
 					{//function def
+						if (advance)
+							CL(COMPOUND_STATEMENT, true, self);
+						else
+							list->Restore(saved);
+						return true;
 					}
 				}
 			}
@@ -137,33 +140,49 @@ GF_DEF(FUNC)
 }
 
 GF_DEF(DATA_DECL)
-{//<data_type> <identifier> '=' <initializer> ';' |
-//<data_type> <identifier> ';' |
+{//<data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
 //<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
 //<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' } + ';'
 	node_c* saved = list->Save();
+	node_c* comma_saved;
 	tnode_c* self = NULL;
 	kv_c kv;
 
 	if (CL(DATA_TYPE, false, NULL))
-	{
-		if(parent)
+	{//<data_type>
+		if (parent)
 			self = parent->InsR("Data declaration", NT_DATA_DECL);
-		CL(DATA_TYPE, true, self); // <data_type>
+		CL(DATA_TYPE, true, self);
 
-		if (CL(IDENTIFIER, false, NULL))
-		{
-			CL(IDENTIFIER, true, self); // <identifier>
+		if (CL(SINGLE_DATA_DECL, false, NULL))
+		{// <single_data_decl>
+			CL(SINGLE_DATA_DECL, true, self);
 
-			if (GETCP(CODE_EQUALS))
-			{
+			while (1)
+			{//{ ',' <single_data_decl> }*
+				if (!GETCP(CODE_COMMA))
+					break;
+				comma_saved = list->Save();
+				list->Pop(&kv);
 
+				if (CL(SINGLE_DATA_DECL, false, NULL))
+				{
+					if(parent)
+						self->InsR(&kv);
+					CL(SINGLE_DATA_DECL, true, self);
+				}
+				else
+				{//replace that comma here
+					list->Restore(comma_saved);
+					break;
+				}
 			}
-			else if (GETCP(CODE_SEMICOLON))
+
+			if (GETCP(CODE_SEMICOLON))
 			{
 				if (advance)
 				{
-					list->Pop(&kv); // ';'
+					list->Pop(&kv);
 					self->InsR(&kv);
 				}
 				else
@@ -173,7 +192,7 @@ GF_DEF(DATA_DECL)
 		}
 
 		list->Restore(saved);
-		if(parent)
+		if (parent)
 			parent->KillChild(self);
 	}
 	//else if (CL(ARRAY_DATA_TYPE, false, NULL))
@@ -181,9 +200,35 @@ GF_DEF(DATA_DECL)
 	return  false;
 }
 
-//
+GF_DEF(SINGLE_DATA_DECL)
+{//<identifier> { '=' <initializer> }+
+	node_c* saved = list->Save();
+	tnode_c* self = NULL;
+	kv_c kv;
+
+	if (CL(IDENTIFIER, false, NULL))
+	{// <identifier>
+		if (parent)
+			self = parent->InsR("Single data declaration", NT_SINGLE_DATA_DECL);
+		CL(IDENTIFIER, true, self);
+
+		//if (GETCP(CODE_EQUALS))
+		{// '='
+
+		}
+
+		if (!advance)
+			list->Restore(saved);
+		
+		return true;
+	}
+
+	return false;
+}
+
+//============================================================================
 //Data
-//
+//============================================================================
 
 GF_DEF(DATA_TYPE)
 {
@@ -203,9 +248,131 @@ GF_DEF(DATA_TYPE)
 	return false;
 }
 
-//
+//============================================================================
+//Statements
+//============================================================================
+
+GF_DEF(COMPOUND_STATEMENT)
+{//'{' <statement>* '}'
+	node_c* saved = list->Save();
+	tnode_c* self = NULL;
+	kv_c kv;
+
+	if (GETCP(CODE_LBRACKET))
+	{// '{'
+		list->Pop(&kv);
+		if (parent)
+		{
+			self = parent->InsR("Compound statement", NT_COMPOUND_STMT);
+			self->InsR(&kv);
+		}
+
+		//if (CL(STATEMENT, false, NULL))
+		{
+			//CL(STATEMENT, true, self);
+			if (GETCP(CODE_RBRACKET))
+			{
+				list->Pop(&kv);
+				if (parent)
+					self->InsR(&kv);
+				if (!advance)
+					list->Restore(saved);
+
+				return true;
+			}
+		}
+		list->Restore(saved);
+		if (parent)
+			parent->KillChild(self);
+	}
+
+	return false;
+}
+
+GF_DEF(STATEMENT)
+{
+	return false;
+}
+
+GF_DEF(OPEN_STATEMENT)
+{//<selection_clause> <statement>								|
+//<selection_clause> <closed_statement> else <open_statement>	|
+//<while_clause> <open_statement>								|
+//<for_clause> <open_statement>
+	
+
+	return false;
+}
+
+GF_DEF(CLOSED_STATEMENT)
+{//<simple_statement>											|
+//<selection_clause> <closed_statement> else <closed_statement> |
+//<while_clause> <closed_statement>								|
+//<for_clause> <closed_statement>
+
+	return false;
+}
+
+GF_DEF(SIMPLE_STATEMENT)
+{//repeat <statement> until ( <expression> ) ;	|
+//<instr_statement> |
+//	<data_decl>		|
+//{ <simple_statement>* } ? ? ? ? ? ? ? ?
+
+	return false;
+}
+
+GF_DEF(SELECTION_CLAUSE)
+{//'if' ( <expression> )
+	node_c* saved = list->Save();
+	tnode_c* self = NULL;
+	kv_c kv;
+
+	if (GETCP(CODE_IF))
+	{// 'if'
+		list->Pop(&kv);
+		if (parent)
+		{
+			self = parent->InsR("Selection clause", NT_SELECTION_CLAUSE);
+			self->InsR(&kv);
+		}
+
+		if (GETCP(CODE_LPAREN))
+		{// '('
+			list->Pop(&kv);
+			if (parent)
+				self->InsR(&kv);
+
+			//if (CL(EXPRESSION, false, NULL))
+			{//<expression>
+				//CL(EXPRESSION, true, self);
+
+				if (GETCP(CODE_RPAREN))
+				{// ')'
+					list->Pop(&kv);
+					if (parent)
+						self->InsR(&kv);
+					if (!advance)
+						list->Restore(saved);
+
+					return true;
+				}
+			}
+		}
+
+		list->Restore(saved);
+		if (parent)
+			parent->KillChild(self);
+	}
+
+	return false;
+}
+
+
+
+//============================================================================
 //Misc
-//
+//============================================================================
 
 GF_DEF(PARAMETER)
 { // <data_type> <identifier>
@@ -256,7 +423,11 @@ GF_DEF(PARAMETER_LIST)
 			list->Pop(&kv);
 
 			if (CL(PARAMETER, false, NULL))
+			{
+				if(parent)
+					self->InsR(&kv);
 				CL(PARAMETER, true, self);
+			}
 			else
 			{//replace that comma here
 				list->Restore(comma_saved);
@@ -1244,6 +1415,9 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 {
 	rcode_t rc;
 	char funcname[DBG_STR_MAX] = "Unknown";
+
+	if (!advance && parent)
+		exit(124);
 
 	if (tabs > (DEPTH_MAX * 2) - 2)
 		exit(123);

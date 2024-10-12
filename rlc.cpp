@@ -12,8 +12,6 @@ preprocessor_c preproc;
 //TODO:
 //preprocessing
 
-//FIXME:
-//can't use an underscore for whatever reason
 
 int main()
 {

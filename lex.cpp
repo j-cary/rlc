@@ -266,7 +266,7 @@ void lex_c::AddLexeme(char* lexeme)
 	{
 		for (int i = 1; lexeme[i]; i++)
 		{
-			if (!isdigit(lexeme[i]) && !isalpha(lexeme[i]))
+			if (!isdigit(lexeme[i]) && !isalpha(lexeme[i]) && lexeme[i] != '_')
 				Error("Invalid text constant %s", lexeme);
 		}
 	}

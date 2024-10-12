@@ -22,7 +22,6 @@ Reserved chars:
 # . , " ' ;
 = + - * / ^
 
-
 new bnf:
 //
 //	MAIN PROG CONTROL
@@ -33,17 +32,19 @@ new bnf:
 
 <function_def> ::= 'subr' <identifier> '(' <parameter_list>+ ')' ';'
 <function_decl> ::= 'subr' <identifier> '(' <parameter_list>+ ')' <compound_statement>
-<data_decl> ::= <data_type> <identifier> '=' <initializer> ';' |
-				<data_type> <identifier> ';' |
+
+<data_decl> ::= <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
 				<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
 				<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' }+ ';' 
+<single_data_decl> ::= <identifier> { '=' <initializer> }+
+
 <type_decl> ::= 'type' '{' <data_decl>* '}' <identifier> ';'
 
 //
 //	DATA TYPES
 //
 
-<unitializeable_data_type> ::= label
+<unitializeable_data_type> ::= lbl
 <data_type> ::= fxd | db | dw | ptr
 <array_data_type> ::= dba | dwa
 
@@ -52,8 +53,24 @@ new bnf:
 //
 
 <compound_statement> ::= '{' <statement>* '}'
-<statement> ::= <compound_statement> |
-				<data_decl> |
+
+<statement> ::= <open_statement> | <closed_statement>
+//at least one if not paired with an else
+<open_statement> ::= <selection_clause> <statement>									|
+						<selection_clause> <closed_statement> else <open_statement> |
+						<while_clause> <open_statement>								|
+						<for_clause> <open_statement>
+//either no if or an if paired with an else
+<closed_statement> ::= <simple_statement>												|
+						<selection_clause> <closed_statement> else <closed_statement>	|
+						<while_clause> <closed_statement>								|
+						<for_clause> <closed_statement>
+//Does NOT end with a statement/selection_statement
+<simple_statement> ::= repeat <statement> until ( <expression> ) ;	|
+						<instr_statement>							|
+						<data_decl>									|
+						{ <simple_statement>* } ????????
+<selection_clause> ::= if ( <expression> )
 
 
 //
