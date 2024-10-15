@@ -36,7 +36,7 @@ new bnf:
 <data_decl> ::= <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
 				<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
 				<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' }+ ';' 
-<single_data_decl> ::= <identifier> { '=' <initializer> }+
+<single_data_decl> ::= <identifier> { '=' <constant_expression> }+
 
 <type_decl> ::= 'type' '{' <data_decl>* '}' <identifier> ';'
 
@@ -57,28 +57,29 @@ new bnf:
 <statement> ::= <open_statement> | <closed_statement>
 //at least one if not paired with an else
 <open_statement> ::= <selection_clause> <statement>									|
-						<selection_clause> <closed_statement> else <open_statement> |
+						<selection_clause> <closed_statement> 'else' <open_statement> |
 						<while_clause> <open_statement>								|
 						<for_clause> <open_statement>
 //either no if or an if paired with an else
 <closed_statement> ::= <simple_statement>												|
-						<selection_clause> <closed_statement> else <closed_statement>	|
+						<selection_clause> <closed_statement> 'else' <closed_statement>	|
 						<while_clause> <closed_statement>								|
 						<for_clause> <closed_statement>
 //Does NOT end with a statement/selection_statement
-<simple_statement> ::= repeat <statement> until ( <expression> ) ;	|
-						<instr_statement>							|
-						<data_decl>									|
-						{ <simple_statement>* } ????????
-<selection_clause> ::= if ( <expression> )
+<simple_statement> ::= 'repeat' <compound_statement> 'until' '(' <expression> ')' ';'	|
+						<instr_statement>												|
+						<data_decl>														|	
+						<compound_statement>
+<selection_clause> ::= if '(' <expression> ')'
+<for_clause> ::= 'for' '(' <expression> '{' ';'  <expression>  ';' <instr_statement> { ',' <instr_statement> }* '}'? ')'
+<while_clause> ::= while '(' <expression> ')'
 
 
 //
 //	MISC
 //
 
-<initializer> ::= <assignment_expression>
-<initializer_list> ::= 
+<initializer_list> ::= <constant_expression> { ',' <constant_expression> }*
 
 <parameter> ::= <data_type> <identifier>			//labels and arrays CANNOT be passed to a function!
 <parameter_list> ::= <parameter> { ',' <parameter> }*
@@ -91,37 +92,62 @@ new bnf:
 //	EXPRESSIONS - some of these need to be dropped!
 //
 
-<constant_expression> ::= <conditional_expression>
+<constant_expression> ::= <logical_or_expression>
 <conditional_expression> ::= <logical_or_expression>
-<logical_or_expression> ::= <logical_and_expression> | <logical_or_expression> || <logical_and_expression>
-<logical_and_expression> ::= <inclusive_or_expression> | <logical_and_expression> && <inclusive_or_expression>
-<or_expression> ::= <xor_expression> | <or_expression> '|' <xor_expression>
-<xor_expression> ::= <and_expression> | <xor_expression> ^ <and_expression>
-<and_expression> ::= <equality_expression> | <and_expression> & <equality_expression> 
+
+<logical_or_expression> ::= <logical_and_expression> | 
+							<logical_or_expression> '||' <logical_and_expression>
+
+<logical_and_expression> ::=	<inclusive_or_expression> | 
+								<logical_and_expression> '&&' <inclusive_or_expression>
+
+<or_expression> ::= <xor_expression> | 
+					<or_expression> '|' <xor_expression>
+
+<xor_expression> ::=	<and_expression> | 
+						<xor_expression> '^' <and_expression>
+
+<and_expression> ::=	<equality_expression> | 
+						<and_expression> '&' <equality_expression> 
+
 <equality_expression> ::= <relational_expression>
-                        | <equality_expression> == <relational_expression>
-                        | <equality_expression> != <relational_expression>
+                        | <equality_expression> '==' <relational_expression>
+                        | <equality_expression> '!=' <relational_expression>
+
 <relational_expression> ::= <shift_expression>
-                          | <relational_expression> < <shift_expression>
-                          | <relational_expression> > <shift_expression>
-                          | <relational_expression> <= <shift_expression>
-                          | <relational_expression> >= <shift_expression>
+                          | <relational_expression> '<' <shift_expression>
+                          | <relational_expression> '>' <shift_expression>
+                          | <relational_expression> '<=' <shift_expression>
+                          | <relational_expression> '>=' <shift_expression>
+
 <shift_expression> ::= <additive-expression>
-                     | <shift_expression> << <additive_expression>
-                     | <shift_expression> >> <additive_expression>
+                     | <shift_expression> '<<' <additive_expression>
+                     | <shift_expression> '>>' <additive_expression>
+
 <additive_expression> ::= <multiplicative_expression>
-                        | <additive_expression> + <multiplicative_expression>
-                        | <additive_expression> - <multiplicative_expression>
+                        | <additive_expression> '+' <multiplicative_expression>
+                        | <additive_expression> '-' <multiplicative_expression>
 
 <multiplicative_expression> ::= <cast-expression>
-                              | <multiplicative_expression> * <cast_expression>
-                              | <multiplicative_expression> / <cast_expression>
-                              | <multiplicative_expression> % <cast_expression>
-<unary_expression> ::= <postfix_expression> | sizeof <unary_expression> | sizeof <type_name>
-<postfix_expression> ::= <primary_expression> | <postfix_expression> . <identifier> | <postfix_expression> .. <identifier>
-<primary_expression> ::= <identifier> | <constant> | <string> | ( <expression> )
-<expression> ::= <assignment_expression> | <expression> , <assignment_expression>
-<assignment_expression> ::= <conditional_expression> | <unary_expression> <assignment_operator> <assignment_expression>
+                              | <multiplicative_expression> '*' <cast_expression>
+                              | <multiplicative_expression> '/' <cast_expression>
+                              | <multiplicative_expression> '%' <cast_expression>
+
+<postfix_expression> ::=	<primary_expression> | 
+							<postfix_expression> . <identifier> | 
+							<postfix_expression> .. <identifier> |
+							'[' <expression> ']'
+
+<primary_expression> ::=	<identifier> | 
+							<constant> | 
+							<string> | 
+							'(' <expression> ')'
+
+<expression> ::=	<assignment_expression> | 
+					<expression> , <assignment_expression>
+
+<assignment_expression> ::= <conditional_expression> | 
+							<unary_expression> <assignment_operator> <assignment_expression>
 
 
 

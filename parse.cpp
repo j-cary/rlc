@@ -1,10 +1,5 @@
 #include "parse.h"
 
-#define PEEKCP(x)	(list->Peek()->V() == x)
-#define GETCP(x)	(list->Get()->V() == x)
-//#define CL(x, y)	(Call(&parse_c::x, y, NULL))
-#define CL(x,y,z)	(Call(&parse_c::x, y, z))
-
 //GUIDELINES:
 //The list should only really be incremented if the function succeeds AND advance is set. Otherwise, return it like it was
 //Tree stuff:	A function should only pass a node when advancing.
@@ -16,6 +11,7 @@ void parse_c::Parse(llist_c* _list)
 	list = _list;
 #if NEW
 
+	root.Set("Translation unit", NT_UNIT);
 	bool success = CL(TRANSLATION_UNIT, true, &root);
 
 	if (success)
@@ -43,7 +39,6 @@ void parse_c::Parse(llist_c* _list)
 
 GF_DEF(TRANSLATION_UNIT)
 {
-	parent->Set("Translation unit", NT_UNIT);
 	while (CL(EXTERNAL_DECL, false, NULL))	{ CL(EXTERNAL_DECL, true, parent); }
 
 	if (GETCP(CODE_NONE))
@@ -148,6 +143,7 @@ GF_DEF(DATA_DECL)
 	tnode_c* self = NULL;
 	kv_c kv;
 
+
 	if (CL(DATA_TYPE, false, NULL))
 	{//<data_type>
 		if (parent)
@@ -183,7 +179,8 @@ GF_DEF(DATA_DECL)
 				if (advance)
 				{
 					list->Pop(&kv);
-					self->InsR(&kv);
+					if(parent)
+						self->InsR(&kv);
 				}
 				else
 					list->Restore(saved);
@@ -195,13 +192,39 @@ GF_DEF(DATA_DECL)
 		if (parent)
 			parent->KillChild(self);
 	}
-	//else if (CL(ARRAY_DATA_TYPE, false, NULL))
+	else if (CL(ARRAY_DATA_TYPE, false, NULL))
+	{// <array_data_type>
+
+		return false; //TMPTMPTMP!!!
+
+		if (parent)
+			self = parent->InsR("Data declaration", NT_DATA_DECL);
+		CL(ARRAY_DATA_TYPE, true, self);
+
+		if (CL(IDENTIFIER, false, NULL))
+		{// <identifier>
+			CL(IDENTIFIER, true, self);
+
+			if (GETCP(CODE_EQUALS))
+			{// '='
+
+			}
+			else if (GETCP(CODE_LBRACKET))
+			{// '['
+
+			}
+		}
+
+		list->Restore(saved);
+		if (parent)
+			parent->KillChild(self);
+	}
 
 	return  false;
 }
 
 GF_DEF(SINGLE_DATA_DECL)
-{//<identifier> { '=' <initializer> }+
+{//<identifier> { '=' <constant_expression> }+
 	node_c* saved = list->Save();
 	tnode_c* self = NULL;
 	kv_c kv;
@@ -212,9 +235,26 @@ GF_DEF(SINGLE_DATA_DECL)
 			self = parent->InsR("Single data declaration", NT_SINGLE_DATA_DECL);
 		CL(IDENTIFIER, true, self);
 
-		//if (GETCP(CODE_EQUALS))
+		if (GETCP(CODE_EQUALS))
 		{// '='
+			list->Pop(&kv);
+			if (parent)
+				self->InsR(&kv);
+			if (CL(CONSTANT_EXPRESSION, false, NULL))
+			{// <constant_expression>
+				if (advance)
+					CL(CONSTANT_EXPRESSION, true, self);
+				else
+					list->Restore(saved);
 
+				return true;
+			}
+
+			list->Restore(saved);
+			if (parent)
+				parent->KillChild(self);
+
+			return false;
 		}
 
 		if (!advance)
@@ -225,151 +265,6 @@ GF_DEF(SINGLE_DATA_DECL)
 
 	return false;
 }
-
-//============================================================================
-//Data
-//============================================================================
-
-GF_DEF(DATA_TYPE)
-{
-	kv_c kv;
-
-	if (GETCP(CODE_BYTE))
-	{
-		if (!advance)
-			return true;
-
-		list->Pop(&kv);
-		if (parent)
-			parent->InsR("Data", NT_DATA_TYPE)->InsR(&kv);
-		return true;
-	}
-
-	return false;
-}
-
-//============================================================================
-//Statements
-//============================================================================
-
-GF_DEF(COMPOUND_STATEMENT)
-{//'{' <statement>* '}'
-	node_c* saved = list->Save();
-	tnode_c* self = NULL;
-	kv_c kv;
-
-	if (GETCP(CODE_LBRACKET))
-	{// '{'
-		list->Pop(&kv);
-		if (parent)
-		{
-			self = parent->InsR("Compound statement", NT_COMPOUND_STMT);
-			self->InsR(&kv);
-		}
-
-		//if (CL(STATEMENT, false, NULL))
-		{
-			//CL(STATEMENT, true, self);
-			if (GETCP(CODE_RBRACKET))
-			{
-				list->Pop(&kv);
-				if (parent)
-					self->InsR(&kv);
-				if (!advance)
-					list->Restore(saved);
-
-				return true;
-			}
-		}
-		list->Restore(saved);
-		if (parent)
-			parent->KillChild(self);
-	}
-
-	return false;
-}
-
-GF_DEF(STATEMENT)
-{
-	return false;
-}
-
-GF_DEF(OPEN_STATEMENT)
-{//<selection_clause> <statement>								|
-//<selection_clause> <closed_statement> else <open_statement>	|
-//<while_clause> <open_statement>								|
-//<for_clause> <open_statement>
-	
-
-	return false;
-}
-
-GF_DEF(CLOSED_STATEMENT)
-{//<simple_statement>											|
-//<selection_clause> <closed_statement> else <closed_statement> |
-//<while_clause> <closed_statement>								|
-//<for_clause> <closed_statement>
-
-	return false;
-}
-
-GF_DEF(SIMPLE_STATEMENT)
-{//repeat <statement> until ( <expression> ) ;	|
-//<instr_statement> |
-//	<data_decl>		|
-//{ <simple_statement>* } ? ? ? ? ? ? ? ?
-
-	return false;
-}
-
-GF_DEF(SELECTION_CLAUSE)
-{//'if' ( <expression> )
-	node_c* saved = list->Save();
-	tnode_c* self = NULL;
-	kv_c kv;
-
-	if (GETCP(CODE_IF))
-	{// 'if'
-		list->Pop(&kv);
-		if (parent)
-		{
-			self = parent->InsR("Selection clause", NT_SELECTION_CLAUSE);
-			self->InsR(&kv);
-		}
-
-		if (GETCP(CODE_LPAREN))
-		{// '('
-			list->Pop(&kv);
-			if (parent)
-				self->InsR(&kv);
-
-			//if (CL(EXPRESSION, false, NULL))
-			{//<expression>
-				//CL(EXPRESSION, true, self);
-
-				if (GETCP(CODE_RPAREN))
-				{// ')'
-					list->Pop(&kv);
-					if (parent)
-						self->InsR(&kv);
-					if (!advance)
-						list->Restore(saved);
-
-					return true;
-				}
-			}
-		}
-
-		list->Restore(saved);
-		if (parent)
-			parent->KillChild(self);
-	}
-
-	return false;
-}
-
-
-
 //============================================================================
 //Misc
 //============================================================================
@@ -1434,11 +1329,13 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 		}
 	}
 
+	/*
 	printf("%s%s", tabstr, funcname);
 
 	if (advance)
 		printf(" ADV");
 	printf("\n");
+	*/
 
 	rc = (this->*func)(advance, parent);
 

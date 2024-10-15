@@ -35,11 +35,13 @@ kv_t reservedwords[] =
 	"subr",		CODE_SUBR,
 	"ans",		CODE_ANS,
 
-	"byte",		CODE_BYTE,
-	"word",		CODE_WORD,
+	"db",		CODE_BYTE,
+	"dw",		CODE_WORD,
 	"ptr",		CODE_PTR,
-	"array",	CODE_ARRAY,
-	"struct",	CODE_STRUCT,
+	"fxd",		CODE_FIXED,
+	"lbl",		CODE_LABEL,
+	"dba",		CODE_BYTEARRAY,
+	"dwa",		CODE_WORDARRAY,
 	"type",		CODE_TYPE,
 
 	"stack",	CODE_STACK,
@@ -163,7 +165,7 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 				for (ti++; text[ti] != '"'; ti++)
 				{
 					if (!text[ti])
-						Error("Unclosed double quote!"); //should be superflous
+						Error("Unclosed double quote!"); //should be superfluous
 
 					lexeme[li++] = text[ti];
 				}

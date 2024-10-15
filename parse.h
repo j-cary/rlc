@@ -43,6 +43,7 @@ private:
 	//Data types
 	//
 	GF_DECL(DATA_TYPE);
+	GF_DECL(ARRAY_DATA_TYPE);
 
 	//
 	//Statements
@@ -62,6 +63,21 @@ private:
 	GF_DECL(PARAMETER_LIST);
 
 	GF_DECL(IDENTIFIER);
+
+	//
+	//Expressions
+	//
+	GF_DECL(CONSTANT_EXPRESSION);
+	GF_DECL(CONDITIONAL_EXPRESSION);
+	GF_DECL(LOGICAL_OR_EXPRESSION);
+	GF_DECL(LOGICAL_AND_EXPRESSION);
+	GF_DECL(OR_EXPRESSION);
+	GF_DECL(AND_EXPRESSION);
+	GF_DECL(EQUALITY_EXPRESSION);
+	GF_DECL(RELATIONAL_EXPRESSION);
+	GF_DECL(SHIFT_EXPRESSION);
+	GF_DECL(ADDITIVE_EXPRESSION);
+	GF_DECL(MULTIPLICATIVE_EXPRESSION);
 
 #else
 	rcode_t UNIT(GF_ARGS);
@@ -187,6 +203,7 @@ private:
 
 		//data
 		FS_ENTRY(DATA_TYPE, "Data"),
+		FS_ENTRY(ARRAY_DATA_TYPE, "Array data"),
 
 		//statements
 		FS_ENTRY(COMPOUND_STATEMENT, "Compound statement"),
@@ -255,3 +272,8 @@ public:
 		root.tnode_c::tnode_c();
 	}
 };
+
+#define PEEKCP(x)	(list->Peek()->V() == x)
+#define GETCP(x)	(list->Get()->V() == x)
+//#define CL(x, y)	(Call(&parse_c::x, y, NULL))
+#define CL(x,y,z)	(Call(&parse_c::x, y, z))
