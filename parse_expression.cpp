@@ -8,27 +8,24 @@
 int operand_queue[OPERANDS_MAX];
 int operator_stack[OPERANDS_MAX];
 
+//680 - var1 && var2
+
 GF_DEF(LOGICAL_EXPRESSION)
 {//<or_expression>
-#if 0
-
-	return false;
-
-#else
 	tnode_c* self = NULL;
 
-	if (CL(OR_EXPRESSION, false, NULL))
-	{//<or_expression>
-		if (parent)
-			self = parent->InsR("Logical expression", NT_LOGICAL_EXPR);
-		if (advance)
-			CL(OR_EXPRESSION, true, self);
+	if (parent)
+		self = parent->InsR("Logical expression", NT_LOGICAL_EXPR);
 
+	if (CL(OR_EXPRESSION, true, self))
+	{//<or_expression>
 		return true;
 	}
 
+	if (parent)
+		parent->KillChild(self);
+
 	return false;
-#endif
 }
 
 GF_DEF(OR_EXPRESSION)
@@ -40,12 +37,12 @@ GF_DEF(OR_EXPRESSION)
 	tnode_c* logical_or = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	if (CL(AND_EXPRESSION, false, NULL))
-	{// <and_expression>
-		if (parent)
-			self = parent->InsR("Or expression", NT_OR_EXPR);
-		CL(AND_EXPRESSION, true, self);
+	if (parent)
+		self = parent->InsR("Or expression", NT_OR_EXPR);
 
+	if (CL(AND_EXPRESSION, true, self))
+	{// <and_expression>
+		
 		while (1)
 		{
 			if (!GETCP(CODE_BAR))
@@ -65,21 +62,23 @@ GF_DEF(OR_EXPRESSION)
 			if (parent)
 				logical_or = self->InsR("||", T_LOGICAL_OR); //combine the two
 
-			if (!CL(AND_EXPRESSION, false, NULL))
+			if (!CL(AND_EXPRESSION, true, self)) //<and_expression>
 			{
 				list->Restore(bar_saved); //restore list to before the first bar was taken off
 				if (parent)
 					self->KillChild(logical_or);
 				break;
 			}
-
-			CL(AND_EXPRESSION, true, self); //<and_expression>
 		}
 
 		if (!advance)
 			list->Restore(saved);
 		return true;
 	}
+
+	if (parent)
+		parent->KillChild(self);
+	list->Restore(saved);
 
 	return false;
 }
@@ -91,11 +90,11 @@ GF_DEF(AND_EXPRESSION)
 	tnode_c* logical_and = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	if (CL(EQUALITY_EXPRESSION, false, NULL))
+	if (parent)
+		self = parent->InsR("And expression", NT_OR_EXPR);
+
+	if (CL(EQUALITY_EXPRESSION, true, self))
 	{// <equality_expression>
-		if (parent)
-			self = parent->InsR("And expression", NT_OR_EXPR);
-		CL(EQUALITY_EXPRESSION, true, self);
 
 		while (1)
 		{
@@ -116,21 +115,23 @@ GF_DEF(AND_EXPRESSION)
 			if (parent)
 				logical_and = self->InsR("&&", T_LOGICAL_AND); //combine the two
 
-			if (!CL(AND_EXPRESSION, false, NULL))
+			if (!CL(EQUALITY_EXPRESSION, true, self)) //<equality_expression>
 			{
 				list->Restore(ampersand_saved); //restore list to before the first bar was taken off
 				if (parent)
 					self->KillChild(logical_and);
 				break;
 			}
-
-			CL(AND_EXPRESSION, true, self); //<and_expression>
 		}
 
 		if (!advance)
 			list->Restore(saved);
 		return true;
 	}
+
+	if (parent)
+		parent->KillChild(self);
+	list->Restore(saved);
 
 	return false;
 }
@@ -144,12 +145,12 @@ GF_DEF(EQUALITY_EXPRESSION)
 	tnode_c* equals_sign = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	if (CL(RELATIONAL_EXPRESSION, false, NULL))
-	{// <equality_expression>
-		if (parent)
-			self = parent->InsR("Equality expression", NT_OR_EXPR);
-		CL(RELATIONAL_EXPRESSION, true, self);
+	if (parent)
+		self = parent->InsR("Equality expression", NT_OR_EXPR);
 
+	if (CL(RELATIONAL_EXPRESSION, true, self))
+	{// <equality_expression>
+		
 		while (1)
 		{
 			if (!GETCP(CODE_EQUALS) && !GETCP(CODE_EXCLAMATION))
@@ -174,21 +175,23 @@ GF_DEF(EQUALITY_EXPRESSION)
 					equals_sign = self->InsR("==", T_EQUIVALENCE); 
 			}
 
-			if (!CL(AND_EXPRESSION, false, NULL))
+			if (!CL(RELATIONAL_EXPRESSION, true, self)) // <relational_expression>
 			{
 				list->Restore(operator_saved); //restore list to before the first bar was taken off
 				if (parent)
 					self->KillChild(equals_sign);
 				break;
 			}
-
-			CL(AND_EXPRESSION, true, self); //<and_expression>
 		}
 
 		if (!advance)
 			list->Restore(saved);
 		return true;
 	}
+
+	if (parent)
+		parent->KillChild(self);
+	list->Restore(saved);
 
 	return false;
 }
@@ -202,11 +205,11 @@ GF_DEF(RELATIONAL_EXPRESSION)
 	tnode_c* relational_sign = NULL; //unnecessary definitions to shut the compiler up
 	kv_c arrow, equal("", CODE_NONE);
 
-	if (CL(LOGICAL_POSTFIX_EXPRESSION, false, NULL))
+	if (parent)
+		self = parent->InsR("Relational expression", NT_RELATIONAL_EXPR);
+
+	if (CL(LOGICAL_POSTFIX_EXPRESSION, true, self))
 	{// <equality_expression>
-		if (parent)
-			self = parent->InsR("Relational expression", NT_RELATIONAL_EXPR);
-		CL(LOGICAL_POSTFIX_EXPRESSION, true, self);
 
 		while (1)
 		{
@@ -239,21 +242,23 @@ GF_DEF(RELATIONAL_EXPRESSION)
 				
 			}
 
-			if (!CL(LOGICAL_POSTFIX_EXPRESSION, false, NULL))
+			if (!CL(LOGICAL_POSTFIX_EXPRESSION, true, self))//<and_expression>
 			{
 				list->Restore(operator_saved); //restore list to before the first bar was taken off
 				if (parent)
 					self->KillChild(relational_sign);
 				break;
 			}
-
-			CL(LOGICAL_POSTFIX_EXPRESSION, true, self); //<and_expression>
 		}
 
 		if (!advance)
 			list->Restore(saved);
 		return true;
 	}
+
+	list->Restore(saved); //is this necessary?
+	if (parent)
+		parent->KillChild(self);
 
 	return false;
 }
@@ -304,13 +309,12 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 	tnode_c* self = NULL;
 	kv_c kv;
 
-	if (CL(LOGICAL_PRIMARY_EXPRESSION, false, NULL))
+	if (parent)
+		self = parent->InsR("Postfix expression", NT_LOGICAL_POSTFIX_EXPRESSION);
+
+	if (CL(LOGICAL_PRIMARY_EXPRESSION, true, self))
 	{//<logical_primary_expression>
-		if (parent)
-			self = parent->InsR("Postfix expression", NT_LOGICAL_POSTFIX_EXPRESSION);
-
-		CL(LOGICAL_PRIMARY_EXPRESSION, true, self);
-
+		
 		if (GETCP(CODE_PERIOD))
 		{
 			list->Pop(&kv);
@@ -327,11 +331,9 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 					self->InsR(&kv);
 			}
 			
-			if (CL(IDENTIFIER, false, NULL))
+			if (CL(IDENTIFIER, true, self))
 			{// <identifier>
-				if (advance)
-					CL(IDENTIFIER, true, self);
-				else
+				if (!advance)
 					list->Restore(saved);
 
 				return true;
@@ -352,6 +354,10 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 			list->Restore(saved);
 		return true;
 	}
+
+	list->Restore(saved);
+	if (parent)
+		parent->KillChild(self);
 
 	return false;
 }

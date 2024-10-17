@@ -6,13 +6,16 @@
 //				A function should pass a newly inserted node related to itself for sub-functions.
 //				Upon failure, a function will kill its associated node (and all its children). This is done from the passed parent node
 
+
+//upon rejection of the stream from a rule, the list will be UNCHANGED!
+//the tree will also be UNCHANGED!
+
 static int maxtab = 0;
 static int calls = 0;
 
 void parse_c::Parse(llist_c* _list)
 {
 	list = _list;
-#if NEW
 
 	root.Set("Translation unit", NT_UNIT);
 	bool success = CL(TRANSLATION_UNIT, true, &root);
@@ -29,14 +32,9 @@ void parse_c::Parse(llist_c* _list)
 		printf("\n================\n\nInvalid translation unit\n\n================\n");
 
 
-#else
-	//UNIT(false, &root);
-	//root.Disp();
-#endif
 
 }
 
-#if NEW
 
 //============================================================================
 //Main prog control
@@ -44,7 +42,7 @@ void parse_c::Parse(llist_c* _list)
 
 GF_DEF(TRANSLATION_UNIT)
 {
-	while (CL(EXTERNAL_DECL, false, NULL))	{ CL(EXTERNAL_DECL, true, parent); }
+	while (CL(EXTERNAL_DECL, true, parent)) {}
 
 	if (GETCP(CODE_NONE))
 		return 1;//nothing left
@@ -54,29 +52,31 @@ GF_DEF(TRANSLATION_UNIT)
 
 GF_DEF(EXTERNAL_DECL)
 {
-	if (CL(FUNC, false, NULL))
+	tnode_c* self = parent->InsR("External decl", NT_EXTERNAL_DECL);
+
+	if (GETCP(CODE_SUBR))
 	{
-		if(advance)
-			CL(FUNC, true, parent->InsR("External decl", NT_EXTERNAL_DECL));
+		if (!CL(FUNC, true, self))
+			return false;
 		return true;
 	}
 
 	if (CL(DATA_DECL, false, NULL))
 	{
 		if (advance)
-			CL(DATA_DECL, true, parent->InsR("External decl", NT_DATA_DECL));
+			CL(DATA_DECL, true, self);
 		return true;
 	}
 
 	//TMPTMPTMP!!!
-	if (CL(LOGICAL_EXPRESSION, false, NULL))
+	if (CL(LOGICAL_EXPRESSION, true, self))
 	{
-		if (advance)
-			CL(LOGICAL_EXPRESSION, true, parent->InsR("External decl", NT_DATA_DECL));
 		return true;
 	}
 
-	return 0;
+	parent->KillChild(self);
+
+	return false;
 }
 
 GF_DEF(FUNC)
@@ -96,9 +96,8 @@ GF_DEF(FUNC)
 			self->InsR(&kv); // 'subr'
 		}
 
-		if (CL(IDENTIFIER, false, NULL))
-		{
-			CL(IDENTIFIER, true, self); // <identifier>
+		if (CL(IDENTIFIER, true, self))
+		{// <identifier>
 
 			if (GETCP(CODE_LPAREN))
 			{
@@ -106,8 +105,8 @@ GF_DEF(FUNC)
 				if(advance)
 					self->InsR(&kv); // '('
 
-				if (CL(PARAMETER_LIST, false, NULL)) //there can be no parameters, too
-					CL(PARAMETER_LIST, true, self); // <parameter_list>
+				//there can be no parameters, too
+				CL(PARAMETER_LIST, true, self); // <parameter_list>
 
 				if (GETCP(CODE_RPAREN))
 				{
@@ -117,31 +116,18 @@ GF_DEF(FUNC)
 
 					if (GETCP(CODE_SEMICOLON))
 					{
-						if (advance)
-						{
-							list->Pop(&kv);
-							self->InsR(&kv); // ';'
-						}
-						else
-							list->Restore(saved);
+						list->Pop(&kv);
+						self->InsR(&kv); // ';'
 
 						return true;
 					}
-					else if CL(COMPOUND_STATEMENT, false, NULL)
+					else if (CL(COMPOUND_STATEMENT, true, self))
 					{//function def
-						if (advance)
-							CL(COMPOUND_STATEMENT, true, self);
-						else
-							list->Restore(saved);
 						return true;
 					}
 				}
 			}
 		}
-
-		if(parent)
-			parent->KillChild(self);
-		list->Restore(saved);
 	}
 
 	return false;
@@ -319,11 +305,11 @@ GF_DEF(PARAMETER_LIST)
 	tnode_c* self = NULL;
 	kv_c kv;
 
-	if (CL(PARAMETER, false, NULL))
-	{
-		if (parent)
-			self = parent->InsR("Parameter list", NT_PARAMETER_LIST);
-		CL(PARAMETER, true, self); // <parameter>
+	if (parent)
+		self = parent->InsR("Parameter list", NT_PARAMETER_LIST);
+
+	if (CL(PARAMETER, true, self))
+	{// <parameter>
 
 		while (1)
 		{
@@ -350,6 +336,10 @@ GF_DEF(PARAMETER_LIST)
 
 		return true;
 	}
+
+	if (parent)
+		parent->KillChild(self);
+	list->Restore(saved);
 	
 	return false;
 }
@@ -370,956 +360,6 @@ GF_DEF(IDENTIFIER)
 	return false;
 }
 
-#else
-parse_c::rcode_t parse_c::UNIT(GF_ARGS)
-{//{ <external_declaration> }*
-
-
-	if (GETCP(CODE_NONE))
-	{
-		printf("\n================\n\nEmpty translation unit\n\n================\n");
-		return RC_FAIL;
-	}
-
-	subroot->Set("UNIT", NT_UNIT);
-
-	//fix the logic for this loop
-	while (CL(EXTERNAL_DECLARATION, true, subroot) == RC_PASS){}
-
-	if (!GETCP(CODE_NONE))
-	{//no more external declarations, but the program list is not empty
-		printf("\n================\n\nInvalid translation unit\n\n================\n");
-		return RC_FAIL;
-	}
-
-	printf("\n================\n\nValid translation unit\n\n================\n");
-	return RC_PASS;
-}
-
-parse_c::rcode_t parse_c::EXTERNAL_DECLARATION(GF_ARGS)
-{//<function_definition> | <declaration>
-	rcode_t rcode = RC_FAIL;
-
-	if (CL(FUNCTION_DEFINITION, false, NULL) == RC_PASS)
-	{
-		CL(FUNCTION_DEFINITION, true, subroot->InsL("EXTERNAL_DECL", NT_EXTERNAL_DECL));
-		return RC_PASS;
-	}
-	//if (DECLARATION() == RC_SUCCESS)
-	//	return RC_SUCCESS;
-
-	return rcode;
-}
-
-parse_c::rcode_t parse_c::FUNCTION_DEFINITION(GF_ARGS)
-{// { <declaration_specifier> }* <identifier> ( ) <compound_statement>
-	node_c* saved;
-	tnode_c* funcdef = NULL;
-	kv_c kv;
-
-	saved = list->Save();
-	if(subroot)
-		funcdef = subroot->InsR("FUNC_DEF", NT_FUNC_DEF);
-
-#if 0
-	while (1) 
-	{
-		if (CL(DECLARATION_SPECIFIER ,false, NULL) == RC_FAILURE) //{ <declaration_specifier> }*
-			break;
-		CL(DECLARATION_SPECIFIER, true, NULL);
-	}
-
-	if (CL(DECLARATOR, false, NULL) == RC_FAILURE)
-	{//<declarator>
-		list->Restore(saved);
-		return RC_FAILURE;
-	}
-	CL(DECLARATOR, true, NULL);
-
-	while (1)
-	{
-		if (CL(DECLARATION, false, NULL) == RC_FAILURE) //{ <declaration> }*
-			break;
-		DECLARATION(true, NULL);
-	}
-
-	//<compound_statement>
-	if (CL(COMPOUND_STATEMENT, false, NULL) == RC_FAILURE)
-	{
-		list->Restore(saved);
-		return RC_FAILURE;
-	}
-
-	if (advance)
-		CL(COMPOUND_STATEMENT, true, NULL);
-	else
-		list->Restore(saved);
-
-	return RC_SUCCESS;
-#else
-
-
-	while (1)
-	{
-		if (CL(DECLARATION_SPECIFIER, false, NULL) == RC_FAIL) //{ <declaration_specifier> }*
-			break;
-		CL(DECLARATION_SPECIFIER, true, funcdef);
-	}
-
-	if (CL(IDENTIFIER, false, NULL) == RC_FAIL)
-	{
-		list->Restore(saved);
-		if (subroot)
-			subroot->KillAllChildren();
-		return RC_FAIL;
-	}
-	CL(IDENTIFIER, true, funcdef);// <identifier>
-
-	if (!GETCP(CODE_LPAREN))
-	{
-		list->Restore(saved);
-		if (subroot)
-			subroot->KillAllChildren();
-		return RC_FAIL;
-	}
-	//list->Pop(NULL); // (
-	list->Pop(&kv);
-	if(funcdef)
-		funcdef->InsR(&kv);
-
-	if (!GETCP(CODE_RPAREN))
-	{
-		list->Restore(saved);
-		if (subroot)
-			subroot->KillAllChildren();
-		return RC_FAIL;
-	}
-	//list->Pop(NULL); // )
-	list->Pop(&kv);
-	if(funcdef)
-		funcdef->InsR(&kv);
-
-	if (CL(COMPOUND_STATEMENT, false, NULL) == RC_FAIL)
-	{
-		list->Restore(saved);
-		if (subroot)
-			subroot->KillAllChildren();
-		return RC_FAIL;
-	}
-
-	if (advance)
-		CL(COMPOUND_STATEMENT, true, funcdef); // <compound_statement>
-	else
-	{
-		if (subroot)
-			subroot->KillAllChildren();
-		list->Restore(saved);
-	}
-
-	return RC_PASS;
-#endif
-}
-
-
-
-parse_c::rcode_t parse_c::DECLARATION_SPECIFIER(GF_ARGS)
-{//<storage_specifier> | <type_specifier>
-	tnode_c* decl_spec = NULL;
-
-	if (subroot)
-		decl_spec = subroot->InsR("DECL_SPEC", NT_DECL_SPEC);
-
-	if (CL(STORAGE_SPECIFIER, false, NULL) == RC_PASS)
-	{
-		if(advance)
-			CL(STORAGE_SPECIFIER, true, decl_spec);
-		return RC_PASS;
-	}
-
-	if (CL(TYPE_SPECIFIER, false, NULL) == RC_PASS)
-	{
-		if(advance)
-			CL(TYPE_SPECIFIER, true, decl_spec);
-		return RC_PASS;
-	}
-
-	if(subroot)
-		subroot->KillAllChildren();
-
-	return RC_FAIL;
-}
-
-parse_c::rcode_t parse_c::STORAGE_SPECIFIER(GF_ARGS)
-{//stack | heap
-	kv_c kv;
-	tnode_c* storage_spec = NULL;
-
-	if (subroot)
-		storage_spec = subroot->InsR("STORAGE_SPEC", NT_STORAGE_SPEC);
-
-	if (GETCP(CODE_STACK))
-	{
-		if (advance)
-		{
-			list->Pop(&kv);
-			if (subroot)
-				storage_spec->InsR(&kv);
-		}
-		return RC_PASS;
-	}
-
-	if (GETCP(CODE_HEAP))
-	{
-		if (advance)
-		{
-			list->Pop(&kv);
-			if (subroot)
-				storage_spec->InsR(&kv);
-		}
-
-		return RC_PASS;
-	}
-
-	if (subroot)
-		subroot->KillAllChildren();
-	return RC_FAIL;
-}
-
-parse_c::rcode_t parse_c::TYPE_SPECIFIER(GF_ARGS)
-{//byte | word | label | db | dbp | dba | dw | dwp | dwa | <struct_specifier> | <typedef_name>
-	tnode_c* type_spec = NULL;
-	kv_c kv;
-
-	if (subroot)
-		type_spec = subroot->InsR("TYPE_SPEC", NT_TYPE_SPEC);
-
-	if (GETCP(CODE_BYTE))
-	{
-		if(advance)
-		{
-			list->Pop(&kv);
-			if (subroot)
-				type_spec->InsR(&kv);
-		}
-
-		return RC_PASS;
-	}
-
-	if (GETCP(CODE_WORD))
-	{
-		if (advance)
-		{
-			list->Pop(&kv);
-			if (subroot)
-				type_spec->InsR(&kv);
-		}
-
-		return RC_PASS;
-	}
-
-	if (subroot)
-		subroot->KillAllChildren();
-
-	return RC_FAIL;
-}
-
-parse_c::rcode_t parse_c::DECLARATOR(GF_ARGS)
-{//<direct_declarator>
-
-	return CL(DIRECT_DECLARATOR, advance, NULL);
-}
-
-parse_c::rcode_t parse_c::DIRECT_DECLARATOR(GF_ARGS)
-{//<identifier> | (<declarator>)
-	//| <direct_declarator> [{<constant_expression>} ? ]
-	//| <direct_declarator> (<parameter_type_list>)
-	//| <direct_declarator> ({ <identifier> }*)
-
-	kv_c save1,  save2;
-	node_c* saved;
-
-	saved = list->Save();
-
-	if (GETCP(CODE_TEXT))
-	{//<identifier>
-		if (advance)
-			list->Pop(NULL);
-
-		return RC_PASS;
-	}
-
-	if (GETCP(CODE_LPAREN))
-	{//(<declarator>)
-		
-		list->Pop(NULL);
-
-		if (CL(DECLARATOR, false, NULL) != RC_PASS)
-		{
-			list->Restore(saved);
-			return RC_FAIL;
-		}
-
-		CL(DECLARATOR, true, NULL);
-
-		if (!GETCP(CODE_RPAREN))
-		{
-			list->Restore(saved);
-			return RC_FAIL;
-		}
-
-		if (advance)
-			list->Restore(saved);
-
-		return RC_PASS;
-	}
-
-
-	if (CL(DIRECT_DECLARATOR, false, NULL) == RC_FAIL)
-		return RC_FAIL; //<direct_declarator>
-	CL(DIRECT_DECLARATOR, true, NULL);
-
-	//[{<constant_expression>} ? ]
-
-	if (GETCP(CODE_LPAREN))
-	{
-		list->Pop(NULL);
-
-
-		if (GETCP(CODE_LBRACKET))
-		{//({ <identifier> })
-			list->Pop(NULL);
-
-			//if (!IDENTIFIER())
-			//	return RC_FAILURE;
-
-			if (!PEEKCP(CODE_RBRACKET))
-			{
-				list->Restore(saved);
-				return RC_FAIL;
-			}
-
-			list->Pop(NULL);
-
-			if (!GETCP(CODE_RPAREN))
-			{
-				list->Restore(saved);
-				return RC_FAIL;
-			}
-
-			if (advance)
-				list->Pop(NULL);
-			else
-				list->Restore(saved);
-
-			return RC_PASS;
-		}
-		else
-		{//(<parameter_type_list>)
-
-		}
-
-		list->Restore(saved);
-		return RC_FAIL;
-	}
-
-
-
-
-	return 0; //fixme
-}
-
-GF_DEF(EXPRESSION)
-{//TMPTMPTMP <identifier> = = <identifier>
-	node_c* saved = list->Save();
-
-	if (CL(IDENTIFIER, false, NULL) == RC_PASS)
-	{
-		CL(IDENTIFIER, true, NULL);
-
-		if (GETCP(CODE_EQUALS))
-		{
-			list->Pop(NULL);
-
-			if (GETCP(CODE_EQUALS))
-			{
-				list->Pop(NULL);
-
-				if (CL(IDENTIFIER, false, NULL) == RC_PASS)
-				{
-					if (advance)
-						CL(IDENTIFIER, true, NULL);
-					else
-						list->Restore(saved);
-
-					return RC_PASS;
-				}
-			}
-		}
-
-		list->Restore(saved);
-	}
-
-	return RC_FAIL;
-}
-
-
-parse_c::rcode_t parse_c::DECLARATION(GF_ARGS)
-{//{<declaration_specifier>}+ { <init_declarator> }* ;
-	node_c* saved;
-
-	saved = list->Save();
-
-	//{<declaration_specifier>}
-	if (CL(DECLARATION_SPECIFIER, false, NULL) == RC_FAIL)
-		return RC_FAIL;
-	CL(DECLARATION_SPECIFIER, true, NULL);
-
-	while (1)
-	{//+
-		if (CL(DECLARATION_SPECIFIER, false, NULL) == RC_FAIL)
-			break;
-		CL(DECLARATION_SPECIFIER, true, NULL);
-	}
-
-	while (1)
-	{//{ <init_declarator> }*
-		if (CL(INIT_DECLARATOR, false, NULL) == RC_FAIL)
-			break;
-		CL(INIT_DECLARATOR, true, NULL);
-	}
-
-	if(!advance)
-		list->Restore(saved);
-
-	return RC_PASS;
-}
-
-parse_c::rcode_t parse_c::INIT_DECLARATOR(GF_ARGS)
-{// <declarator> | <declarator> = <initializer>
-	return 0; //fixme 
-}
-
-parse_c::rcode_t parse_c::INITIALIZER(GF_ARGS)
-{//<assignment_expression> | { <initializer_list> } | { <initializer_list> , }
-	return 0; //fixme
-}
-
-parse_c::rcode_t parse_c::INITIALIZER_LIST(GF_ARGS)
-{//<initializer> | <initializer_list> , <initializer>
-	return 0; //fixme
-}
-
-//STATEMENTS
-
-parse_c::rcode_t parse_c::COMPOUND_STATEMENT(GF_ARGS)
-{//{ { <declaration> }* { <statement> }* }
-	node_c* saved;
-	tnode_c* compound_stmt = NULL;
-	kv_c kv;
-
-	saved = list->Save();
-
-	if (!GETCP(CODE_LBRACKET))
-		return RC_FAIL;
-
-	list->Pop(&kv);
-	if (subroot)
-	{
-		compound_stmt = subroot->InsR("COMPOUND_STMT", NT_COMPOUND_STMT);
-		compound_stmt->InsR(&kv);
-	}
-
-	while (1)
-	{//{ <declaration> }*
-		if (CL(DECLARATION, false, NULL) == RC_FAIL)
-			break;
-		CL(DECLARATION, true, compound_stmt);
-	}
-
-	while (1)
-	{//{ <statement> }*
-		if (CL(STATEMENT, false, NULL) == RC_FAIL)
-			break;
-		CL(STATEMENT, true, compound_stmt);
-	}
-
-	if (!GETCP(CODE_RBRACKET))
-	{
-		list->Restore(saved);
-		if (subroot)
-			subroot->KillAllChildren();
-		return RC_FAIL;
-	}
-
-	if (!advance)
-	{
-		list->Restore(saved);
-		if (subroot)
-			subroot->KillAllChildren();
-	}
-	else
-	{
-		list->Pop(&kv); //get the last bracket
-		if (subroot)
-			compound_stmt->InsR(&kv);
-	}
-
-	return RC_PASS;
-}
-
-#define PARANOID_TEST	1
-
-GF_DEF(STATEMENT)
-{// <open_statement> | <closed_statement>
-	tnode_c* stmt = NULL;
-
-	if (subroot) //just split this into two in the conditionals below. Fix remove though
-		stmt = subroot->InsR("STMT", NT_STMT);
-
-	if (CL(OPEN_STATEMENT, false, NULL) == RC_PASS)
-	{
-		CL(OPEN_STATEMENT, true, stmt);
-		return RC_PASS;
-	}
-
-	if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
-	{
-		CL(CLOSED_STATEMENT, true, stmt);
-		return RC_PASS;
-	}
-
-	if (subroot)
-		subroot->KillChild(stmt);
-
-	return RC_FAIL;
-}
-
-GF_DEF(OPEN_STATEMENT)
-{// <selection_clause> <statement> |
-//	<selection_clause> <closed_statement> else <open_statement> |
-//	<while_clause> <open_statement> |
-//	<for_clause> <open_statement>
-
-	node_c* saved = list->Save();
-	node_c* saved2;
-
-	if (CL(SELECTION_CLAUSE, false, NULL) == RC_PASS)
-	{// <selection_clause>
-		CL(SELECTION_CLAUSE, true, NULL);
-		saved2 = list->Save(); //save the rest of the list without the above clause for the second possible production
-
- 		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
-		{// <closed_statement>
-			CL(CLOSED_STATEMENT, true, NULL);
-			if (GETCP(CODE_ELSE))
-			{// else
-				list->Pop(NULL);
-				if (CL(OPEN_STATEMENT, false, NULL) == RC_PASS)
-				{// <open_statement>
-					if (advance)
-						CL(OPEN_STATEMENT, true, NULL);
-					else
-						list->Restore(saved);
-					return RC_PASS;
-				}
-			}
-
-			list->Restore(saved2);
-			//saved = list->Save();
-		}
-
-		if (CL(STATEMENT, false, NULL) == RC_PASS)
-		{// <statement>
-			CL(STATEMENT, true, NULL);
-
-			if (GETCP(CODE_ELSE))
-			{
-				/* Given the following if else block
-					if (cond)
-						instr;
-					else
-						instr;
-					
-					if(cond) instr will be seen as an open statement and then parsing will fail at the else. 
-					This lookahead prevents that
-				*/
-				list->Restore(saved);
-				return RC_FAIL;
-			}
-
-			if (!advance)
-				list->Restore(saved);
-
-			return RC_PASS;
-		}
-
-		list->Restore(saved);
-	}
-#if !PARANOID_TEST
-	if (CL(WHILE_CLAUSE, false, NULL) == RC_PASS)
-	{// <while_clause>
-		CL(WHILE_CLAUSE, true, NULL);
-		if (CL(OPEN_STATEMENT, false, NULL), RC_PASS)
-		{// <open_statement>
-			if (advance)
-				CL(OPEN_STATEMENT, true, NULL);
-			else
-				list->Restore(saved);
-			return RC_PASS;
-		}
-
-		list->Restore(saved);
-		saved = list->Save();
-	}
-	
-	if (CL(FOR_CLAUSE, false, NULL) == RC_PASS)
-	{// <for_clause>
-		CL(FOR_CLAUSE, true, NULL);
-		if (CL(OPEN_STATEMENT, false, NULL), RC_PASS)
-		{// <open_statement>
-			if (advance)
-				CL(OPEN_STATEMENT, true, NULL);
-			else
-				list->Restore(saved);
-			return RC_PASS;
-		}
-
-		list->Restore(saved);
-		saved = list->Save();
-	}
-#endif
-	return RC_FAIL;
-}
-
-GF_DEF(CLOSED_STATEMENT)
-{// <simple_statement> |
-//	<selection_clause> <closed_statement> else <closed_statement> |
-//	<while_clause> <closed_statement> |
-//	<for_clause> <closed_statement>
-
-	node_c* saved = list->Save();
-
-	if (CL(SIMPLE_STATEMENT, false, NULL) == RC_PASS)
-	{// <simple_statement>
-		if (advance)
-			CL(SIMPLE_STATEMENT, true, NULL);
-		else
-			list->Restore(saved);
-		return RC_PASS;
-	}
-
-	if (CL(SELECTION_CLAUSE, false, NULL) == RC_PASS)
-	{// <selection_clause>
-		CL(SELECTION_CLAUSE, true, NULL);
-
-		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
-		{// <closed_statement>
-			CL(CLOSED_STATEMENT, true, NULL);
-			if (GETCP(CODE_ELSE))
-			{// else
-				list->Pop(NULL);
-				if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
-				{// <closed_statement>
-					if (advance)
-						CL(CLOSED_STATEMENT, true, NULL);
-					else
-						list->Restore(saved);
-					return RC_PASS;
-				}
-			}
-		}
-
-		list->Restore(saved);
-		return RC_FAIL;
-	}
-#if !PARANOID_TEST
-	if (CL(WHILE_CLAUSE, false, NULL) == RC_PASS)
-	{// <while_clause>
-		CL(WHILE_CLAUSE, true, NULL);
-		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
-		{
-			if (advance)
-			{
-				CL(CLOSED_STATEMENT, true, NULL);
-				delete saved;
-			}
-			else
-				list->Restore(saved);
-			return RC_PASS;
-		}
-	}
-
-	if (CL(FOR_CLAUSE, false, NULL) == RC_PASS)
-	{// <for_clause>
-		CL(FOR_CLAUSE, true, NULL);
-		if (CL(CLOSED_STATEMENT, false, NULL) == RC_PASS)
-		{
-			if (advance)
-			{
-				CL(CLOSED_STATEMENT, true, NULL);
-				delete saved;
-			}
-			else
-				list->Restore(saved);
-			return RC_PASS;
-		}
-	}
-#endif
-	return RC_FAIL;
-}
-
-GF_DEF(SIMPLE_STATEMENT)
-{// repeat <statement> until ( <expression> ) ; |
-//	<instr_statement>
-
-	node_c* saved = list->Save();
-
-	if (GETCP(CODE_REPEAT))
-	{// repeat
-		list->Pop(NULL);
-		if (CL(STATEMENT, false, NULL) == RC_PASS)
-		{// <statement>
-			CL(STATEMENT, true, NULL);
-
-			if (GETCP(CODE_UNTIL))
-			{// until
-				list->Pop(NULL);
-
-				if (GETCP(CODE_LPAREN))
-				{// (
-					list->Pop(NULL);
-
-					if (CL(EXPRESSION, false, NULL) == RC_PASS)
-					{// <expression>
-						CL(EXPRESSION, true, NULL);
-
-						if (GETCP(CODE_RPAREN))
-						{// )
-							list->Pop(NULL);
-
-							if (GETCP(CODE_SEMICOLON))
-							{// ;
-
-								if (advance)
-									list->Pop(NULL);
-								else
-									list->Restore(saved);
-								return RC_PASS;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		list->Restore(saved);
-		saved = list->Save();
-	}
-
-	if (CL(INSTR_STATEMENT, false, NULL) == RC_PASS)
-	{
-		if (advance)
-			CL(INSTR_STATEMENT, true, NULL);
-		else
-			list->Restore(saved);
-
-		return RC_PASS;
-	}
-
-	return RC_FAIL;
-}
-
-GF_DEF(INSTR_STATEMENT)
-{//{ <instr_add> | <instr_ld> | <instr_jp> };
-	node_c* saved = list->Save();
-	//!!!MEMLEAK
-	if (CL(INSTRUCTION_ADD, false, NULL) == RC_PASS)
-	{// <instr_add>
-		//if (advance)
-		CL(INSTRUCTION_ADD, true, NULL);
-
-		if (!GETCP(CODE_SEMICOLON))
-		{
-			list->Restore(saved);
-			return RC_FAIL;
-		}
-		list->Pop(NULL);
-	}
-	else
-		return RC_FAIL;
-
-	// <instr_ld>
-	// <instr_jp>
-
-	if (advance)
-		list->Restore(saved);
-
-	return RC_PASS;
-}
-
-GF_DEF(SELECTION_CLAUSE)
-{// if ( <expression> )
-	node_c* saved = list->Save();
-
-	if (GETCP(CODE_IF))
-	{// if
-		list->Pop(NULL);
-		if (GETCP(CODE_LPAREN))
-		{// (
-			list->Pop(NULL);
-
-			if (CL(EXPRESSION, false, NULL) == RC_PASS)
-			{// <expression>
-				CL(EXPRESSION, true, NULL);
-
-				if (GETCP(CODE_RPAREN))
-				{// )
-					if (advance)
-						list->Pop(NULL);
-					else
-						list->Restore(saved);
-
-					return RC_PASS;
-				}
-			}
-		}
-
-		list->Restore(saved); //Popped at least one thing off
-	}
-
-	return RC_FAIL;
-}
-
-GF_DEF(FOR_CLAUSE)
-{
-	return RC_FAIL;
-}
-
-GF_DEF(WHILE_CLAUSE)
-{
-	return RC_FAIL;
-}
-
-//INSTRUCTIONS
-
-parse_c::rcode_t parse_c::INSTRUCTION_ADD(GF_ARGS)
-{// add <identifier> , <rvalue> { , <rvalue> }*
-	node_c* saved = list->Save();
-	kv_c* saved_comma = NULL;
-
-	if (!GETCP(CODE_ADD))
-	{// add
-		return RC_FAIL;
-	}
-	list->Pop(NULL);
-
-	if (CL(IDENTIFIER, false, NULL) == RC_FAIL)
-	{// <identifier>
-		list->Restore(saved);
-		return RC_FAIL;
-	}
-	CL(IDENTIFIER, true, NULL);
-
-	if (!GETCP(CODE_COMMA))
-	{// ,
-		list->Restore(saved);
-		return RC_FAIL;
-	}
-	list->Pop(NULL);
-
-	if (CL(RVALUE, false, NULL) == RC_FAIL)
-	{// <rvalue>
-		list->Restore(saved);
-		return RC_FAIL;
-	}
-	CL(RVALUE, true, NULL);
-
-
-	if (CL(RVALUE_LIST, false, NULL) == RC_PASS)
-	{// <rvalue_list>
-		CL(RVALUE_LIST, true, NULL);
-	}
-
-	if (advance)
-	{
-		if(saved_comma) //restore any lone commas
-			list->Push(saved_comma);
-	}
-	else
-		list->Restore(saved);
-
-	return RC_PASS;
-}
-
-
-
-parse_c::rcode_t parse_c::IDENTIFIER(GF_ARGS)
-{
-	tnode_c* ident = NULL;
-	kv_c kv;
-
-	if (!GETCP(CODE_TEXT))
-		return RC_FAIL;
-
-	if (advance)
-	{
-		list->Pop(&kv);
-		if (subroot)
-		{
-			ident = subroot->InsR("IDENT", NT_IDENT);
-			ident->InsR(&kv);
-		}
-	}
-
-	return RC_PASS;
-}
-
-parse_c::rcode_t parse_c::RVALUE(GF_ARGS)
-{// <identifier> | <number>
-	//NOT DONE. Subject to possible name change
-
-	if (CL(IDENTIFIER, false, NULL) == RC_PASS)
-	{
-		if (advance)
-			CL(IDENTIFIER, true, NULL);
-		return RC_PASS;
-	}
-
-	if (GETCP(CODE_NUM_BIN) || GETCP(CODE_NUM_DEC) || GETCP(CODE_NUM_HEX))
-	{
-		if (advance)
-			list->Pop(NULL);
-		return RC_PASS;
-	}
-
-	return RC_FAIL;
-}
-
-GF_DEF(RVALUE_LIST)
-{// {, <rvalue> }*
-	node_c* saved = list->Save();
-	kv_c* saved_comma = NULL;
-
-	//FIXME: Does saved_comma have to be deleted in any of these cases?
-
-	while (1)
-	{// {, <rvalue> }*
-		if (!GETCP(CODE_COMMA))
-			break;
-		list->Pop(saved_comma); //could just set saved_comma manually but this is easier
-
-		if (CL(RVALUE, false, NULL) == RC_FAIL)
-		{//comma without following rval
-			list->Restore(saved);
-			return RC_FAIL;
-		}
-		CL(RVALUE, true, NULL);
-	}
-
-	return RC_FAIL;
-}
-
-#endif
 
 parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 {
@@ -1350,7 +390,7 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 	}
 
 	
-#if 0
+#if 1
 	printf("%s%s", tabstr, funcname);
 	if (advance)
 		printf(" ADV");
