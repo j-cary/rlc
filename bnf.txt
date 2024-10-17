@@ -36,7 +36,7 @@ new bnf:
 <data_decl> ::= <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
 				<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
 				<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' }+ ';' 
-<single_data_decl> ::= <identifier> { '=' <constant_expression> }+
+<single_data_decl> ::= <identifier> { '=' <constant_expression> }?
 
 <type_decl> ::= 'type' '{' <data_decl>* '}' <identifier> ';'
 
@@ -45,7 +45,7 @@ new bnf:
 //
 
 <unitializeable_data_type> ::= lbl
-<data_type> ::= fxd | db | dw | ptr
+<data_type> ::= fxd | db | dw | ptr			//FIXME: should I make a stack/heap distinction? Arrays should always be on the heap
 <array_data_type> ::= dba | dwa
 
 //
@@ -74,6 +74,29 @@ new bnf:
 <for_clause> ::= 'for' '(' <expression> '{' ';'  <expression>  ';' <instr_statement> { ',' <instr_statement> }* '}'? ')'
 <while_clause> ::= while '(' <expression> ')'
 
+//
+//	INSTRUCTIONS
+//
+
+<instruction> ::= { <instruction_min1_maxinf> | <i_single> | <i_comp> | <i_min1_max2> | <i_min1_max3> | <i_double> | <i_triple> } ';'
+
+<instruction_1_ops>		::= { 'jp' | 'add' | 'sub' | 'mult' | 'div' | 'mod' } <logical_unary_expression> { ',' <logical_unary_expression> }+
+<instruction_2_ops>		::= { 'res' | 'set' | 'flp' | 'in' | 'out' } <logical_unary_expression> ',' <logical_unary_expression>
+<instruction_3_ops>		::= { 'ldm'| 'inm' | 'outm' } 'ldm' <logical_unary_expression> , <logical_unary_expression> , <mathematical_expression>
+<instruction_1to2_ops>	::= { 'rl' | 'rr' } <logical_unary_expression> { ',' <logical_unary_expression> }?
+<instruction_1to3_ops>	::= { 'sl' | 'rr' } <logical_unary_expression>  { ',' <boolean_constant>  { ',' <logical_unary_expression> }? }?
+<instruction_1toinf_ops>::= { 'ld' | 'add' | 'sub' | 'mult' | 'div' | 'mod' } <logical_unary_expression> { ',' <logical_unary_expression> }+
+<instruction_comp>		::= 'comp' <mathematical_expression>
+
+add, sub, mult, div, mod :'ld' <logical_unary_expression> { ',' <logical_unary_expression> }+
+jp, call, inc, dec, im: 'jp' <logical_unary_expression> 
+ret: 'ret' { <logical_unary_expression> }?
+comp: 'comp' <mathematical_expression>
+rl, rr: 'rl' <logical_unary_expression> { ',' <logical_unary_expression> }?
+sl, sr: 'sl' <logical_unary_expression>  { ',' <boolean_constant>  { ',' <logical_unary_expression> }? }?
+res, set, flp, in, out: 'res' <logical_unary_expression> ',' <logical_unary_expression>
+ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , <mathematical_expression> //Do I even want to support this, or should I just make this a constant?
+
 
 //
 //	MISC
@@ -84,70 +107,109 @@ new bnf:
 <parameter> ::= <data_type> <identifier>			//labels and arrays CANNOT be passed to a function!
 <parameter_list> ::= <parameter> { ',' <parameter> }*
 
-<identifier> ::= 
+<identifier> ::= text
 <constant> ::= 
 
 
+//=========================================================================================================//
+//	EXPRESSIONS
+//	Used for data decls (constant), conditionals, COMP
+//	conditionals need:	logical or/and, equality, relational, logical not/dereference (unary), postfix.
+//	decls need:			shift, additive, multiplicative, minus [unary?]
+//	COMP needs:			shift, additive, multiplicative, minus [unary?], postfix.
+//	
+//	Note: An array in a conditional can be indexed with a CONSTANT arithmetic expression
+//		
 //
-//	EXPRESSIONS - some of these need to be dropped!
+//	Order of Operations -
+//						Post===Unary=Rel========Equ==AndOr=													//
+//		Conditional:	.. . [] & * ! >= <= > < != == && || 
+//		Math:			.. . [] & * - + % / * - + >> <<														//
+//						Post===Unary===Mult==Add==Shift														//
+//																											//
+// Note: Unary minus, not, dereference, and indirection are all right associative.							//
+//==========================================================================================================//
+
+//
+//	Conditional Expressions
 //
 
-<constant_expression> ::= <logical_or_expression>
-<conditional_expression> ::= <logical_or_expression>
+<logical_expression> ::= <or_expression>
 
-<logical_or_expression> ::= <logical_and_expression> | 
-							<logical_or_expression> '||' <logical_and_expression>
+<or_expression> ::= <and_expression> | 
+					<or_expression> '||' <and_expression>
 
-<logical_and_expression> ::=	<inclusive_or_expression> | 
-								<logical_and_expression> '&&' <inclusive_or_expression>
+<and_expression> ::=	<inclusive_or_expression> | 
+						<and_expression> '&&' <equality_expression>
 
-<or_expression> ::= <xor_expression> | 
-					<or_expression> '|' <xor_expression>
+<equality_expression> ::=	<relational_expression>								| 
+							<equality_expression> '==' <relational_expression>	|
+							<equality_expression> '!=' <relational_expression>
 
-<xor_expression> ::=	<and_expression> | 
-						<xor_expression> '^' <and_expression>
+<relational_expression> ::= <logical_unary_expression>						|
+                          <relational_expression> '<' <unary_expression>	|
+                          <relational_expression> '>' <unary_expression>	|
+                          <relational_expression> '<=' <unary_expression>	|
+                          <relational_expression> '>=' <unary_expression>	|
 
-<and_expression> ::=	<equality_expression> | 
-						<and_expression> '&' <equality_expression> 
+<logical_unary_expression> ::=	<postfix_expression>	|
+								<logical_unary_operator> <logical_unary_expression>
 
-<equality_expression> ::= <relational_expression>
-                        | <equality_expression> '==' <relational_expression>
-                        | <equality_expression> '!=' <relational_expression>
+<logical_unary_operator> ::= & | * | !
 
-<relational_expression> ::= <shift_expression>
-                          | <relational_expression> '<' <shift_expression>
-                          | <relational_expression> '>' <shift_expression>
-                          | <relational_expression> '<=' <shift_expression>
-                          | <relational_expression> '>=' <shift_expression>
+<or_expression> ::=				<and_expression> { '||' <and_expression> }*
+<and_expression> ::=			<equality_expression> { '&&' <equality_expression> }*
+<equality_expression> ::=		<relational_expression> { { '==' | '!=' } <relational_expression> }*
+<relational_expression> ::=		<logical_postfix_expression> { {'<' | '>' | '<=' | '>=' } <logical_postfix_expression> }*
+<logical_postfix_expression> ::=<logical_primary_expression> { { '.' | '..' } <identifier> }?	|
+								<logical_primary_expression> { '[' <constant_expression> ']' }?
+<logical_primary_expression> ::=<identifier> | <constant> | <string> | '(' <logical_expression> ')' | { '&' | '*' | '!' } <logical_expression>
 
-<shift_expression> ::= <additive-expression>
-                     | <shift_expression> '<<' <additive_expression>
-                     | <shift_expression> '>>' <additive_expression>
 
-<additive_expression> ::= <multiplicative_expression>
-                        | <additive_expression> '+' <multiplicative_expression>
-                        | <additive_expression> '-' <multiplicative_expression>
+<logical_unary_expression> ::=	<logical_postfix_expression> { { '&' | '*' | '!' } <logical_unary_expression> }?
 
-<multiplicative_expression> ::= <cast-expression>
-                              | <multiplicative_expression> '*' <cast_expression>
-                              | <multiplicative_expression> '/' <cast_expression>
-                              | <multiplicative_expression> '%' <cast_expression>
+
+//
+//	Math Expressions
+//
+
+<constant_expressions> ::= <shift_expression>
+<arithmetic_expression> ::= <shift_expression>
+
+<shift_expression> ::=	<additive_expression>							|
+						<shift_expression> '<<' <additive_expression>	|
+						<shift_expression> '>>' <additive_expression>
+
+<additive_expression> ::=	<multiplicative_expression>								|
+							<additive_expression> '+' <multiplicative_expression>	|
+							<additive_expression> '-' <multiplicative_expression>
+
+<multiplicative_expression> ::= <cast-expression>									|
+								<multiplicative_expression> '*' <unary_expression>	|
+								<multiplicative_expression> '/' <unary_expression>	|
+								<multiplicative_expression> '%' <unary_expression>
+
+<mathematical_unary_expression> ::=	<postfix_expression>	|
+									<mathematical_unary_operator> <mathematical_unary_expression>
+
+<mathematical_unary_operator> ::= & | * | + | -
+
+//
+//	Shared
+//
 
 <postfix_expression> ::=	<primary_expression> | 
-							<postfix_expression> . <identifier> | 
-							<postfix_expression> .. <identifier> |
-							'[' <expression> ']'
+							<postfix_expression> '.' <identifier> | 
+							<postfix_expression> '..' <identifier> |
+							<postfix-expression> '[' <expression> ']'
+
+
 
 <primary_expression> ::=	<identifier> | 
 							<constant> | 
 							<string> | 
 							'(' <expression> ')'
 
-<expression> ::=	<assignment_expression> | 
-					<expression> , <assignment_expression>
-
-<assignment_expression> ::= <conditional_expression> | 
-							<unary_expression> <assignment_operator> <assignment_expression>
 
 
 

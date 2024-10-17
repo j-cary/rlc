@@ -11,6 +11,7 @@ preprocessor_c preproc;
 
 //TODO:
 //preprocessing
+//symbol table - make this part of IDENTIFIER?
 
 
 int main()

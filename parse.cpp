@@ -6,6 +6,9 @@
 //				A function should pass a newly inserted node related to itself for sub-functions.
 //				Upon failure, a function will kill its associated node (and all its children). This is done from the passed parent node
 
+static int maxtab = 0;
+static int calls = 0;
+
 void parse_c::Parse(llist_c* _list)
 {
 	list = _list;
@@ -13,6 +16,8 @@ void parse_c::Parse(llist_c* _list)
 
 	root.Set("Translation unit", NT_UNIT);
 	bool success = CL(TRANSLATION_UNIT, true, &root);
+
+	printf("Max tabs: %i calls: %i\n", maxtab, calls);
 
 	if (success)
 	{
@@ -60,6 +65,14 @@ GF_DEF(EXTERNAL_DECL)
 	{
 		if (advance)
 			CL(DATA_DECL, true, parent->InsR("External decl", NT_DATA_DECL));
+		return true;
+	}
+
+	//TMPTMPTMP!!!
+	if (CL(LOGICAL_EXPRESSION, false, NULL))
+	{
+		if (advance)
+			CL(LOGICAL_EXPRESSION, true, parent->InsR("External decl", NT_DATA_DECL));
 		return true;
 	}
 
@@ -240,6 +253,7 @@ GF_DEF(SINGLE_DATA_DECL)
 			list->Pop(&kv);
 			if (parent)
 				self->InsR(&kv);
+			/*
 			if (CL(CONSTANT_EXPRESSION, false, NULL))
 			{// <constant_expression>
 				if (advance)
@@ -249,6 +263,7 @@ GF_DEF(SINGLE_DATA_DECL)
 
 				return true;
 			}
+			*/
 
 			list->Restore(saved);
 			if (parent)
@@ -1320,6 +1335,11 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 	tabstr[tabs++] = ' ';
 	tabstr[tabs++] = ' ';
 
+	if (tabs > maxtab)
+		maxtab = tabs;
+
+	calls++;
+
 	for (int i = 0; i < sizeof(fs) / sizeof(fstrans_t); i++)
 	{
 		if (func == fs[i].f)
@@ -1329,13 +1349,15 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 		}
 	}
 
-	/*
+	
+#if 0
 	printf("%s%s", tabstr, funcname);
-
 	if (advance)
 		printf(" ADV");
 	printf("\n");
-	*/
+#endif
+	
+	
 
 	rc = (this->*func)(advance, parent);
 

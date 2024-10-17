@@ -303,9 +303,9 @@ GF_DEF(SELECTION_CLAUSE)
 			if (parent)
 				self->InsR(&kv);
 
-			//if (CL(EXPRESSION, false, NULL))
+			if (CL(LOGICAL_EXPRESSION, false, NULL))
 			{//<expression>
-				//CL(EXPRESSION, true, self);
+				CL(LOGICAL_EXPRESSION, true, self);
 
 				if (GETCP(CODE_RPAREN))
 				{// ')'

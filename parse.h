@@ -67,17 +67,23 @@ private:
 	//
 	//Expressions
 	//
-	GF_DECL(CONSTANT_EXPRESSION);
-	GF_DECL(CONDITIONAL_EXPRESSION);
-	GF_DECL(LOGICAL_OR_EXPRESSION);
-	GF_DECL(LOGICAL_AND_EXPRESSION);
+
+	//Logical expressions
+	GF_DECL(LOGICAL_EXPRESSION);
 	GF_DECL(OR_EXPRESSION);
 	GF_DECL(AND_EXPRESSION);
 	GF_DECL(EQUALITY_EXPRESSION);
 	GF_DECL(RELATIONAL_EXPRESSION);
+	GF_DECL(LOGICAL_POSTFIX_EXPRESSION); //these last two could be shared, but the '(' <logical/arithmetic_expression> ')' production wouldn't work
+	GF_DECL(LOGICAL_PRIMARY_EXPRESSION);
+	//Arithmetic expressions
+	GF_DECL(ARITHMETIC_EXPRESSION);
 	GF_DECL(SHIFT_EXPRESSION);
 	GF_DECL(ADDITIVE_EXPRESSION);
 	GF_DECL(MULTIPLICATIVE_EXPRESSION);
+	GF_DECL(ARITHMETIC_UNARY_EXPRESSION);
+	//Shared
+
 
 #else
 	rcode_t UNIT(GF_ARGS);
@@ -108,8 +114,8 @@ private:
 	GF_DECL(ADDITIVE_EXPRESSION);
 	GF_DECL(MULTIPLICATIVE_EXPRESSION);
 	GF_DECL(UNARY_EXPRESSION);
-	GF_DECL(POSTFIX_EXPRESSION);
-	GF_DECL(PRIMARY_EXPRESSION);
+	GF_DECL(LOGICAL_POSTFIX_EXPRESSION);
+	GF_DECL(LOGICAL_PRIMARY_EXPRESSION);
 	GF_DECL(EXPRESSION);
 	GF_DECL(ASSIGNMENT_EXPRESSION); //I think this is getting replaced by the EXPR pseudo-instruction
 
@@ -220,6 +226,20 @@ private:
 
 		FS_ENTRY(IDENTIFIER, "Ident"),
 
+		//Logical expressions
+
+		 FS_ENTRY(LOGICAL_EXPRESSION, "Logical expression"),
+		 FS_ENTRY(OR_EXPRESSION, "Or expression"),
+		 FS_ENTRY(AND_EXPRESSION, "And expression"),
+		 FS_ENTRY(EQUALITY_EXPRESSION, "Equality expression"),
+		 FS_ENTRY(RELATIONAL_EXPRESSION, "Relational expression"),
+
+		//Arithmetic expressions
+		
+		//Shared
+
+		 FS_ENTRY(LOGICAL_POSTFIX_EXPRESSION, "Postfix expression"),
+		 FS_ENTRY(LOGICAL_PRIMARY_EXPRESSION, "Primary expression"),
 
 #else
 		& parse_c::UNIT,					"Unit",

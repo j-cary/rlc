@@ -17,7 +17,11 @@ ckv_t reservedchars[] =
 	//'\'', CODE_QUOTE_SINGLE,
 	';', CODE_SEMICOLON,
 	':', CODE_COLON,
+	'<', CODE_LARROW,
 	'>', CODE_RARROW,
+	'!', CODE_EXCLAMATION,
+	'&', CODE_AMPERSAND,
+	'|', CODE_BAR,
 
 	//arithmetic
 	'=', CODE_EQUALS,
@@ -73,7 +77,7 @@ kv_t reservedwords[] =
 	"mod",		CODE_MOD,
 	"inc",		CODE_INC,
 	"dec",		CODE_DEC,
-	"expr",		CODE_EXPR,
+	"comp",		CODE_COMP,
 
 	"rlc",		CODE_RLC,
 	"rrc",		CODE_RRC,
