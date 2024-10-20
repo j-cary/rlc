@@ -10,19 +10,39 @@
 //upon rejection of the stream from a rule, the list will be UNCHANGED!
 //the tree will also be UNCHANGED!
 
+
+//TODO:
+//Double check expressions
+//Double check main - data decls 
+//Double check statements
+//Change over data
+//Get rid of 'advance' argument
+//get rid of 'parent' checks everywhere
+
 static int maxtab = 0;
 static int calls = 0;
 
 void parse_c::Parse(llist_c* _list)
 {
+	struct timeb start, end;
+	int elapsed_time;
+	bool result;
+
+	printf("Parsing...\n");
+	ftime(&start);
+
 	list = _list;
 
 	root.Set("Translation unit", NT_UNIT);
-	bool success = CL(TRANSLATION_UNIT, true, &root);
+	result = CL(TRANSLATION_UNIT, &root);
 
+	ftime(&end);
+	elapsed_time = (int)(1000.0 * (end.time - start.time)+ (end.millitm - start.millitm));
+	printf("Parsing completed in %u millisecond(s)\n", elapsed_time);
 	printf("Max tabs: %i calls: %i\n", maxtab, calls);
 
-	if (success)
+
+	if (result)
 	{
 		printf("\n\n");
 		root.Disp();
@@ -41,8 +61,8 @@ void parse_c::Parse(llist_c* _list)
 //============================================================================
 
 GF_DEF(TRANSLATION_UNIT)
-{
-	while (CL(EXTERNAL_DECL, true, parent)) {}
+{// <external_decl>*
+	while (CL(EXTERNAL_DECL, parent)) {}
 
 	if (GETCP(CODE_NONE))
 		return 1;//nothing left
@@ -51,29 +71,28 @@ GF_DEF(TRANSLATION_UNIT)
 }
 
 GF_DEF(EXTERNAL_DECL)
-{
+{//<function_decl> | <function_def> | <data_decl> | <type_def>
 	tnode_c* self = parent->InsR("External decl", NT_EXTERNAL_DECL);
 
 	if (GETCP(CODE_SUBR))
 	{
-		if (!CL(FUNC, true, self))
+		if (!CL(FUNC, self))
 			return false;
 		return true;
 	}
-
-	if (CL(DATA_DECL, false, NULL))
-	{
-		if (advance)
-			CL(DATA_DECL, true, self);
-		return true;
-	}
-
-	//TMPTMPTMP!!!
-	if (CL(LOGICAL_EXPRESSION, true, self))
+	
+	if (CL(DATA_DECL, self))
 	{
 		return true;
 	}
-
+	
+	if (GETCP(CODE_TYPE))
+	{
+		if (!CL(TYPE_DEF, self))
+			return false;
+		return true;
+	}
+	
 	parent->KillChild(self);
 
 	return false;
@@ -90,29 +109,25 @@ GF_DEF(FUNC)
 	if (GETCP(CODE_SUBR))
 	{
 		list->Pop(&kv);
-		if (advance)
-		{
-			self = parent->InsR("Func decl", NT_FUNC_DECL); //could still be a def, though
-			self->InsR(&kv); // 'subr'
-		}
+		self = parent->InsR("Func decl", NT_FUNC_DECL); //could still be a def, though
+		self->InsR(&kv); // 'subr'
+		
 
-		if (CL(IDENTIFIER, true, self))
+		if (CL(IDENTIFIER, self))
 		{// <identifier>
 
 			if (GETCP(CODE_LPAREN))
 			{
 				list->Pop(&kv);
-				if(advance)
-					self->InsR(&kv); // '('
+				self->InsR(&kv); // '('
 
 				//there can be no parameters, too
-				CL(PARAMETER_LIST, true, self); // <parameter_list>
+				CL(PARAMETER_LIST, self); // <parameter_list>
 
 				if (GETCP(CODE_RPAREN))
 				{
 					list->Pop(&kv);
-					if (advance)
-						self->InsR(&kv); // ')'
+					self->InsR(&kv); // ')'
 
 					if (GETCP(CODE_SEMICOLON))
 					{
@@ -121,14 +136,19 @@ GF_DEF(FUNC)
 
 						return true;
 					}
-					else if (CL(COMPOUND_STATEMENT, true, self))
+					else if (CL(COMPOUND_STATEMENT, self))
 					{//function def
 						return true;
 					}
 				}
 			}
 		}
+
+		parent->KillChild(self);
+
+		list->Restore(saved);
 	}
+
 
 	return false;
 }
@@ -136,88 +156,147 @@ GF_DEF(FUNC)
 GF_DEF(DATA_DECL)
 {//<data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
 //<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
-//<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' } + ';'
+//<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' } + ';' |
+//<unitializeable_data_type> <identifier> ';'
+	//<type> <ident> = {<expr>, <expr>, ... <expr>};
+	//<type> <ident> [<expr>];
+	//<type> <ident> [<expr>] = {<expr>, ... <expr>};
 	node_c* saved = list->Save();
 	node_c* comma_saved;
-	tnode_c* self = NULL;
+	node_c* equals_saved;
+	tnode_c* self = parent->InsR("Data declaration", NT_DATA_DECL);
 	kv_c kv;
 
-
-	if (CL(DATA_TYPE, false, NULL))
-	{//<data_type>
-		if (parent)
-			self = parent->InsR("Data declaration", NT_DATA_DECL);
-		CL(DATA_TYPE, true, self);
-
-		if (CL(SINGLE_DATA_DECL, false, NULL))
+	if (CL(DATA_TYPE, self))
+	{// <data_type>
+		if (CL(SINGLE_DATA_DECL, self))
 		{// <single_data_decl>
-			CL(SINGLE_DATA_DECL, true, self);
-
 			while (1)
-			{//{ ',' <single_data_decl> }*
+			{
 				if (!GETCP(CODE_COMMA))
 					break;
 				comma_saved = list->Save();
-				list->Pop(&kv);
+				list->Pop(&kv);// ','
+				self->InsR(&kv);
 
-				if (CL(SINGLE_DATA_DECL, false, NULL))
+				if (!CL(SINGLE_DATA_DECL, self))
 				{
-					if(parent)
-						self->InsR(&kv);
-					CL(SINGLE_DATA_DECL, true, self);
-				}
-				else
-				{//replace that comma here
 					list->Restore(comma_saved);
+					parent->KillChild(self);
 					break;
 				}
+				//<single_data_decl>
 			}
 
 			if (GETCP(CODE_SEMICOLON))
-			{
-				if (advance)
-				{
-					list->Pop(&kv);
-					if(parent)
-						self->InsR(&kv);
-				}
-				else
-					list->Restore(saved);
+			{// ';'
+				list->Pop(&kv);
+				self->InsR(&kv);
 				return true;
 			}
 		}
-
-		list->Restore(saved);
-		if (parent)
-			parent->KillChild(self);
 	}
-	else if (CL(ARRAY_DATA_TYPE, false, NULL))
+	else if (CL(ARRAY_DATA_TYPE, self))
 	{// <array_data_type>
-
-		return false; //TMPTMPTMP!!!
-
-		if (parent)
-			self = parent->InsR("Data declaration", NT_DATA_DECL);
-		CL(ARRAY_DATA_TYPE, true, self);
-
-		if (CL(IDENTIFIER, false, NULL))
+		if (CL(IDENTIFIER, self))
 		{// <identifier>
-			CL(IDENTIFIER, true, self);
-
 			if (GETCP(CODE_EQUALS))
 			{// '='
+				list->Pop(&kv);
+				self->InsR(&kv);
 
+				if (GETCP(CODE_LBRACKET))
+				{// '{'
+					list->Pop(&kv);
+					self->InsR(&kv);
+
+					if (CL(INITIALIZER_LIST, self))
+					{// <initializer_list>
+
+						if (GETCP(CODE_RBRACKET))
+						{// '}'
+							list->Pop(&kv);
+							self->InsR(&kv);
+
+							if (GETCP(CODE_SEMICOLON))
+							{// ';'
+								list->Pop(&kv);
+								self->InsR(&kv);
+								return true;
+							}
+						}
+					}
+				}
 			}
-			else if (GETCP(CODE_LBRACKET))
+			else if (GETCP(CODE_LBRACE))
 			{// '['
+				list->Pop(&kv);
+				self->InsR(&kv);
 
+				if (CL(CONSTANT_EXPRESSION, self))
+				{// <constant_expression>
+					if (GETCP(CODE_RBRACE))
+					{// ']'
+						list->Pop(&kv);
+						self->InsR(&kv);
+
+						if (GETCP(CODE_SEMICOLON))
+						{// ';'
+							list->Pop(&kv);
+							self->InsR(&kv);
+
+							return true;
+						}
+						else if (GETCP(CODE_EQUALS)) //optional
+						{// '='
+							//Reeeeaaallly should save/restore all this stuff in case the rest fails. oh well.
+							list->Pop(&kv);
+							self->InsR(&kv);
+
+							if (GETCP(CODE_LBRACKET))
+							{//'{'
+								list->Pop(&kv);
+								self->InsR(&kv);
+
+								if (CL(INITIALIZER_LIST, self))
+								{// <initializer_list>
+									if (GETCP(CODE_RBRACKET))
+									{//'}'
+										list->Pop(&kv);
+										self->InsR(&kv);
+										if (GETCP(CODE_SEMICOLON))
+										{// just handle this separately than the above
+											list->Pop(&kv);
+											self->InsR(&kv);
+											return true;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
-
-		list->Restore(saved);
-		if (parent)
-			parent->KillChild(self);
 	}
+	else if (GETCP(CODE_LABEL))
+	{// <unitializeable_data_type>
+		list->Pop(&kv);
+		self->InsR(&kv);
+
+		if (CL(IDENTIFIER, self))
+		{// <identifier>
+			if (GETCP(CODE_SEMICOLON))
+			{
+				list->Pop(&kv);
+				self->InsR(&kv);
+				return true;
+			}
+		}
+	}
+
+	parent->KillChild(self);
+	list->Restore(saved);
 
 	return  false;
 }
@@ -225,76 +304,141 @@ GF_DEF(DATA_DECL)
 GF_DEF(SINGLE_DATA_DECL)
 {//<identifier> { '=' <constant_expression> }+
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	node_c* saved_equals;
+	tnode_c* self = parent->InsR("Single data decl", NT_SINGLE_DATA_DECL);
+	tnode_c* equals_sign = NULL;
 	kv_c kv;
 
-	if (CL(IDENTIFIER, false, NULL))
-	{// <identifier>
-		if (parent)
-			self = parent->InsR("Single data declaration", NT_SINGLE_DATA_DECL);
-		CL(IDENTIFIER, true, self);
-
+	if (CL(IDENTIFIER, self))
+	{//<identifier>
 		if (GETCP(CODE_EQUALS))
-		{// '='
+		{//'='
+			saved_equals = list->Save();
 			list->Pop(&kv);
-			if (parent)
-				self->InsR(&kv);
-			/*
-			if (CL(CONSTANT_EXPRESSION, false, NULL))
-			{// <constant_expression>
-				if (advance)
-					CL(CONSTANT_EXPRESSION, true, self);
-				else
-					list->Restore(saved);
+			equals_sign = self->InsR(&kv);
 
-				return true;
+			if (!CL(CONSTANT_EXPRESSION, self))
+			{//no expression, restore it anyways
+				list->Restore(saved_equals);
+				self->KillChild(equals_sign);
 			}
-			*/
-
-			list->Restore(saved);
-			if (parent)
-				parent->KillChild(self);
-
-			return false;
+			//<constant_expression>
 		}
 
-		if (!advance)
-			list->Restore(saved);
-		
 		return true;
 	}
 
+	parent->KillChild(self);
+
 	return false;
 }
+
+GF_DEF(TYPE_DEF)
+{// 'type' '{' <data_decl>+ '}' <identifier> ';'
+	kv_c kv;
+	node_c* saved = list->Save();
+	tnode_c* self = parent->InsR("Type def", NT_TYPE_DEF);
+
+	if (GETCP(CODE_TYPE))
+	{// 'type'
+		list->Pop(&kv);
+		self->InsR(&kv);
+
+		if (GETCP(CODE_LBRACKET))
+		{// '{'
+			list->Pop(&kv);
+			self->InsR(&kv);
+
+			if(CL(DATA_DECL, self))
+			{// <data_decl>
+				while (CL(DATA_DECL, self)){} // <data_decl>*
+
+				if (GETCP(CODE_RBRACKET))
+				{// '}'
+					list->Pop(&kv);
+					self->InsR(&kv);
+
+					if (CL(IDENTIFIER, self))
+					{// <identifier>
+						if (GETCP(CODE_SEMICOLON))
+						{// ';'
+							list->Pop(&kv);
+							self->InsR(&kv);
+							return true;
+						}
+					}
+				}
+			}
+
+		}
+	}
+
+	list->Restore(saved);
+	parent->KillChild(self);
+
+	return false;
+}
+
 //============================================================================
 //Misc
 //============================================================================
 
+GF_DEF(INITIALIZER_LIST)
+{// <constant_expression> { ',' <constant_expression> }*
+	node_c* saved = list->Save();
+	node_c* comma_saved;
+	tnode_c* self;
+	tnode_c* comma_op;
+	kv_c kv;
+
+	self = parent->InsR("Initializer list", NT_INITIALIZER_LIST);
+
+	if (CL(CONSTANT_EXPRESSION, self))
+	{// <constant_expression>
+
+		while (1)
+		{
+			if (!GETCP(CODE_COMMA))
+				break;
+
+			comma_saved = list->Save();
+			list->Pop(&kv);// ','
+			comma_op = self->InsR(&kv);
+
+			if (!CL(CONSTANT_EXPRESSION, self))
+			{
+				list->Restore(comma_saved);
+				self->KillChild(comma_op);
+				break;
+			}
+			//<constant_expression>
+		}
+
+		return true;
+	}
+	list->Restore(saved);
+	parent->KillChild(self);
+
+	return false;
+}
+
 GF_DEF(PARAMETER)
 { // <data_type> <identifier>
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tnode_c* self = parent->InsR("Parameter", NT_PARAMETER);
 
-	if (CL(DATA_TYPE, false, NULL))
-	{
-		if (parent)
-			self = parent->InsR("Parameter", NT_PARAMETER);
+	if (CL(DATA_TYPE, self))
+	{// <data_type>
 
-		CL(DATA_TYPE, true, self); // <data_type>
-
-		if (CL(IDENTIFIER, false, NULL))
-		{
-			if (advance)
-				CL(IDENTIFIER, true, self); // <identifier>
-			else
-				list->Restore(saved);
-
+		if (CL(IDENTIFIER, self))
+		{//<identifier>
 			return true;
 		}
 
-		list->Restore(saved);
 	}
 
+	parent->KillChild(self);
+	list->Restore(saved);
 	return false;
 }
 
@@ -303,12 +447,12 @@ GF_DEF(PARAMETER_LIST)
 	node_c* saved = list->Save();
 	node_c* comma_saved;
 	tnode_c* self = NULL;
+	tnode_c* comma_op;
 	kv_c kv;
 
-	if (parent)
-		self = parent->InsR("Parameter list", NT_PARAMETER_LIST);
+	self = parent->InsR("Parameter list", NT_PARAMETER_LIST);
 
-	if (CL(PARAMETER, true, self))
+	if (CL(PARAMETER, self))
 	{// <parameter>
 
 		while (1)
@@ -316,23 +460,17 @@ GF_DEF(PARAMETER_LIST)
 			if (!GETCP(CODE_COMMA))
 				break;
 			comma_saved = list->Save();
-			list->Pop(&kv);
+			list->Pop(&kv);// ','
+			comma_op = self->InsR(&kv);
 
-			if (CL(PARAMETER, false, NULL))
+			if (!CL(PARAMETER, self))
 			{
-				if(parent)
-					self->InsR(&kv);
-				CL(PARAMETER, true, self);
-			}
-			else
-			{//replace that comma here
 				list->Restore(comma_saved);
+				self->KillChild(comma_op);
 				break;
 			}
+			// <parameter>
 		}
-
-		if (!advance)
-			list->Restore(saved);
 
 		return true;
 	}
@@ -349,12 +487,8 @@ GF_DEF(IDENTIFIER)
 	kv_c kv;
 	if (GETCP(CODE_TEXT))
 	{
-		if (advance)
-		{
-			list->Pop(&kv);
-			if(parent)
-				parent->InsR(&kv);
-		}
+		list->Pop(&kv);
+		parent->InsR(&kv);
 		return true;
 	}
 	return false;
@@ -365,9 +499,6 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 {
 	rcode_t rc;
 	char funcname[DBG_STR_MAX] = "Unknown";
-
-	if (!advance && parent)
-		exit(124);
 
 	if (tabs > (DEPTH_MAX * 2) - 2)
 		exit(123);
@@ -389,17 +520,19 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 		}
 	}
 
+	if (!parent)
+		printf("\n====%s has no passed root!====\n\n", funcname);
+
+
 	
-#if 1
+#if 0
 	printf("%s%s", tabstr, funcname);
-	if (advance)
-		printf(" ADV");
 	printf("\n");
 #endif
 	
 	
 
-	rc = (this->*func)(advance, parent);
+	rc = (this->*func)(parent);
 
 	tabstr[--tabs] = '\0';
 	tabstr[--tabs] = '\0';

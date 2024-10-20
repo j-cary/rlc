@@ -11,6 +11,7 @@ preprocessor_c preproc;
 
 //TODO:
 //preprocessing
+//for, instructions, constant, string
 //symbol table - make this part of IDENTIFIER?
 
 
@@ -18,10 +19,15 @@ int main()
 {
 	FILE* fin;
 
+	struct timeb start, end;
+	int elapsed_time;
+
 	static char program[PROG_MAX_LEN] = {};
 	char* line = program;
 
 	llist_c list;
+
+	ftime(&start);
 
 	fopen_s(&fin, tmp_filename, "rb");
 
@@ -51,9 +57,13 @@ int main()
 		}
 	}
 
-	printf("%s\n", program);
+	//printf("%s\n", program);
 	lex.Lex(program, &list);
 	parse.Parse(&list);
+
+	ftime(&end);
+	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));
+	printf("Compilation finished in %u millisecond(s)\n", elapsed_time);
 
 	return 0;
 }

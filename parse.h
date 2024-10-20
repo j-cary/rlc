@@ -7,7 +7,7 @@ enum RETURNCODES
 	RC_NULL	= 0, RC_PASS, RC_FAIL, RC_WARNING
 };
 
-#define GF_ARGS	bool advance, tnode_c* parent
+#define GF_ARGS	tnode_c* parent
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
 #define GF_DEF(x)	parse_c::rcode_t parse_c::x(GF_ARGS)
 #define FS_ENTRY(func, string)	&parse_c::func,string
@@ -36,6 +36,7 @@ private:
 	GF_DECL(FUNC);
 	GF_DECL(DATA_DECL);
 	GF_DECL(SINGLE_DATA_DECL);
+	GF_DECL(TYPE_DEF);
 
 	//
 	//Data types
@@ -51,12 +52,16 @@ private:
 	GF_DECL(OPEN_STATEMENT);
 	GF_DECL(CLOSED_STATEMENT);
 	GF_DECL(SIMPLE_STATEMENT);
+
 	GF_DECL(SELECTION_CLAUSE);
+	GF_DECL(FOR_CLAUSE);
+	GF_DECL(WHILE_CLAUSE);
+	GF_DECL(LABEL_DEF);
 
 	//
 	//Misc
 	//
-
+	GF_DECL(INITIALIZER_LIST);
 	GF_DECL(PARAMETER);
 	GF_DECL(PARAMETER_LIST);
 
@@ -68,6 +73,7 @@ private:
 
 	//Logical expressions
 	GF_DECL(LOGICAL_EXPRESSION);
+
 	GF_DECL(OR_EXPRESSION);
 	GF_DECL(AND_EXPRESSION);
 	GF_DECL(EQUALITY_EXPRESSION);
@@ -76,14 +82,16 @@ private:
 	GF_DECL(LOGICAL_PRIMARY_EXPRESSION);
 	//Arithmetic expressions
 	GF_DECL(ARITHMETIC_EXPRESSION);
+	GF_DECL(CONSTANT_EXPRESSION);
+
 	GF_DECL(SHIFT_EXPRESSION);
 	GF_DECL(ADDITIVE_EXPRESSION);
 	GF_DECL(MULTIPLICATIVE_EXPRESSION);
-	GF_DECL(ARITHMETIC_UNARY_EXPRESSION);
-	//Shared
+	GF_DECL(ARITHMETIC_POSTFIX_EXPRESSION);
+	GF_DECL(ARITHMETIC_PRIMARY_EXPRESSION);
+
 
 	rcode_t Call(gfunc_t func, GF_ARGS);
-	//
 
 	llist_c* list;
 	tnode_c root;
@@ -91,7 +99,7 @@ private:
 	char tabstr[DEPTH_MAX * 2] = {};
 	int tabs = 0;
 
-	fstrans_t fs[26] =
+	fstrans_t fs[35] =
 	{
 		//main prog
 		FS_ENTRY(TRANSLATION_UNIT, "Translation unit"),
@@ -100,6 +108,7 @@ private:
 		FS_ENTRY(FUNC, "Function"),
 		FS_ENTRY(DATA_DECL, "Data declaration"),
 		FS_ENTRY(SINGLE_DATA_DECL, "Single data declaration"),
+		FS_ENTRY(TYPE_DEF, "Type definition"),
 
 		//data
 		FS_ENTRY(DATA_TYPE, "Data"),
@@ -111,10 +120,14 @@ private:
 		FS_ENTRY(OPEN_STATEMENT, "Open statement"),
 		FS_ENTRY(CLOSED_STATEMENT, "Closed statement"),
 		FS_ENTRY(SIMPLE_STATEMENT, "Simple statement"),
-		FS_ENTRY(SELECTION_CLAUSE, "Selection Clause"),
+
+		FS_ENTRY(SELECTION_CLAUSE, "Selection clause"),
+		FS_ENTRY(FOR_CLAUSE, "For clause"),
+		FS_ENTRY(WHILE_CLAUSE, "While clause"),
+		FS_ENTRY(LABEL_DEF, "Label definition"),
 
 		//misc
-
+		FS_ENTRY(INITIALIZER_LIST, "Initializer list"),
 		FS_ENTRY(PARAMETER, "Parameter"),
 		FS_ENTRY(PARAMETER_LIST, "Parameter list"),
 
@@ -122,18 +135,28 @@ private:
 
 		//Logical expressions
 
-		 FS_ENTRY(LOGICAL_EXPRESSION, "Logical expression"),
-		 FS_ENTRY(OR_EXPRESSION, "Or expression"),
-		 FS_ENTRY(AND_EXPRESSION, "And expression"),
-		 FS_ENTRY(EQUALITY_EXPRESSION, "Equality expression"),
-		 FS_ENTRY(RELATIONAL_EXPRESSION, "Relational expression"),
+		FS_ENTRY(LOGICAL_EXPRESSION, "Logical expression"),
+
+		FS_ENTRY(OR_EXPRESSION, "Or expression"),
+		FS_ENTRY(AND_EXPRESSION, "And expression"),
+		FS_ENTRY(EQUALITY_EXPRESSION, "Equality expression"),
+		FS_ENTRY(RELATIONAL_EXPRESSION, "Relational expression"),
+		FS_ENTRY(LOGICAL_POSTFIX_EXPRESSION, "Postfix expression"),
+		FS_ENTRY(LOGICAL_PRIMARY_EXPRESSION, "Primary expression"),
 
 		//Arithmetic expressions
+
+		FS_ENTRY(ARITHMETIC_EXPRESSION, "Arithmetic expression"),
+		FS_ENTRY(CONSTANT_EXPRESSION, "Constant expression"),
+
+		FS_ENTRY(SHIFT_EXPRESSION, "Shift expression"),
+		FS_ENTRY(ADDITIVE_EXPRESSION, "Additive expression"),
+		FS_ENTRY(MULTIPLICATIVE_EXPRESSION, "Multiplicative expression"),
+		FS_ENTRY(ARITHMETIC_POSTFIX_EXPRESSION, "Postfix expression"),
+		FS_ENTRY(ARITHMETIC_PRIMARY_EXPRESSION, "Primary expression"),
 		
 		//Shared
 
-		 FS_ENTRY(LOGICAL_POSTFIX_EXPRESSION, "Postfix expression"),
-		 FS_ENTRY(LOGICAL_PRIMARY_EXPRESSION, "Primary expression"),
 
 	};
 
@@ -149,4 +172,5 @@ public:
 #define PEEKCP(x)	(list->Peek()->V() == x)
 #define GETCP(x)	(list->Get()->V() == x)
 //#define CL(x, y)	(Call(&parse_c::x, y, NULL))
-#define CL(x,y,z)	(Call(&parse_c::x, y, z))
+//#define CL(x,y,z)	(Call(&parse_c::x, y, z))
+#define CL(x, y)	(Call(&parse_c::x, y))

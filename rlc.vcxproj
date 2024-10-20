@@ -132,6 +132,7 @@
     <ClCompile Include="parse.cpp" />
     <ClCompile Include="parse_data.cpp" />
     <ClCompile Include="parse_expression.cpp" />
+    <ClCompile Include="parse_instruction.cpp" />
     <ClCompile Include="parse_statement.cpp" />
     <ClCompile Include="preprocessor.cpp" />
     <ClCompile Include="rlc.cpp" />

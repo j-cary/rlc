@@ -21,7 +21,7 @@ GF_DEF(COMPOUND_STATEMENT)
 
 		while (1)
 		{// <statement>*
-			if (!CL(STATEMENT, true, self))
+			if (!CL(STATEMENT,  self))
 				break;
 		}
 
@@ -30,8 +30,6 @@ GF_DEF(COMPOUND_STATEMENT)
 			list->Pop(&kv);
 			if (parent)
 				self->InsR(&kv);
-			if (!advance)
-				list->Restore(saved);
 
 			return true;
 		}
@@ -51,21 +49,13 @@ GF_DEF(STATEMENT)
 	if (parent)
 		self = parent->InsR("Statement", NT_STMT);
 
-	if (CL(OPEN_STATEMENT, true, self))
+	if (CL(OPEN_STATEMENT,  self))
 	{// <open_statement>
-		
-
-		//if (advance)
-		//	CL(OPEN_STATEMENT, true, self);
-
 		return true;
 	}
 
-	if (CL(CLOSED_STATEMENT, true, self))
+	if (CL(CLOSED_STATEMENT,  self))
 	{// <closed_statement>
-
-		//if (advance)
-		//	CL(CLOSED_STATEMENT, true, self);
 
 		return true;
 	}
@@ -88,10 +78,10 @@ GF_DEF(OPEN_STATEMENT)
 	if (parent)
 		self = parent->InsR("Open statement", NT_OPEN_STMT);
 
-	if (CL(SELECTION_CLAUSE, true, self))
+	if (CL(SELECTION_CLAUSE,  self))
 	{// <selection_clause>
 
-		if (CL(STATEMENT, true, self))
+		if (CL(STATEMENT,  self))
 		{// <statement
 
 			//lookahead for the 'else' here. reject if so
@@ -104,13 +94,11 @@ GF_DEF(OPEN_STATEMENT)
 				return false;
 			}
 
-			if (!advance)
-				list->Restore(saved);
 
 			return true;
 		}
 
-		if (CL(CLOSED_STATEMENT, true, self))
+		if (CL(CLOSED_STATEMENT,  self))
 		{// <closed_statement>
 
 			if (GETCP(CODE_ELSE))
@@ -119,13 +107,21 @@ GF_DEF(OPEN_STATEMENT)
 				if (parent)
 					self->InsR(&kv);
 
-				if (CL(OPEN_STATEMENT, true, self))
+				if (CL(OPEN_STATEMENT,  self))
 				{// <open_statement>
-					if (!advance)
-						list->Restore(saved);
 					return true;
 				}
 			}
+		}
+	}
+
+	if (GETCP(CODE_WHILE))
+	{// <while_clause>
+		CL(WHILE_CLAUSE, self);
+
+		if (CL(OPEN_STATEMENT, self))
+		{// <open_statement>
+			return true;
 		}
 	}
 
@@ -147,16 +143,16 @@ GF_DEF(CLOSED_STATEMENT)
 	if (parent)
 		self = parent->InsR("Closed statement", NT_CLOSED_STMT);
 
-	if (CL(SIMPLE_STATEMENT, true, self))
+	if (CL(SIMPLE_STATEMENT,  self))
 	{// <simple_statement>
 
 		return true;
 	}
 
-	if (CL(SELECTION_CLAUSE, true, self))
+	if (CL(SELECTION_CLAUSE,  self))
 	{// <selection_clause>
 
-		if (CL(CLOSED_STATEMENT, true, self))
+		if (CL(CLOSED_STATEMENT,  self))
 		{// <closed_statement>
 
 			if (GETCP(CODE_ELSE))
@@ -165,14 +161,22 @@ GF_DEF(CLOSED_STATEMENT)
 				if (parent)
 					self->InsR(&kv);
 
-				if (CL(CLOSED_STATEMENT, true, self))
+				if (CL(CLOSED_STATEMENT,  self))
 				{// <closed_statement>
-					if (!advance)
-						list->Restore(saved);
 
 					return true;
 				}
 			}
+		}
+	}
+
+	if (GETCP(CODE_WHILE))
+	{// <while_clause>
+		CL(WHILE_CLAUSE, self);
+
+		if (CL(CLOSED_STATEMENT, self))
+		{// <closed_statement>
+			return true;
 		}
 	}
 
@@ -187,6 +191,7 @@ GF_DEF(SIMPLE_STATEMENT)
 {//'repeat' <statement> 'until' '(' <expression> ')' ;	|
 //<instr_statement> |
 //<data_decl>		|
+//<label_def>		|
 //<compound_statement>
 	tnode_c* self = NULL;
 	node_c* saved = list->Save();
@@ -201,9 +206,8 @@ GF_DEF(SIMPLE_STATEMENT)
 		if (parent)
 			self->InsR(&kv);
 
-		if (CL(STATEMENT, false, NULL))
+		if (CL(STATEMENT,  self))
 		{// <statement>
-			CL(STATEMENT, true, self);
 
 			if (GETCP(CODE_UNTIL))
 			{// 'until'
@@ -217,9 +221,8 @@ GF_DEF(SIMPLE_STATEMENT)
 					if (parent)
 						self->InsR(&kv);
 
-					//if (CL(EXPRESSION, false, NULL))
+					if (CL(LOGICAL_EXPRESSION, self))
 					{ // <expression>
-						//CL(EXPRESSION, true, self);
 
 						if (GETCP(CODE_RPAREN))
 						{// ')'
@@ -228,10 +231,7 @@ GF_DEF(SIMPLE_STATEMENT)
 								self->InsR(&kv);
 							if (GETCP(CODE_SEMICOLON))
 							{
-								if (advance)
-									list->Pop(&kv);
-								else
-									list->Restore(saved);
+								list->Pop(&kv);
 								if (parent)
 									self->InsR(&kv);
 
@@ -247,14 +247,18 @@ GF_DEF(SIMPLE_STATEMENT)
 		if (parent)
 			parent->KillChild(self);
 	}
-	else if (CL(DATA_DECL, true, self))
+	else if (CL(DATA_DECL,  self))
 	{// <data_decl>
 
 		return true;
 	}
-	else if (CL(COMPOUND_STATEMENT, true, self))
+	else if (CL(COMPOUND_STATEMENT,  self))
 	{// <compound_statement>
 
+		return true;
+	}
+	else if (CL(LABEL_DEF, self))
+	{//<label_def>
 		return true;
 	}
 
@@ -285,15 +289,13 @@ GF_DEF(SELECTION_CLAUSE)
 			if (parent)
 				self->InsR(&kv);
 
-			if (CL(LOGICAL_EXPRESSION, true, self))
+			if (CL(LOGICAL_EXPRESSION,  self))
 			{//<expression>
 				if (GETCP(CODE_RPAREN))
 				{// ')'
 					list->Pop(&kv);
 					if (parent)
 						self->InsR(&kv);
-					if (!advance)
-						list->Restore(saved);
 
 					return true;
 				}
@@ -305,5 +307,64 @@ GF_DEF(SELECTION_CLAUSE)
 			parent->KillChild(self);
 	}
 
+	return false;
+}
+
+GF_DEF(FOR_CLAUSE)
+{ //'for' '(' <expression> '{' ';'  <expression>  ';' <instr_statement> { ',' <instr_statement> }* '}'? ')'
+	return false;
+}
+
+GF_DEF(WHILE_CLAUSE)
+{// 'while' '(' <logical_expression> ')'
+	node_c* saved = list->Save();
+	tnode_c* self = parent->InsR("While clause", NT_WHILE_CLAUSE);
+	kv_c kv;
+
+	if (GETCP(CODE_WHILE))
+	{// 'while'
+		list->Pop(&kv);
+		self->InsR(&kv);
+
+		if (GETCP(CODE_LPAREN))
+		{// '('
+			list->Pop(&kv);
+			self->InsR(&kv);
+
+			if (CL(LOGICAL_EXPRESSION, self))
+			{// <logical_expression>
+				if (GETCP(CODE_RPAREN))
+				{// ')'
+					list->Pop(&kv);
+					self->InsR(&kv);
+					return true;
+				}
+			}
+		}
+	}
+
+	list->Restore(saved);
+	parent->KillChild(self);
+	return false;
+}
+
+GF_DEF(LABEL_DEF)
+{//<identifier> ':'
+	tnode_c* self = parent->InsR("Label definition", NT_LABEL_DEF);
+	node_c* saved = list->Save();
+	kv_c kv;
+
+	if (CL(IDENTIFIER, self))
+	{//<identifier>
+		if (GETCP(CODE_COLON))
+		{// ':'
+			list->Pop(&kv);
+			self->InsR(&kv);
+			return true;
+		}
+	}
+
+	list->Restore(saved);
+	parent->KillChild(self);
 	return false;
 }

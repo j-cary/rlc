@@ -29,6 +29,7 @@ ckv_t reservedchars[] =
 	'-', CODE_MINUS,
 	'*', CODE_STAR,
 	'/', CODE_FSLASH,
+	'%', CODE_PERCENT,
 
 };
 
@@ -38,33 +39,29 @@ kv_t reservedwords[] =
 	"inline",	CODE_INLINE,
 	"subr",		CODE_SUBR,
 	"ans",		CODE_ANS,
+	
+	//data types
+	"db",		CODE_BYTE,		"byte",		CODE_BYTE,
+	"dw",		CODE_WORD,		"word",		CODE_WORD,
+	"ptr",		CODE_PTR,		"pointer",	CODE_PTR,
+	"fxd",		CODE_FIXED,		"fixed",	CODE_FIXED,
+	"lbl",		CODE_LABEL,		"label",	CODE_LABEL,
+	"dba",		CODE_BYTEARRAY,	"bytearray",CODE_BYTEARRAY,
+	"dwa",		CODE_WORDARRAY,	"wordarray",CODE_WORDARRAY,
+	"dpa",		CODE_PTRARRAY,	"ptrarray",	CODE_PTRARRAY,
+	"dfa",		CODE_FXDARRAY,	"fxdarray",	CODE_FXDARRAY,
 
-	"db",		CODE_BYTE,
-	"dw",		CODE_WORD,
-	"ptr",		CODE_PTR,
-	"fxd",		CODE_FIXED,
-	"lbl",		CODE_LABEL,
-	"dba",		CODE_BYTEARRAY,
-	"dwa",		CODE_WORDARRAY,
 	"type",		CODE_TYPE,
 
-	"stack",	CODE_STACK,
-	"heap",		CODE_HEAP,
-
+	//control flow
 	"repeat",	CODE_REPEAT,
 	"until",	CODE_UNTIL,
 	"while",	CODE_WHILE,
 	"for",		CODE_FOR,
-
 	"if",		CODE_IF,
 	"else",		CODE_ELSE,
-	"eq",		CODE_EQ,
-	"neq",		CODE_NEQ,
-	"lt",		CODE_LT,
-	"gt",		CODE_GT,
-	"le",		CODE_LE,
-	"ge",		CODE_GE,
 
+	//instructions
 	"ld",		CODE_LD,
 	"jp",		CODE_JP,
 	"call",		CODE_CALL,
@@ -111,6 +108,8 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 	char text[TEXT_MAX_LEN] = {};
 
 	list = _list;
+
+	printf("\nScanning...\n");
 
 	for (int pi = 0; prog[pi]; pi++)
 	{
@@ -212,8 +211,6 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 
 	list->Insert(NULL, nullkv); //null terminator
 	list->Disp();
-
-	printf("");
 }
 
 void lex_c::AddReservedChar(char c, int code)
