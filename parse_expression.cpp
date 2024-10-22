@@ -66,6 +66,7 @@ GF_DEF(OR_EXPRESSION)
 
 	return false;
 }
+
 GF_DEF(AND_EXPRESSION)
 {//<equality_expression> { '&&' <equality_expression> }*
 	node_c* saved = list->Save();
@@ -74,7 +75,7 @@ GF_DEF(AND_EXPRESSION)
 	tnode_c* logical_and = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	self = parent->InsR("And expression", NT_OR_EXPR);
+	self = parent->InsR("And expression", NT_AND_EXPR);
 
 	if (CL(EQUALITY_EXPRESSION, self))
 	{// <equality_expression>
@@ -114,7 +115,6 @@ GF_DEF(AND_EXPRESSION)
 	return false;
 }
 
-
 GF_DEF(EQUALITY_EXPRESSION)
 {//<relational_expression> { { '==' | '!=' } <relational_expression> }*
 	node_c* saved = list->Save();
@@ -123,7 +123,7 @@ GF_DEF(EQUALITY_EXPRESSION)
 	tnode_c* equals_sign = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	self = parent->InsR("Equality expression", NT_OR_EXPR);
+	self = parent->InsR("Equality expression", NT_EQUALITY_EXPR);
 
 	if (CL(RELATIONAL_EXPRESSION,  self))
 	{// <equality_expression>
@@ -166,7 +166,6 @@ GF_DEF(EQUALITY_EXPRESSION)
 
 	return false;
 }
-
 
 GF_DEF(RELATIONAL_EXPRESSION)
 {//<logical_unary_expression> { {'<' | '>' | '<=' | '>=' } <logical_unary_expression> }*
@@ -225,7 +224,6 @@ GF_DEF(RELATIONAL_EXPRESSION)
 	return false;
 }
 
-
 GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 {//<logical_primary_expression> 
 //	{ { { '.' | '..' } <logical_primary_expression> } | '[' <constant_expression> ']' }*
@@ -236,7 +234,7 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 	tnode_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Postfix expression", NT_LOGICAL_POSTFIX_EXPRESSION);
+	self = parent->InsR("Postfix expression", NT_LOGICAL_POSTFIX_EXPR);
 
 	if (CL(LOGICAL_PRIMARY_EXPRESSION,  self))
 	{//<logical_primary_expression>
@@ -306,15 +304,20 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 	tnode_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Primary expression", NT_AND_EXPR);
-
-	//<constant>
-
-	//<string>
+	self = parent->InsR("Primary expression", NT_LOGICAL_PRIMARY_EXPR);
 
 	if (CL(IDENTIFIER,  self))
 	{// <identifier>
-
+		return true;
+	}
+	else if (CL(CONSTANT, self))
+	{// <constant>
+		return true;
+	}
+	else if (GETCP(CODE_STRING))
+	{// <string>
+		list->Pop(&kv);
+		self->InsR(&kv);
 		return true;
 	}
 	else if (GETCP(CODE_LPAREN))
@@ -386,7 +389,7 @@ GF_DEF(CONSTANT_EXPRESSION)
 
 GF_DEF(SHIFT_EXPRESSION)
 {// <additive_expression> { { '<<' | '>>' } <additive_expression> }*
-	tnode_c* self = parent->InsR("Shift expression", NT_SHIFT_EXPRESSION);
+	tnode_c* self = parent->InsR("Shift expression", NT_SHIFT_EXPR);
 	tnode_c* shift_op = NULL;
 	node_c* operator_saved = NULL;
 	kv_c first, second;
@@ -479,7 +482,7 @@ GF_DEF(ADDITIVE_EXPRESSION)
 
 GF_DEF(MULTIPLICATIVE_EXPRESSION)
 {// <arithmetic_postfix_expression> { { '*' | '/' | '%' } <arithmetic_postfix_expression> }*
-	tnode_c* self = parent->InsR("Multiplicative expression", NT_ADDITIVE_EXPR);
+	tnode_c* self = parent->InsR("Multiplicative expression", NT_MULTIPLICATIVE_EXPR);
 	kv_c kv;
 	node_c* operator_saved = NULL;
 	tnode_c* multiplicative_op = NULL;
@@ -592,7 +595,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 	tnode_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Primary expression", NT_AND_EXPR);
+	self = parent->InsR("Primary expression", NT_ARITHMETIC_PRIMARY_EXPR);
 
 	//<constant>
 
@@ -602,14 +605,18 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 	{// <identifier>
 		return true;
 	}
+	else if (CL(CONSTANT, self))
+	{// <identifier>
+		return true;
+	}
 	else if (GETCP(CODE_LPAREN))
 	{// '('
 		list->Pop(&kv);
 
 		self->InsR(&kv);
 
-		if (CL(LOGICAL_EXPRESSION,  self))
-		{// <logical_expression>
+		if (CL(ARITHMETIC_EXPRESSION,  self))
+		{// <arithmetic_expression>
 
 			if (GETCP(CODE_RPAREN))
 			{// ')'
@@ -631,6 +638,136 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 		self->InsR(&kv);
 
 		if (CL(ARITHMETIC_EXPRESSION,  self))
+		{//<arithmetic_expression>
+			return true;
+		}
+	}
+
+	list->Restore(saved);
+	parent->KillChild(self);
+
+	return false;
+}
+
+//
+//Memory expressions
+//
+
+GF_DEF(MEMORY_EXPRESSION)
+{//<memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <mem_or_const_expression> ']' }*
+	node_c* saved = list->Save();
+	node_c* saved_op;
+	tnode_c* child = NULL;
+	tnode_c* self = NULL;
+	kv_c kv;
+
+	self = parent->InsR("Memory expression", NT_MEMORY_EXPR);
+
+	if (CL(MEMORY_PRIMARY_EXPRESSION, self))
+	{//<logical_primary_expression>
+		while (1)
+		{
+			if (GETCP(CODE_PERIOD))
+			{// '.'
+				saved_op = list->Save();
+				list->Pop(&kv);
+
+				if (GETCP(CODE_PERIOD))
+				{
+					list->Pop(NULL);// '.'
+					child = self->InsR("..", T_DEREF_MEMBER);
+				}
+				else
+					child = self->InsR(&kv);
+
+				if (!CL(MEMORY_PRIMARY_EXPRESSION, self))
+				{
+					list->Restore(saved_op);
+					self->KillChild(child);
+					break;
+				}
+			}
+			else if (GETCP(CODE_LBRACE))
+			{// '['
+				saved_op = list->Save();
+				list->Pop(&kv);// '['
+				child = self->InsR(&kv);
+
+				if (!CL(MEM_OR_CONST_EXPRESSION, self))
+				{
+					list->Restore(saved_op);
+					self->KillChild(child);
+					break;
+				}
+				//<constant_expression>
+
+				if (!GETCP(CODE_RBRACE))
+				{
+					list->Restore(saved_op);
+					self->KillChild(child);
+					self->KillChild(self->GetR()); //kill the expr
+					break;
+				}
+
+				list->Pop(&kv); //']'
+				self->InsR(&kv);
+			}
+			else
+				break;// not a '.' or a '['
+		}
+
+		return true;
+	}
+
+	list->Restore(saved);
+	parent->KillChild(self);
+	return false;
+}
+
+GF_DEF(MEM_OR_CONST_EXPRESSION)
+{//<memory_expression> | <constant_expression>
+	tnode_c* self = parent->InsR("Mem or const expression", NT_MEM_OR_CONST_EXPR);
+	node_c* saved = list->Save();
+
+	//note: identifiers are not checked for in syntax parsing of constant_expression.
+	//also, this code should only match a constant expression that could not otherwise be matched to a memory expression
+
+	if (CL(MEMORY_EXPRESSION, self))
+	{
+		if(GETCP(CODE_SEMICOLON) || GETCP(CODE_COMMA))
+			return true;
+
+		list->Restore(saved);
+		//self->KillAllChildren(); //should work, not confident this is cleaning up everything yet. just needs testing
+		self->KillChild(self->GetR());
+	}
+
+	//either its not a memory expression or there is some trailing stuff besides a comma
+	if (CL(CONSTANT_EXPRESSION, self))
+		return true;
+
+	parent->KillChild(self);
+	return false;
+}
+
+GF_DEF(MEMORY_PRIMARY_EXPRESSION)
+{//<identifier> | { '&' | '*' } <memory_expression>
+	node_c* saved = list->Save();
+	tnode_c* self = NULL;
+	kv_c kv;
+
+	self = parent->InsR("Primary expression", NT_MEMORY_PRIMARY_EXPR);
+
+	if (CL(IDENTIFIER, self))
+	{// <identifier>
+		return true;
+	}
+	else if (GETCP(CODE_AMPERSAND) || GETCP(CODE_STAR))
+	{// '&' | '*' 
+		list->Pop(&kv);
+		self->InsR(&kv);
+
+		if (CL(MEMORY_EXPRESSION, self))
 		{//<arithmetic_expression>
 			return true;
 		}

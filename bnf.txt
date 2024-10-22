@@ -8,8 +8,7 @@ if, else,
 //instrs
 ld, call, ret,
 add, sub, mul, div, inc, dec,
-and, or, xor, 
-//rlc, rrc, rl, rr, sla, sra, sll, srl, res, set, flp
+and, or, xor, neg,
 rl, rr, sl, sr, res, set, flp
 in, out,
 im,
@@ -45,7 +44,7 @@ new bnf:
 //
 
 <unitializeable_data_type> ::= lbl | label
-<data_type> ::= fxd | db | dw | ptr | fixed | byte | word | pointer
+<data_type> ::= fxd | db | dw | ptr | fixed | byte | word | pointer | { 'type' <identifier> } //FIXME: Implement this
 <array_data_type> ::= dfa | dba | dwa | dpa | fixedarray | bytearray | wordarray | ptrarray
 
 //
@@ -67,7 +66,7 @@ new bnf:
 						<for_clause> <closed_statement>
 //Does NOT end with a statement/selection_statement
 <simple_statement> ::= 'repeat' <compound_statement> 'until' '(' <expression> ')' ';'	|
-						<instr_statement>												|
+						<instruction>													|
 						<data_decl>														|
 						<label_def>														|
 						<compound_statement>
@@ -81,23 +80,33 @@ new bnf:
 //	INSTRUCTIONS
 //
 
-<instruction> ::= { <instruction_min1_maxinf> | <i_single> | <i_comp> | <i_min1_max2> | <i_min1_max3> | <i_double> | <i_triple> } ';'
+//expressions
+//basically, instructions will do you the courtesy of dereferencing, referencing, etc. but no more.
+//arrays can be used with simple memory or constant expression indexing
+//no adds or sub expressions
+//memory should allow: ., .., [], *, &
+
+<instruction> ::= { <i_one> | <i_two> | <i_three> | <i_one_to_two> | <i_one_to_three> | <i_one_to_infinite> | <i_comp> | <i_cpm> } ';'
 
 //check this shit ouuut..
-<instruction_1_ops>		::= { 'jp' }
-							<memory_expression>
+<instruction_1_ops>		::= { 'jp' | 'call' | 'inc' | 'dec' | 'im' | 'neg' }
+							<memory_expression>														//im 0/1/2;
 <instruction_2_ops>		::= { 'res' | 'set' | 'flp' | 'in' | 'out' }
-							<memory_expression> ',' <memory_expression>
+							<memory_expression> ',' <mem_or_const_expression>						//res/set/flp mem, bit; in/out dest, port;
 <instruction_3_ops>		::= { 'ldm'| 'inm' | 'outm' }
-							<memory_expression> ',' <memory_expression> ',' <arithmetic_expression>
+							<memory_expression> ',' <memory_expression> ',' <mem_or_const_expression> //ldm dest, src, size; inm/outm dest, port, size
 <instruction_1to2_ops>	::= { 'rl' | 'rr' }	
-							<memory_expression> { ',' <memory_expression> }?
+							<memory_expression> { ',' <mem_or_const_expression> }?					//rl/rr mem, shift_amt; shift_amt defaults to 1. Do not deal with carry flag! - using rrc & rlc
 <instruction_1to3_ops>	::= { 'sl' | 'sr' }	
-							<memory_expression>  { ',' <boolean_constant>  { ',' <memory_expression> }? }?
-<instruction_1toinf_ops>::= { 'ld' | 'add' | 'sub' | 'mult' | 'div' | 'mod' }
-							<memory_expression> { ',' <memory_expression> }+
+							<memory_expression>  { ',' <constant>  { ',' <mem_or_const_expression> }? }? //sl/sr mem, fill, shift_amt; Defaults to 0, 1. Do not deal with carry flag! - fill 0 zeros the first shifted bit, fill 1 sets bit0 in sl, does not change bit 7 in sr
+<instruction_2toinf_ops>::= { 'ld' | 'add' | 'sub' | 'mult' | 'div' | 'mod' | 'and' | 'or' | 'xor' }
+							<memory_expression> { ',' <mem_or_const_expression> }+					//ld dst1, dst2, ... ,src. others dst, src_n, src_n-1, ..., src_1
 <instruction_comp>		::= 'comp'
 							<arithmetic_expression>
+<instruction_cpm>		::= 'cpm'
+							<memory_expression> ',' <memory_expression> ',' <memory_expression> ',' <mem_or_const_expression>	//result, src1, src2, size
+
+//=========================================================================================================//
 
 add, sub, mult, div, mod :'ld' <logical_unary_expression> { ',' <logical_unary_expression> }+
 jp, call, inc, dec, im: 'jp' <logical_unary_expression> 
@@ -107,6 +116,8 @@ rl, rr: 'rl' <logical_unary_expression> { ',' <logical_unary_expression> }?
 sl, sr: 'sl' <logical_unary_expression>  { ',' <boolean_constant>  { ',' <logical_unary_expression> }? }?
 res, set, flp, in, out: 'res' <logical_unary_expression> ',' <logical_unary_expression>
 ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , <mathematical_expression> //Do I even want to support this, or should I just make this a constant?
+
+//=========================================================================================================//
 
 
 //
@@ -119,7 +130,7 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 <parameter_list> ::= <parameter> { ',' <parameter> }*
 
 <identifier> ::= text
-<constant> ::= 
+<constant> ::= <bool_const> | <dec_const> | <hex_const> | <fxd_const>
 
 
 //=========================================================================================================//
@@ -133,10 +144,12 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 //		
 //
 //	Order of Operations -
-//						Post===Unary=Rel========Equ==AndOr=													//
 //		Conditional:	.. . [] & * ! >= <= > < != == && || 
+//						Post===Unary=Rel========Equ==AndOr=													//
 //		Math:			.. . [] & * - % / * - + >> <<														//
 //						Post===Unary===Mult=Add=Shift														//
+//		Mem:			.. . [] & * 																			//
+//																											//
 //																											//
 // Note: Unary minus, not, dereference, and indirection are all right associative.							//
 //==========================================================================================================//
@@ -170,3 +183,12 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 									{ { { '.' | '..' } <arithmetic_primary_expression> } | '[' <arithmetic_expression> ']' }*
 <arithmetic_primary_expression> ::=	<identifier> | <constant> | '(' <arithmetic_expression> ')' | { '&' | '*' | '-' } <arithmetic_expression>
 
+//
+// Memory Expressions
+//
+
+//ex. ld var1.var2[var3], var4[1].var5[2 * 4];
+
+<mem_or_const_expression> ::= <memory_expression> | <constant_expression> //implementation: test mem first, then const
+<memory_expression> ::= <memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <mem_or_const_expression> ']' }*
+<memory_primary_expression> ::= <identifier> | { '&' | '*' } <memory_expression>

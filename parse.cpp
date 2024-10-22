@@ -494,6 +494,18 @@ GF_DEF(IDENTIFIER)
 	return false;
 }
 
+GF_DEF(CONSTANT)
+{
+	kv_c kv;
+	if (GETCP(CODE_NUM_BIN) | GETCP(CODE_NUM_DEC) | GETCP(CODE_NUM_HEX) | GETCP(CODE_NUM_FXD))
+	{
+		list->Pop(&kv);
+		parent->InsR(&kv);
+		return true;
+	}
+	return false;
+}
+
 
 parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 {

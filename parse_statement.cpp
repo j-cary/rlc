@@ -189,7 +189,7 @@ GF_DEF(CLOSED_STATEMENT)
 
 GF_DEF(SIMPLE_STATEMENT)
 {//'repeat' <statement> 'until' '(' <expression> ')' ;	|
-//<instr_statement> |
+//<instruction>		|
 //<data_decl>		|
 //<label_def>		|
 //<compound_statement>
@@ -246,6 +246,10 @@ GF_DEF(SIMPLE_STATEMENT)
 		list->Restore(saved);
 		if (parent)
 			parent->KillChild(self);
+	}
+	else if (CL(INSTRUCTION, self))
+	{
+		return true;
 	}
 	else if (CL(DATA_DECL,  self))
 	{// <data_decl>

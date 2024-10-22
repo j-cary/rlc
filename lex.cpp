@@ -75,15 +75,17 @@ kv_t reservedwords[] =
 	"inc",		CODE_INC,
 	"dec",		CODE_DEC,
 	"comp",		CODE_COMP,
+	"and",		CODE_AND,
+	"or",		CODE_OR,
+	"xor",		CODE_XOR,
+	"neg",		CODE_NEG,
 
 	"rlc",		CODE_RLC,
 	"rrc",		CODE_RRC,
 	"rl",		CODE_RL,
 	"rr",		CODE_RR,
-	"sla",		CODE_SLA,
-	"sra",		CODE_SRA,
-	"sll",		CODE_SLL,
-	"srl",		CODE_SRL,
+	"sl",		CODE_SL,
+	"sr",		CODE_SR,
 	"res",		CODE_RES,
 	"set",		CODE_SET,
 	"flp",		CODE_FLP,
@@ -186,7 +188,16 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 			{
 				if (text[ti] == reservedchars[ri].k)
 				{
-					if (*lexeme)
+					if (li && reservedchars[ri].k == '.' && isdigit(lexeme[li - 1]) && isdigit(text[ti + 1]))
+					{//if lexeme has been started, the char is a period, and numbers surround the period - assume a fixed number
+						lexeme[li++] = text[ti];
+						for (ti++; text[ti]; ti++)
+						{
+							lexeme[li++] = text[ti];
+						}
+						goto copy;
+					}
+					else if (*lexeme)
 					{
 						AddLexeme(lexeme);
 						li = 0;
@@ -202,7 +213,7 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 		skipcopy:;
 
 		}
-		
+	copy:
 		if (*lexeme)
 			AddLexeme(lexeme);
 
@@ -257,13 +268,22 @@ void lex_c::AddLexeme(char* lexeme)
 	}
 	else if (isdigit(lexeme[0]))
 	{
+		bool point = false;
 		for (int i = 1; lexeme[i]; i++)
 		{
-			if (!isdigit(lexeme[i]))
+			if (lexeme[i] == '.')
+			{
+				if (point) //there can't be two decimal points in a number
+					Error("Invalid fixed number");
+				point = true;
+			}
+			else if (!isdigit(lexeme[i]))
 				Error("Invalid decimal number");
 		}
-
-		ins.v = CODE_NUM_DEC;
+		if (point)
+			ins.v = CODE_NUM_FXD;
+		else
+			ins.v = CODE_NUM_DEC;
 	}
 	else if (isalpha(lexeme[0]))
 	{

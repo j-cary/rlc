@@ -10,8 +10,10 @@ parse_c parse;
 preprocessor_c preproc;
 
 //TODO:
+//Memory expressions
+//Typedef stuff - declaring variables of a type, how are arrays going to work? - maybe all types end with _t and an array of said type used in a decl should end with _a?
 //preprocessing
-//for, instructions, constant, string
+//for, instructions
 //symbol table - make this part of IDENTIFIER?
 
 
