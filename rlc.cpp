@@ -3,13 +3,16 @@
 #include "lex.h"
 #include "parse.h"
 #include "preprocessor.h"
+#include "semantics.h"
 
 const char tmp_filename[] = "c:/ti83/rl/test.rls";
 lex_c lex;
-parse_c parse;
 preprocessor_c preproc;
+parse_c parse;
+semantic_c semantic;
 
 //TODO:
+//Call stuff. thinking call oscallname, parm1, parm2, etc.;
 //Typedef stuff - declaring variables of a type, how are arrays going to work? 
 //preprocessing
 //symbol table - make this part of IDENTIFIER?
@@ -26,6 +29,7 @@ int main()
 	char* line = program;
 
 	llist_c list;
+	tnode_c tree;
 
 	ftime(&start);
 
@@ -60,7 +64,8 @@ int main()
 	//printf("%s\n", program);
 	lex.Lex(program, &list, false);
 	//actually do the preprocessing here
-	parse.Parse(&list, false);
+	parse.Parse(&list, &tree, false);
+	semantic.Check(&tree);
 
 	ftime(&end);
 	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));

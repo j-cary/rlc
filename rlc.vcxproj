@@ -136,6 +136,7 @@
     <ClCompile Include="parse_statement.cpp" />
     <ClCompile Include="preprocessor.cpp" />
     <ClCompile Include="rlc.cpp" />
+    <ClCompile Include="semantics.cpp" />
     <ClCompile Include="tree.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -143,6 +144,7 @@
     <ClInclude Include="lex.h" />
     <ClInclude Include="parse.h" />
     <ClInclude Include="preprocessor.h" />
+    <ClInclude Include="semantics.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="bnf.txt" />

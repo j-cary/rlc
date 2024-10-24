@@ -22,7 +22,7 @@
 static int maxtab = 0;
 static int calls = 0;
 
-void parse_c::Parse(llist_c* _list, bool _debug)
+void parse_c::Parse(llist_c* _list, tnode_c* _root, bool _debug)
 {
 	struct timeb start, end;
 	int elapsed_time;
@@ -33,9 +33,10 @@ void parse_c::Parse(llist_c* _list, bool _debug)
 
 	list = _list;
 	debug = _debug;
+	root = _root;
 
-	root.Set("Translation unit", NT_UNIT);
-	result = CL(TRANSLATION_UNIT, &root);
+	root->Set("Translation unit", NT_UNIT);
+	result = CL(TRANSLATION_UNIT, root);
 
 	ftime(&end);
 	elapsed_time = (int)(1000.0 * (end.time - start.time)+ (end.millitm - start.millitm));
@@ -46,13 +47,11 @@ void parse_c::Parse(llist_c* _list, bool _debug)
 	if (result)
 	{
 		printf("\n\n");
-		root.Disp();
+		root->Disp();
 		printf("\n================\n\nValid translation unit\n\n================\n");
 	}
 	else
 		printf("\n================\n\nInvalid translation unit\n\n================\n");
-
-
 
 }
 

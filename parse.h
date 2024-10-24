@@ -113,7 +113,8 @@ private:
 	rcode_t Call(gfunc_t func, GF_ARGS);
 
 	llist_c* list;
-	tnode_c root;
+	//tnode_c root;
+	tnode_c* root;
 	bool debug;
 
 	char tabstr[DEPTH_MAX * 2] = {};
@@ -196,11 +197,11 @@ private:
 	};
 
 public:
-	void Parse(llist_c* _list, bool debug);
+	void Parse(llist_c* _list, tnode_c* _root, bool debug);
 	parse_c()
 	{
 		list = NULL;
-		root.tnode_c::tnode_c();
+		//root.tnode_c::tnode_c();
 	}
 };
 
