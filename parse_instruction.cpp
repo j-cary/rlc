@@ -3,6 +3,7 @@
 GF_DEF(INSTRUCTION)
 {
 	tnode_c* self = parent->InsR("Instruction", NT_INSTRUCTION);
+	node_c* saved = list->Save();
 	kv_c kv;
 	gfunc_t func = NULL;
 
@@ -13,43 +14,23 @@ GF_DEF(INSTRUCTION)
 	case CODE_INC:
 	case CODE_DEC:
 	case CODE_IM:
-	case CODE_NEG:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_ONE;
-		break;
+	case CODE_NEG:	func = &parse_c::OPERANDS_ONE;			break;
 
 	case CODE_RES:
 	case CODE_SET:
 	case CODE_FLP:
 	case CODE_IN:
-	case CODE_OUT:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_TWO;
-		break;
+	case CODE_OUT:	func = &parse_c::OPERANDS_TWO;			break;
 
 	case CODE_LDM:
 	case CODE_OUTM:
-	case CODE_INM:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_THREE;
-		break;
+	case CODE_INM:	func = &parse_c::OPERANDS_THREE;		break;
 
 	case CODE_RR:
-	case CODE_RL:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_ONE_TO_TWO;
-		break;
+	case CODE_RL:	func = &parse_c::OPERANDS_ONE_TO_TWO;	break;
 
 	case CODE_SL:
-	case CODE_SR:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_ONE_TO_THREE;
-		break;
+	case CODE_SR:	func = &parse_c::OPERANDS_ONE_TO_THREE;	break;
 
 	case CODE_LD:
 	case CODE_ADD:
@@ -59,28 +40,18 @@ GF_DEF(INSTRUCTION)
 	case CODE_MOD:
 	case CODE_AND:
 	case CODE_OR:
-	case CODE_XOR:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_TWO_TO_INF;
-		break;
+	case CODE_XOR:	func = &parse_c::OPERANDS_TWO_TO_INF;	break;
 
-	case CODE_COMP:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_COMP;
-		break;
+	case CODE_COMP:	func = &parse_c::OPERANDS_COMP;			break;
 
-	case CODE_CPM:
-		list->Pop(&kv);
-		self->InsR(&kv);
-		func = &parse_c::OPERANDS_CPM;
-		break;
-	default:
-		parent->KillChild(self);
-		return false;
-		break;
+	case CODE_CPM:	func = &parse_c::OPERANDS_CPM;			break;
+
+	default:	parent->KillChild(self);	return false;	break;
 	}
+
+
+	list->Pop(&kv);
+	self->InsR(&kv);
 
 	if(Call(func, self))
 	{// <operand(s)>
@@ -93,7 +64,7 @@ GF_DEF(INSTRUCTION)
 	}
 
 	
-
+	list->Restore(saved);
 	parent->KillChild(self);
 	return false;
 }
@@ -281,12 +252,24 @@ GF_DEF(OPERANDS_TWO_TO_INF)
 }
 
 GF_DEF(OPERANDS_COMP)
-{//<arithmetic_expression>
-	tnode_c* self = parent->InsR("1 op", NT_OPERANDS_COMP);
+{//<memory_expression> ',' <arithmetic_expression>
+	tnode_c* self = parent->InsR("2 ops", NT_OPERANDS_COMP);
+	node_c* saved = list->Save();
+	kv_c kv;
 
-	if (CL(ARITHMETIC_EXPRESSION, self))
-		return true;
-	
+	if (CL(MEMORY_EXPRESSION, self))
+	{// <memory_expression>
+		if (GETCP(CODE_COMMA))
+		{// ','
+			list->Pop(&kv);
+			self->InsR(&kv);
+
+			if (CL(ARITHMETIC_EXPRESSION, self))
+				return true;
+		}
+	}
+
+	list->Restore(saved);
 	parent->KillChild(self);
 	return false;
 }

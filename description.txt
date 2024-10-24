@@ -1,28 +1,27 @@
 RLS (Register-Less Assembly) Tentative Description
 
 Syntax is meant to be very similar to regular z80 assembly. In addition, however, it has higher-level constructs like block-statements,
-if-statements, and type-checking. This is just a quick set of examples and noteable features as to not waste time.
+if-statements, and type-checking.
 
-BNF:
-<instruction_statement> ::= <operator> {, <operand> }*
-An operator may be a reserved word, a user-defined function or an OS function. 
+Functions:
+	functions are declared like so: subr subroutine1 ( db byte1, dw word1, ptr ptr1, fxd fxd1);
+	and are define like so: subr subroutine1 () { <statements> }
+	//Note: the entry function may be defined using the 'start' keyword instead of subr
+	//Note: Arrays and labels cannot be passed as parameters
 
-this rule does not fully implement a lot of stuff including: labels, arrays, and initialization
-<variable_declaration> ::= <data_type> {<data_qualifier>} <text_constant> ;
-<data_type> ::= byte | word | label | dword | fixed
-<data_qualifier> ::= ptr | array
-
-C-like conditional expressions. Conditionals in assembly are very hard to read so these should be simplified.
-
-Assembly-like arithmetic expressions. This CPU does not have hardware multiplication, division, modulus, etc., so, in my opinion,
-high level expressions are too abstract. Take the expression v1 = ((v2 * v3 + v4) * v5) % v6;. This is fairly simple to look at
-but this simplicity hides how computationally heavy it really is. This could be expressed as the following RLS statements:
-mul v1, v2, v3; //software instruction
-add v1, v4; //hardware instruction
-mul v1, v5; //note: the above mul does v1 = v2 * v3, this one does v1 *= v5;
-mod v1, v6; //software instruction
-
-Bit instructions:
+Data Declarations:
+	single data entries can be declared like so: 
+		db byte1;
+		db byte1 = $00;
+		db byte1, byte2;
+		db byte1, byte2 = $00;
+		type usertype_t uservar1;
+		type usertype_t uservar1 = 0; // initializes all member variables of 'uservar1' to 0
+		etc.
+	array data entries can be declared like so:
+		dba bytearray1 = { $00, 0 + 4 * 2 }; // the initializer list must NOT be empty, and must only contain constant expressions!
+		dba byrearray1[2 * 4]; //The size of the array must be determined by a constant expression
+		dba byrearray1[2 * 4] = { 0 };  // The size of the initializer list must not exceed the size of the array
 
 
 Reserved words:
@@ -40,6 +39,4 @@ in, out, //port i/o
 im, //interrupt mode
 ldm, cpm, inm, outm //block ld, cp, in, out instructions
 
-//!!!FIXME - need some way to fit cpm into if/else structures
-//!!!FIXME - implement new shifts & rotates
 //!!!FIXME - implement skip/escape loop control keywords

@@ -22,7 +22,7 @@
 static int maxtab = 0;
 static int calls = 0;
 
-void parse_c::Parse(llist_c* _list)
+void parse_c::Parse(llist_c* _list, bool _debug)
 {
 	struct timeb start, end;
 	int elapsed_time;
@@ -32,6 +32,7 @@ void parse_c::Parse(llist_c* _list)
 	ftime(&start);
 
 	list = _list;
+	debug = _debug;
 
 	root.Set("Translation unit", NT_UNIT);
 	result = CL(TRANSLATION_UNIT, &root);
@@ -99,8 +100,8 @@ GF_DEF(EXTERNAL_DECL)
 }
 
 GF_DEF(FUNC)
-{ //'subr' <identifier> '(' <parameter_list>+ ')' ';'
-  //'subr' <identifier> '(' <parameter_list>+ ')' <compound_statement>
+{ //'subr' <identifier> '(' <parameter_list>* ')' ';'
+  //'subr' <identifier> '(' <parameter_list>* ')' <compound_statement>
   //cheat here. Combine a decl and a def into one function due to their similarities.
 	tnode_c* self = NULL;
 	kv_c kv;
@@ -302,7 +303,7 @@ GF_DEF(DATA_DECL)
 }
 
 GF_DEF(SINGLE_DATA_DECL)
-{//<identifier> { '=' <constant_expression> }+
+{//<identifier> { '=' <arithmetic_expression> }+
 	node_c* saved = list->Save();
 	node_c* saved_equals;
 	tnode_c* self = parent->InsR("Single data decl", NT_SINGLE_DATA_DECL);
@@ -537,10 +538,12 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 
 
 	
-#if 0
-	printf("%s%s", tabstr, funcname);
-	printf("\n");
-#endif
+	if (debug)
+	{
+		printf("%s%s", tabstr, funcname);
+		printf("\n");
+	}
+
 	
 	
 

@@ -125,6 +125,16 @@ GF_DEF(OPEN_STATEMENT)
 		}
 	}
 
+	if (GETCP(CODE_FOR))
+	{// <for_clause>
+		CL(FOR_CLAUSE, self);
+
+		if (CL(OPEN_STATEMENT, self))
+		{// <open_statement>
+			return true;
+		}
+	}
+
 	list->Restore(saved);
 	if (parent)
 		parent->KillChild(self);
@@ -173,6 +183,16 @@ GF_DEF(CLOSED_STATEMENT)
 	if (GETCP(CODE_WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);
+
+		if (CL(CLOSED_STATEMENT, self))
+		{// <closed_statement>
+			return true;
+		}
+	}
+
+	if (GETCP(CODE_FOR))
+	{// <for_clause>
+		CL(FOR_CLAUSE, self);
 
 		if (CL(CLOSED_STATEMENT, self))
 		{// <closed_statement>
@@ -315,7 +335,38 @@ GF_DEF(SELECTION_CLAUSE)
 }
 
 GF_DEF(FOR_CLAUSE)
-{ //'for' '(' <expression> '{' ';'  <expression>  ';' <instr_statement> { ',' <instr_statement> }* '}'? ')'
+{ //'for' '(' <data_type>  <single_data_decl> ')'
+	tnode_c* self = parent->InsR("For clause", NT_FOR_CLAUSE);
+	node_c* saved = list->Save();
+	kv_c kv;
+
+	if (GETCP(CODE_FOR))
+	{// 'for'
+		list->Pop(&kv);
+		self->InsR(&kv);
+
+		if (GETCP(CODE_LPAREN))
+		{// '('
+			list->Pop(&kv);
+			self->InsR(&kv);
+
+			if (CL(DATA_TYPE, self))
+			{// <data_type>
+				if (CL(SINGLE_DATA_DECL, self))
+				{// <single_data_decl>
+					if (GETCP(CODE_RPAREN))
+					{//')'
+						list->Pop(&kv);
+						self->InsR(&kv);
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	//list->Restore(saved);
+	parent->KillChild(self);
 	return false;
 }
 

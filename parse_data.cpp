@@ -1,8 +1,10 @@
 #include "parse.h"
 
 GF_DEF(DATA_TYPE)
-{// 'db' | 'dw' | 'fxd' | 'ptr'
+{// 'db' | 'dw' | 'fxd' | 'ptr' | 'type' <identifier>
 	kv_c kv;
+	tnode_c* self;
+	node_c* saved = list->Save();
 
 	if (GETCP(CODE_BYTE) || GETCP(CODE_WORD) || GETCP(CODE_FIXED) || GETCP(CODE_PTR))
 	{
@@ -10,7 +12,18 @@ GF_DEF(DATA_TYPE)
 		parent->InsR("Data", NT_DATA_TYPE)->InsR(&kv);
 		return true;
 	}
+	else if (GETCP(CODE_TYPE))
+	{// 'type'
+		list->Pop(&kv);
+		self = parent->InsR("Data", NT_DATA_TYPE);
+		self->InsR(&kv);
+		if (CL(IDENTIFIER, self))
+		{// <identifier>
+			return true;
+		}
+	}
 
+	list->Restore(saved);
 	return false;
 }
 

@@ -10,10 +10,8 @@ parse_c parse;
 preprocessor_c preproc;
 
 //TODO:
-//Memory expressions
-//Typedef stuff - declaring variables of a type, how are arrays going to work? - maybe all types end with _t and an array of said type used in a decl should end with _a?
+//Typedef stuff - declaring variables of a type, how are arrays going to work? 
 //preprocessing
-//for, instructions
 //symbol table - make this part of IDENTIFIER?
 
 
@@ -60,8 +58,9 @@ int main()
 	}
 
 	//printf("%s\n", program);
-	lex.Lex(program, &list);
-	parse.Parse(&list);
+	lex.Lex(program, &list, false);
+	//actually do the preprocessing here
+	parse.Parse(&list, false);
 
 	ftime(&end);
 	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));

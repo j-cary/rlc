@@ -114,6 +114,7 @@ private:
 
 	llist_c* list;
 	tnode_c root;
+	bool debug;
 
 	char tabstr[DEPTH_MAX * 2] = {};
 	int tabs = 0;
@@ -195,7 +196,7 @@ private:
 	};
 
 public:
-	void Parse(llist_c* _list);
+	void Parse(llist_c* _list, bool debug);
 	parse_c()
 	{
 		list = NULL;

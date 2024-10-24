@@ -105,12 +105,16 @@ kv_t reservedwords[] =
 	"define",	CODE_PP_DEFINE,
 };
 
-void lex_c::Lex(const char* prog, llist_c* _list)
+void lex_c::Lex(const char* prog, llist_c* _list, bool _debug)
 {
+	struct timeb start, end;
+	int elapsed_time;
 	char text[TEXT_MAX_LEN] = {};
 
 	list = _list;
+	debug = _debug;
 
+	ftime(&start);
 	printf("\nScanning...\n");
 
 	for (int pi = 0; prog[pi]; pi++)
@@ -220,8 +224,13 @@ void lex_c::Lex(const char* prog, llist_c* _list)
 		memset(text, 0, TEXT_MAX_LEN);
 	}
 
+	ftime(&end);
+	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));
+	printf("Scanning completed in %u millisecond(s)\n", elapsed_time);
+
 	list->Insert(NULL, nullkv); //null terminator
-	list->Disp();
+	if(debug)
+		list->Disp();
 }
 
 void lex_c::AddReservedChar(char c, int code)
