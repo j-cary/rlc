@@ -65,7 +65,7 @@ int main()
 	lex.Lex(program, &list, false);
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, false);
-	semantic.Check(&tree);
+	semantic.CheckParseTree(&tree);
 
 	ftime(&end);
 	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));

@@ -10,6 +10,9 @@ class semantic_c
 {
 private:
 	tnode_c* root;
+	llist_c symbols;
+
+	void VisitNode(tnode_c* node);
 public:
-	void Check(tnode_c* _root);
+	void CheckParseTree(tnode_c* _root);
 };
