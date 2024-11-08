@@ -12,7 +12,7 @@ private:
 	tnode_c* root;
 	llist_c symbols;
 
-	void VisitNode(tnode_c* node);
+	void VisitNode(tnode_c* node, tnode_c* parent);
 public:
-	void CheckParseTree(tnode_c* _root);
+	void GenerateAST(tnode_c* _root);
 };

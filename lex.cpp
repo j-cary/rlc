@@ -35,7 +35,6 @@ ckv_t reservedchars[] =
 
 kv_t reservedwords[] =
 {
-	"start",	CODE_START,
 	"inline",	CODE_INLINE,
 	"subr",		CODE_SUBR,
 	"ans",		CODE_ANS,
@@ -108,7 +107,7 @@ kv_t reservedwords[] =
 void lex_c::Lex(const char* prog, llist_c* _list, bool _debug)
 {
 	struct timeb start, end;
-	int elapsed_time;
+	float time_seconds;
 	char text[TEXT_MAX_LEN] = {};
 
 	list = _list;
@@ -225,8 +224,9 @@ void lex_c::Lex(const char* prog, llist_c* _list, bool _debug)
 	}
 
 	ftime(&end);
-	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));
-	printf("Scanning completed in %u millisecond(s)\n", elapsed_time);
+	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0;
+	printf("Scanning completed in %.4f second(s)\n", time_seconds);
+
 
 	list->Insert(NULL, nullkv); //null terminator
 	if(debug)

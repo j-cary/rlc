@@ -21,7 +21,7 @@ enum CODES
 	CODE_EQUALS, CODE_PLUS, CODE_MINUS, CODE_STAR, CODE_FSLASH, CODE_PERCENT,//arithmetic
 
 	//words
-	CODE_START, CODE_INLINE, CODE_SUBR, CODE_ANS,
+	CODE_INLINE, CODE_SUBR, CODE_ANS,
 	//data types
 	CODE_BYTE, CODE_WORD, CODE_PTR, CODE_FIXED, CODE_LABEL, 
 	CODE_BYTEARRAY, CODE_WORDARRAY, CODE_PTRARRAY, CODE_FXDARRAY,
@@ -64,7 +64,7 @@ enum CODES
 
 	//Instructions
 	NT_INSTRUCTION, 
-	NT_OPERANDS_ONE, NT_OPERANDS_TWO, NT_OPERANDS_THREE, NT_OPERANDS_ONE_TO_TWO, NT_OPERANDS_ONE_TO_THREE, NT_OPERANDS_TWO_TO_INF, NT_OPERANDS_COMP, NT_OPERANDS_FOUR,
+	NT_OPERANDS_ONE, NT_OPERANDS_TWO, NT_OPERANDS_THREE, NT_OPERANDS_ONE_TO_TWO, NT_OPERANDS_ONE_TO_THREE, NT_OPERANDS_TWO_TO_INF, NT_OPERANDS_COMP, NT_OPERANDS_FOUR, NT_OPERANDS_RET, NT_OPERANDS_CALL,
 
 	//misc
 	NT_INITIALIZER_LIST,
@@ -271,6 +271,8 @@ public:
 	tnode_c* InsL(const char* str, int code);
 	tnode_c* InsL(kv_t _kv);
 	void Ins(kv_t _kv, int idx); //needs work. Currently will only add a child if the list is not empty
+	tnode_c* Ins(const char* str, int code, int idx);
+	tnode_c* Ins(tnode_c* t, int idx);
 
 	tnode_c* Save(); //make copy of current sub-tree
 	void Restore(tnode_c* saved);
@@ -278,19 +280,24 @@ public:
 	void Delete(); //Delete this sub-tree, including the root
 	void KillAllChildren(); //Delete this sub-tree, minus the root
 	bool KillChild(tnode_c* removee); //Delete a single node. Must be called from an ancestor node
+	void DetachChild(tnode_c* removee); //Get a node out of the list, but don't delete it
 
 	//Getting children
 	tnode_c* GetL();
 	tnode_c* GetR();
 	tnode_c* Get(int idx); //rename this
 
+	int GetIndex(tnode_c* child); //-1 if non-existant
+
 	void Set(const kv_c* _kv) { kv.Copy(_kv); }
 	void Set(const char* str, int code) { kv.Set(str, code); }
-	const kv_c* GetMine()		{	return &kv;	}//rename this
+	const kv_c* Hash()		{	return &kv;	}//rename this
 	 
 	bool IsLeaf() { return leaf; }
 
 	void Disp();
+
+	void Collapse(tnode_c* child);
 
 	tnode_c()
 	{

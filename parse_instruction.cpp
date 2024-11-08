@@ -10,7 +10,6 @@ GF_DEF(INSTRUCTION)
 	switch (list->Get()->V())
 	{
 	case CODE_JP:
-	case CODE_CALL:
 	case CODE_INC:
 	case CODE_DEC:
 	case CODE_IM:
@@ -45,6 +44,10 @@ GF_DEF(INSTRUCTION)
 	case CODE_COMP:	func = &parse_c::OPERANDS_COMP;			break;
 
 	case CODE_CPM:	func = &parse_c::OPERANDS_CPM;			break;
+
+	case CODE_RET:	func = &parse_c::OPERANDS_RET;			break;
+
+	case CODE_CALL:	func = &parse_c::OPERANDS_CALL;			break;
 
 	default:	parent->KillChild(self);	return false;	break;
 	}
@@ -305,6 +308,54 @@ GF_DEF(OPERANDS_CPM)
 	if(success && CL(MEM_OR_CONST_EXPRESSION, self))
 		return true;
 	
+
+	list->Restore(saved);
+	parent->KillChild(self);
+	return false;
+}
+
+GF_DEF(OPERANDS_RET)
+{// { <logical_expression> }+
+
+	tnode_c* self = parent->InsR("1 op", NT_OPERANDS_RET);
+
+	if (!CL(LOGICAL_EXPRESSION, self))
+		parent->KillChild(self);
+
+	return true;
+}
+
+GF_DEF(OPERANDS_CALL)
+{//<memory_expression>  { ',' <mem_or_const_expression> }*
+	tnode_c* self = parent->InsR("1 to inf ops", NT_OPERANDS_CALL);
+	tnode_c* comma_child;
+	node_c* saved = list->Save();
+	node_c* comma_saved;
+	kv_c kv;
+
+
+	if (CL(MEMORY_EXPRESSION, self))
+	{// <memory_expression>
+
+		while (1)
+		{
+			if (!GETCP(CODE_COMMA))
+				break;
+			comma_saved = list->Save();
+			list->Pop(&kv); //','
+			comma_child = self->InsR(&kv);
+
+			if (!CL(MEM_OR_CONST_EXPRESSION, self))
+			{
+				list->Restore(comma_saved);
+				self->KillChild(comma_child);
+				break;
+			}
+			//<mem_or_const_expression>
+		}
+
+		return true;
+	}
 
 	list->Restore(saved);
 	parent->KillChild(self);

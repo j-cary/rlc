@@ -25,7 +25,7 @@ static int calls = 0;
 void parse_c::Parse(llist_c* _list, tnode_c* _root, bool _debug)
 {
 	struct timeb start, end;
-	int elapsed_time;
+	float time_seconds;
 	bool result;
 
 	printf("Parsing...\n");
@@ -39,19 +39,24 @@ void parse_c::Parse(llist_c* _list, tnode_c* _root, bool _debug)
 	result = CL(TRANSLATION_UNIT, root);
 
 	ftime(&end);
-	elapsed_time = (int)(1000.0 * (end.time - start.time)+ (end.millitm - start.millitm));
-	printf("Parsing completed in %u millisecond(s)\n", elapsed_time);
-	printf("Max tabs: %i calls: %i\n", maxtab, calls);
+	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0;
+	printf("Parsing completed in %.4f second(s)\n", time_seconds);
+
+	//printf("Max tabs: %i calls: %i\n", maxtab, calls);
 
 
 	if (result)
 	{
-		printf("\n\n");
-		root->Disp();
-		printf("\n================\n\nValid translation unit\n\n================\n");
+		//printf("\n\n");
+		if(debug)
+			root->Disp();
+		//printf("\n================\n\nValid translation unit\n\n================\n");
 	}
 	else
-		printf("\n================\n\nInvalid translation unit\n\n================\n");
+	{
+		//printf("\n================\n\nInvalid translation unit\n\n================\n");
+		Error("Invalid translation unit\n");
+	}
 
 }
 
@@ -138,6 +143,7 @@ GF_DEF(FUNC)
 					}
 					else if (CL(COMPOUND_STATEMENT, self))
 					{//function def
+						self->Set("Func def", NT_FUNC_DEF);
 						return true;
 					}
 				}

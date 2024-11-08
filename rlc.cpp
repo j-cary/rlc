@@ -4,15 +4,17 @@
 #include "parse.h"
 #include "preprocessor.h"
 #include "semantics.h"
+#include "generator.h"
 
 const char tmp_filename[] = "c:/ti83/rl/test.rls";
 lex_c lex;
 preprocessor_c preproc;
 parse_c parse;
 semantic_c semantic;
+generator_c generator;
 
 //TODO:
-//Call stuff. thinking call oscallname, parm1, parm2, etc.;
+//turn the parse tree into an AST. Ex. collapse expr->shift->add->mult->postf->primary->2 to just 2
 //Typedef stuff - declaring variables of a type, how are arrays going to work? 
 //preprocessing
 //symbol table - make this part of IDENTIFIER?
@@ -23,7 +25,7 @@ int main()
 	FILE* fin;
 
 	struct timeb start, end;
-	int elapsed_time;
+	float time_seconds;
 
 	static char program[PROG_MAX_LEN] = {};
 	char* line = program;
@@ -65,11 +67,12 @@ int main()
 	lex.Lex(program, &list, false);
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, false);
-	semantic.CheckParseTree(&tree);
+	semantic.GenerateAST(&tree);
+	generator.Generate(&tree);
 
 	ftime(&end);
-	elapsed_time = (int)(1000.0 * (end.time - start.time) + (end.millitm - start.millitm));
-	printf("Compilation finished in %u millisecond(s)\n", elapsed_time);
+	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0;
+	printf("Compilation finished in %.4f second(s)\n", time_seconds);
 
 	return 0;
 }

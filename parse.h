@@ -70,6 +70,8 @@ private:
 	GF_DECL(OPERANDS_TWO_TO_INF);
 	GF_DECL(OPERANDS_COMP);
 	GF_DECL(OPERANDS_CPM);
+	GF_DECL(OPERANDS_RET);
+	GF_DECL(OPERANDS_CALL);
 
 
 	//
@@ -120,7 +122,7 @@ private:
 	char tabstr[DEPTH_MAX * 2] = {};
 	int tabs = 0;
 
-	fstrans_t fs[48] =
+	fstrans_t fs[50] =
 	{
 		//main prog
 		FS_ENTRY(TRANSLATION_UNIT, "Translation unit"),
@@ -157,6 +159,8 @@ private:
 		FS_ENTRY(OPERANDS_TWO_TO_INF, "At least two ops"),
 		FS_ENTRY(OPERANDS_COMP, "COMP op"),
 		FS_ENTRY(OPERANDS_CPM, "CPM ops"),
+		FS_ENTRY(OPERANDS_RET, "RET ops"),
+		FS_ENTRY(OPERANDS_CALL, "CALL ops"),
 
 		//misc
 		FS_ENTRY(INITIALIZER_LIST, "Initializer list"),

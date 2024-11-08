@@ -88,8 +88,8 @@ new bnf:
 
 <instruction> ::= { <i_one> | <i_two> | <i_three> | <i_one_to_two> | <i_one_to_three> | <i_one_to_infinite> | <i_comp> | <i_cpm> } ';'
 
-//check this shit ouuut..
-<instruction_1_ops>		::= { 'jp' | 'call' | 'inc' | 'dec' | 'im' | 'neg' }
+
+<instruction_1_ops>		::= { 'jp' | 'inc' | 'dec' | 'im' | 'neg' }
 							<memory_expression>														//im 0/1/2;
 <instruction_2_ops>		::= { 'res' | 'set' | 'flp' | 'in' | 'out' }
 							<memory_expression> ',' <mem_or_const_expression>						//res/set/flp mem, bit; in/out dest, port;
@@ -105,6 +105,10 @@ new bnf:
 							<memory_expression> ',' <arithmetic_expression>
 <instruction_cpm>		::= 'cpm'
 							<memory_expression> ',' <memory_expression> ',' <memory_expression> ',' <mem_or_const_expression>	//result, src1, src2, size
+<instruction_ret>		::= 'ret'
+							{ <logical_expression> }+
+<instruction_call>		::= 'call'
+							<memory_expression>  { ',' <mem_or_const_expression> }*
 
 //=========================================================================================================//
 

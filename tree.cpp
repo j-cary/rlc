@@ -84,6 +84,43 @@ void tnode_c::Ins(kv_t _kv, int idx)
 	children.insert(it, t);
 }
 
+tnode_c* tnode_c::Ins(const char* str, int code, int idx)
+{
+	tnode_c* t = new tnode_c;
+	int sz = (int)children.size();
+	std::vector<tnode_c*>::iterator it = children.begin();
+
+	if (!t)
+		Error("Ran out of memory\n");
+
+	t->kv.Set(str, code);
+
+	if (!sz)
+		return _InsR(t);
+
+	for (int i = 0; i < idx; i++, it++);
+
+	children.insert(it, t);
+	return t;
+}
+
+tnode_c* tnode_c::Ins(tnode_c* t, int idx)
+{
+	int sz = (int)children.size();
+	std::vector<tnode_c*>::iterator it = children.begin();
+
+	//if (!t)
+	//	Error("Ran out of memory\n");
+
+	if (!sz)
+		return _InsR(t);
+
+	for (int i = 0; i < idx; i++, it++);
+
+	children.insert(it, t);
+	return t;
+}
+
 tnode_c* tnode_c::GetL()
 {
 	if(!children.size())
@@ -106,6 +143,23 @@ tnode_c* tnode_c::Get(int idx)
 		return NULL;
 
 	return children.at(idx);
+}
+
+int tnode_c::GetIndex(tnode_c* child)
+{
+	int index = -1;
+	int sz = (int)children.size();
+
+	for (int i = 0; i < sz; i++)
+	{
+		if (children.at(i) == child)
+		{
+			index = i;
+			break;
+		}
+	}
+
+	return index;
 }
 
 void tnode_c::Delete()
@@ -147,6 +201,15 @@ bool tnode_c::KillChild(tnode_c* removee)
 	return false;
 }
 
+void tnode_c::DetachChild(tnode_c* removee)
+{
+	//loop through, find the child, detach it 
+	int i = GetIndex(removee);
+
+	if (i != -1)
+		children.erase(children.begin() + i);
+}
+
 char g_tabstr[DEPTH_MAX * 2];
 int g_tabs;
 
@@ -163,8 +226,6 @@ void tnode_c::R_Disp()
 {//preorder traversal of a non-binary tree...
 	std::vector<tnode_c*>::iterator it = children.begin();
 
-	//tabs are not working correctly
-	//some delete is causing a crash.
 	if (g_tabs > (DEPTH_MAX * 2) - 2)
 		Error("Parser: Attempted to display too many recursive tree nodes!\n");
 
@@ -183,4 +244,17 @@ void tnode_c::R_Disp()
 
 	g_tabstr[--g_tabs] = '\0';
 	g_tabstr[--g_tabs] = '\0';
+}
+
+void tnode_c::Collapse(tnode_c* child)
+{
+	int start = GetIndex(child);
+	tnode_c* grandchild;
+
+	for (int i = 0; grandchild = child->Get(i); i++)
+		Ins(grandchild, start + i);
+
+	//remove just this node
+	DetachChild(child);
+	child->kv.~kv();
 }
