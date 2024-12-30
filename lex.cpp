@@ -224,7 +224,7 @@ void lex_c::Lex(const char* prog, llist_c* _list, bool _debug)
 	}
 
 	ftime(&end);
-	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0;
+	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
 	printf("Scanning completed in %.4f second(s)\n", time_seconds);
 
 

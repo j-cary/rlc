@@ -6,7 +6,7 @@
 
 GF_DEF(LOGICAL_EXPRESSION)
 {//<or_expression>
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 
 	self = parent->InsR("Logical expression", NT_LOGICAL_EXPR);
 
@@ -23,8 +23,8 @@ GF_DEF(OR_EXPRESSION)
 
 	node_c* saved = list->Save();
 	node_c* bar_saved;
-	tnode_c* self = NULL;
-	tnode_c* logical_or = NULL; //unnecessary definitions to shut the compiler up
+	tree_c* self = NULL;
+	tree_c* logical_or = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
 	self = parent->InsR("Or expression", NT_OR_EXPR);
@@ -71,8 +71,8 @@ GF_DEF(AND_EXPRESSION)
 {//<equality_expression> { '&&' <equality_expression> }*
 	node_c* saved = list->Save();
 	node_c* ampersand_saved;
-	tnode_c* self = NULL;
-	tnode_c* logical_and = NULL; //unnecessary definitions to shut the compiler up
+	tree_c* self = NULL;
+	tree_c* logical_and = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
 	self = parent->InsR("And expression", NT_AND_EXPR);
@@ -119,8 +119,8 @@ GF_DEF(EQUALITY_EXPRESSION)
 {//<relational_expression> { { '==' | '!=' } <relational_expression> }*
 	node_c* saved = list->Save();
 	node_c* operator_saved;
-	tnode_c* self = NULL;
-	tnode_c* equals_sign = NULL; //unnecessary definitions to shut the compiler up
+	tree_c* self = NULL;
+	tree_c* equals_sign = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
 	self = parent->InsR("Equality expression", NT_EQUALITY_EXPR);
@@ -171,8 +171,8 @@ GF_DEF(RELATIONAL_EXPRESSION)
 {//<logical_unary_expression> { {'<' | '>' | '<=' | '>=' } <logical_unary_expression> }*
 	node_c* saved = list->Save();
 	node_c* operator_saved;
-	tnode_c* self = NULL;
-	tnode_c* relational_sign = NULL; //unnecessary definitions to shut the compiler up
+	tree_c* self = NULL;
+	tree_c* relational_sign = NULL; //unnecessary definitions to shut the compiler up
 	kv_c arrow, equal("", CODE_NONE);
 
 	self = parent->InsR("Relational expression", NT_RELATIONAL_EXPR);
@@ -230,8 +230,8 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 	//basically an identifier followed by any number of .<ident> or [<expr>]
 	node_c* saved = list->Save();
 	node_c* saved_op;
-	tnode_c* child = NULL;
-	tnode_c* self = NULL;
+	tree_c* child = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	self = parent->InsR("Postfix expression", NT_LOGICAL_POSTFIX_EXPR);
@@ -301,7 +301,7 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 {// <identifier> | <constant> | <string> | '(' <logical_expression> ')' | { '&' | '*' | '!' } <logical_expression>
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	self = parent->InsR("Primary expression", NT_LOGICAL_PRIMARY_EXPR);
@@ -367,7 +367,7 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 
 GF_DEF(ARITHMETIC_EXPRESSION)
 {// <shift_expression>
-	tnode_c* self = parent->InsR("Arithmetic expression", NT_ARITHMETIC_EXPR);
+	tree_c* self = parent->InsR("Arithmetic expression", NT_ARITHMETIC_EXPR);
 
 	if (CL(SHIFT_EXPRESSION,  self))
 		return true; // <shift_expression>
@@ -378,7 +378,7 @@ GF_DEF(ARITHMETIC_EXPRESSION)
 
 GF_DEF(CONSTANT_EXPRESSION)
 {// <shift_expression>
-	tnode_c* self = parent->InsR("Constant expression", NT_CONSTANT_EXPR);
+	tree_c* self = parent->InsR("Constant expression", NT_CONSTANT_EXPR);
 
 	if (CL(SHIFT_EXPRESSION,  self))
 		return true; // <shift_expression>
@@ -389,8 +389,8 @@ GF_DEF(CONSTANT_EXPRESSION)
 
 GF_DEF(SHIFT_EXPRESSION)
 {// <additive_expression> { { '<<' | '>>' } <additive_expression> }*
-	tnode_c* self = parent->InsR("Shift expression", NT_SHIFT_EXPR);
-	tnode_c* shift_op = NULL;
+	tree_c* self = parent->InsR("Shift expression", NT_SHIFT_EXPR);
+	tree_c* shift_op = NULL;
 	node_c* operator_saved = NULL;
 	kv_c first, second;
 
@@ -446,10 +446,10 @@ GF_DEF(SHIFT_EXPRESSION)
 
 GF_DEF(ADDITIVE_EXPRESSION)
 {// <multiplicative_expression> { { '+' | '-' } <multiplicative_expression> }*
-	tnode_c* self = parent->InsR("Additive expression", NT_ADDITIVE_EXPR);
+	tree_c* self = parent->InsR("Additive expression", NT_ADDITIVE_EXPR);
 	kv_c kv;
 	node_c* operator_saved = NULL;
-	tnode_c* additive_op = NULL;
+	tree_c* additive_op = NULL;
 
 	
 	if (CL(MULTIPLICATIVE_EXPRESSION,  self))
@@ -482,10 +482,10 @@ GF_DEF(ADDITIVE_EXPRESSION)
 
 GF_DEF(MULTIPLICATIVE_EXPRESSION)
 {// <arithmetic_postfix_expression> { { '*' | '/' | '%' } <arithmetic_postfix_expression> }*
-	tnode_c* self = parent->InsR("Multiplicative expression", NT_MULTIPLICATIVE_EXPR);
+	tree_c* self = parent->InsR("Multiplicative expression", NT_MULTIPLICATIVE_EXPR);
 	kv_c kv;
 	node_c* operator_saved = NULL;
-	tnode_c* multiplicative_op = NULL;
+	tree_c* multiplicative_op = NULL;
 
 
 	if (CL(ARITHMETIC_POSTFIX_EXPRESSION,  self))
@@ -521,8 +521,8 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 	//basically an identifier followed by any number of .<ident> or [<expr>]
 	node_c* saved = list->Save();
 	node_c* saved_op;
-	tnode_c* child = NULL;
-	tnode_c* self = NULL;
+	tree_c* child = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	self = parent->InsR("Postfix expression", NT_ARITHMETIC_POSTFIX_EXPR);
@@ -592,7 +592,7 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 {// <identifier> | <constant> | '(' <arithmetic_expression> ')' | { '&' | '*' | '-' } <arithmetic_expression>
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	self = parent->InsR("Primary expression", NT_ARITHMETIC_PRIMARY_EXPR);
@@ -657,8 +657,8 @@ GF_DEF(MEMORY_EXPRESSION)
 {//<memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <mem_or_const_expression> ']' }*
 	node_c* saved = list->Save();
 	node_c* saved_op;
-	tnode_c* child = NULL;
-	tnode_c* self = NULL;
+	tree_c* child = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	self = parent->InsR("Memory expression", NT_MEMORY_EXPR);
@@ -726,7 +726,7 @@ GF_DEF(MEMORY_EXPRESSION)
 
 GF_DEF(MEM_OR_CONST_EXPRESSION)
 {//<memory_expression> | <constant_expression>
-	tnode_c* self = parent->InsR("Mem or const expression", NT_MEM_OR_CONST_EXPR);
+	tree_c* self = parent->InsR("Mem or const expression", NT_MEM_OR_CONST_EXPR);
 	node_c* saved = list->Save();
 
 	//note: identifiers are not checked for in syntax parsing of constant_expression.
@@ -753,7 +753,7 @@ GF_DEF(MEM_OR_CONST_EXPRESSION)
 GF_DEF(MEMORY_PRIMARY_EXPRESSION)
 {//<identifier> | { '&' | '*' } <memory_expression>
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	self = parent->InsR("Primary expression", NT_MEMORY_PRIMARY_EXPR);

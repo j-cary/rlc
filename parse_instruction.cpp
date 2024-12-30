@@ -2,7 +2,7 @@
 
 GF_DEF(INSTRUCTION)
 {
-	tnode_c* self = parent->InsR("Instruction", NT_INSTRUCTION);
+	tree_c* self = parent->InsR("Instruction", NT_INSTRUCTION);
 	node_c* saved = list->Save();
 	kv_c kv;
 	gfunc_t func = NULL;
@@ -75,7 +75,7 @@ GF_DEF(INSTRUCTION)
 
 GF_DEF(OPERANDS_ONE)
 {// <memory_expression>
-	tnode_c* self = parent->InsR("1 op", NT_OPERANDS_ONE);
+	tree_c* self = parent->InsR("1 op", NT_OPERANDS_ONE);
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
@@ -88,7 +88,7 @@ GF_DEF(OPERANDS_ONE)
 
 GF_DEF(OPERANDS_TWO)
 {//<memory_expression> ',' <mem_or_const_expression>
-	tnode_c* self = parent->InsR("2 ops", NT_OPERANDS_TWO);
+	tree_c* self = parent->InsR("2 ops", NT_OPERANDS_TWO);
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -111,7 +111,7 @@ GF_DEF(OPERANDS_TWO)
 
 GF_DEF(OPERANDS_THREE)
 {//<memory_expression> ',' <memory_expression> ',' <mem_or_const_expression>
-	tnode_c* self = parent->InsR("3 ops", NT_OPERANDS_THREE);
+	tree_c* self = parent->InsR("3 ops", NT_OPERANDS_THREE);
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -143,7 +143,7 @@ GF_DEF(OPERANDS_THREE)
 
 GF_DEF(OPERANDS_ONE_TO_TWO)
 {//<memory_expression> { ',' <mem_or_const_expression> }?
-	tnode_c* self = parent->InsR("1 or 2 ops", NT_OPERANDS_ONE_TO_TWO);
+	tree_c* self = parent->InsR("1 or 2 ops", NT_OPERANDS_ONE_TO_TWO);
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -169,7 +169,7 @@ GF_DEF(OPERANDS_ONE_TO_TWO)
 
 GF_DEF(OPERANDS_ONE_TO_THREE)
 {// <memory_expression>  { ',' <constant>  { ',' <mem_or_const_expression> }? }?
-	tnode_c* self = parent->InsR("1 to 3 ops", NT_OPERANDS_ONE_TO_THREE);
+	tree_c* self = parent->InsR("1 to 3 ops", NT_OPERANDS_ONE_TO_THREE);
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -206,8 +206,8 @@ GF_DEF(OPERANDS_ONE_TO_THREE)
 
 GF_DEF(OPERANDS_TWO_TO_INF)
 {//<memory_expression> { ',' <mem_or_const_expression> }+
-	tnode_c* self = parent->InsR("2 to inf ops", NT_OPERANDS_TWO_TO_INF);
-	tnode_c* comma_child;
+	tree_c* self = parent->InsR("2 to inf ops", NT_OPERANDS_TWO_TO_INF);
+	tree_c* comma_child;
 	node_c* saved = list->Save();
 	node_c* comma_saved;
 
@@ -256,7 +256,7 @@ GF_DEF(OPERANDS_TWO_TO_INF)
 
 GF_DEF(OPERANDS_COMP)
 {//<memory_expression> ',' <arithmetic_expression>
-	tnode_c* self = parent->InsR("2 ops", NT_OPERANDS_COMP);
+	tree_c* self = parent->InsR("2 ops", NT_OPERANDS_COMP);
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -279,7 +279,7 @@ GF_DEF(OPERANDS_COMP)
 
 GF_DEF(OPERANDS_CPM)
 {//<memory_expression> ',' <memory_expression> ',' <memory_expression> ',' <mem_or_const_expression>
-	tnode_c* self = parent->InsR("4 ops", NT_OPERANDS_FOUR);
+	tree_c* self = parent->InsR("4 ops", NT_OPERANDS_FOUR);
 	node_c* saved = list->Save();
 	bool success = true;
 	kv_c kv;
@@ -317,7 +317,7 @@ GF_DEF(OPERANDS_CPM)
 GF_DEF(OPERANDS_RET)
 {// { <logical_expression> }+
 
-	tnode_c* self = parent->InsR("1 op", NT_OPERANDS_RET);
+	tree_c* self = parent->InsR("1 op", NT_OPERANDS_RET);
 
 	if (!CL(LOGICAL_EXPRESSION, self))
 		parent->KillChild(self);
@@ -327,8 +327,8 @@ GF_DEF(OPERANDS_RET)
 
 GF_DEF(OPERANDS_CALL)
 {//<memory_expression>  { ',' <mem_or_const_expression> }*
-	tnode_c* self = parent->InsR("1 to inf ops", NT_OPERANDS_CALL);
-	tnode_c* comma_child;
+	tree_c* self = parent->InsR("1 to inf ops", NT_OPERANDS_CALL);
+	tree_c* comma_child;
 	node_c* saved = list->Save();
 	node_c* comma_saved;
 	kv_c kv;

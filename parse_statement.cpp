@@ -7,7 +7,7 @@
 GF_DEF(COMPOUND_STATEMENT)
 {//'{' <statement>* '}'
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	if (GETCP(CODE_LBRACKET))
@@ -44,7 +44,7 @@ GF_DEF(COMPOUND_STATEMENT)
 
 GF_DEF(STATEMENT)
 {//<open_statement> | <closed_statement>
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 
 	if (parent)
 		self = parent->InsR("Statement", NT_STMT);
@@ -72,7 +72,7 @@ GF_DEF(OPEN_STATEMENT)
 //<while_clause> <open_statement>								|
 //<for_clause> <open_statement>
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	if (parent)
@@ -87,6 +87,15 @@ GF_DEF(OPEN_STATEMENT)
 			//lookahead for the 'else' here. reject if so
 			if (GETCP(CODE_ELSE))
 			{
+				//TESTME!!!
+				//this is necessary given 'if() ... else if() ...'
+				//===
+				list->Pop(&kv);
+				self->InsR(&kv);
+				if (CL(OPEN_STATEMENT, self))
+					return true;
+				//===
+
 				list->Restore(saved);
 				if (parent)
 					parent->KillChild(self);
@@ -114,7 +123,7 @@ GF_DEF(OPEN_STATEMENT)
 			}
 		}
 	}
-
+#if 0
 	if (GETCP(CODE_WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);
@@ -134,7 +143,7 @@ GF_DEF(OPEN_STATEMENT)
 			return true;
 		}
 	}
-
+#endif
 	list->Restore(saved);
 	if (parent)
 		parent->KillChild(self);
@@ -148,7 +157,7 @@ GF_DEF(CLOSED_STATEMENT)
 //<while_clause> <closed_statement>								|
 //<for_clause> <closed_statement>
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 	if (parent)
 		self = parent->InsR("Closed statement", NT_CLOSED_STMT);
@@ -179,7 +188,7 @@ GF_DEF(CLOSED_STATEMENT)
 			}
 		}
 	}
-
+#if 0
 	if (GETCP(CODE_WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);
@@ -199,7 +208,7 @@ GF_DEF(CLOSED_STATEMENT)
 			return true;
 		}
 	}
-
+#endif
 	list->Restore(saved);
 	if (parent)
 		parent->KillChild(self);
@@ -213,7 +222,7 @@ GF_DEF(SIMPLE_STATEMENT)
 //<data_decl>		|
 //<label_def>		|
 //<compound_statement>
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -295,7 +304,7 @@ GF_DEF(SIMPLE_STATEMENT)
 GF_DEF(SELECTION_CLAUSE)
 {//'if' '(' <expression> ')'
 	node_c* saved = list->Save();
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 
 	if (GETCP(CODE_IF))
@@ -336,7 +345,7 @@ GF_DEF(SELECTION_CLAUSE)
 
 GF_DEF(FOR_CLAUSE)
 { //'for' '(' <data_type>  <single_data_decl> ')'
-	tnode_c* self = parent->InsR("For clause", NT_FOR_CLAUSE);
+	tree_c* self = parent->InsR("For clause", NT_FOR_CLAUSE);
 	node_c* saved = list->Save();
 	kv_c kv;
 
@@ -373,7 +382,7 @@ GF_DEF(FOR_CLAUSE)
 GF_DEF(WHILE_CLAUSE)
 {// 'while' '(' <logical_expression> ')'
 	node_c* saved = list->Save();
-	tnode_c* self = parent->InsR("While clause", NT_WHILE_CLAUSE);
+	tree_c* self = parent->InsR("While clause", NT_WHILE_CLAUSE);
 	kv_c kv;
 
 	if (GETCP(CODE_WHILE))
@@ -405,7 +414,7 @@ GF_DEF(WHILE_CLAUSE)
 
 GF_DEF(LABEL_DEF)
 {//<identifier> ':'
-	tnode_c* self = parent->InsR("Label definition", NT_LABEL_DEF);
+	tree_c* self = parent->InsR("Label definition", NT_LABEL_DEF);
 	node_c* saved = list->Save();
 	kv_c kv;
 

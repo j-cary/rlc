@@ -7,7 +7,7 @@ enum RETURNCODES
 	RC_NULL	= 0, RC_PASS, RC_FAIL, RC_WARNING
 };
 
-#define GF_ARGS	tnode_c* parent
+#define GF_ARGS	tree_c* parent
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
 #define GF_DEF(x)	parse_c::rcode_t parse_c::x(GF_ARGS)
 #define FS_ENTRY(func, string)	&parse_c::func,string
@@ -39,7 +39,7 @@ private:
 	GF_DECL(TYPE_DEF);
 
 	//
-	//Data types
+	//ASM_Data types
 	//
 	GF_DECL(DATA_TYPE);
 	GF_DECL(ARRAY_DATA_TYPE);
@@ -115,9 +115,9 @@ private:
 	rcode_t Call(gfunc_t func, GF_ARGS);
 
 	llist_c* list;
-	//tnode_c root;
-	tnode_c* root;
-	bool debug;
+	//tree_c root;
+	tree_c* root;
+	int debug;
 
 	char tabstr[DEPTH_MAX * 2] = {};
 	int tabs = 0;
@@ -201,11 +201,11 @@ private:
 	};
 
 public:
-	void Parse(llist_c* _list, tnode_c* _root, bool debug);
+	void Parse(llist_c* _list, tree_c* _root, int debug);
 	parse_c()
 	{
 		list = NULL;
-		//root.tnode_c::tnode_c();
+		//root.tree_c::tree_c();
 	}
 };
 

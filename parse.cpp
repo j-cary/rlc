@@ -22,7 +22,7 @@
 static int maxtab = 0;
 static int calls = 0;
 
-void parse_c::Parse(llist_c* _list, tnode_c* _root, bool _debug)
+void parse_c::Parse(llist_c* _list, tree_c* _root, int _debug)
 {
 	struct timeb start, end;
 	float time_seconds;
@@ -39,7 +39,7 @@ void parse_c::Parse(llist_c* _list, tnode_c* _root, bool _debug)
 	result = CL(TRANSLATION_UNIT, root);
 
 	ftime(&end);
-	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0;
+	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
 	printf("Parsing completed in %.4f second(s)\n", time_seconds);
 
 	//printf("Max tabs: %i calls: %i\n", maxtab, calls);
@@ -77,7 +77,7 @@ GF_DEF(TRANSLATION_UNIT)
 
 GF_DEF(EXTERNAL_DECL)
 {//<function_decl> | <function_def> | <data_decl> | <type_def>
-	tnode_c* self = parent->InsR("External decl", NT_EXTERNAL_DECL);
+	tree_c* self = parent->InsR("External decl", NT_EXTERNAL_DECL);
 
 	if (GETCP(CODE_SUBR))
 	{
@@ -107,7 +107,7 @@ GF_DEF(FUNC)
 { //'subr' <identifier> '(' <parameter_list>* ')' ';'
   //'subr' <identifier> '(' <parameter_list>* ')' <compound_statement>
   //cheat here. Combine a decl and a def into one function due to their similarities.
-	tnode_c* self = NULL;
+	tree_c* self = NULL;
 	kv_c kv;
 	node_c* saved = list->Save();
 
@@ -164,13 +164,12 @@ GF_DEF(DATA_DECL)
 //<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
 //<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' } + ';' |
 //<unitializeable_data_type> <identifier> ';'
-	//<type> <ident> = {<expr>, <expr>, ... <expr>};
-	//<type> <ident> [<expr>];
-	//<type> <ident> [<expr>] = {<expr>, ... <expr>};
+	//<flags> <ident> = {<expr>, <expr>, ... <expr>};
+	//<flags> <ident> [<expr>];
+	//<flags> <ident> [<expr>] = {<expr>, ... <expr>};
 	node_c* saved = list->Save();
 	node_c* comma_saved;
-	node_c* equals_saved;
-	tnode_c* self = parent->InsR("Data declaration", NT_DATA_DECL);
+	tree_c* self = parent->InsR("Data declaration", NT_DATA_DECL);
 	kv_c kv;
 
 	if (CL(DATA_TYPE, self))
@@ -311,8 +310,8 @@ GF_DEF(SINGLE_DATA_DECL)
 {//<identifier> { '=' <arithmetic_expression> }+
 	node_c* saved = list->Save();
 	node_c* saved_equals;
-	tnode_c* self = parent->InsR("Single data decl", NT_SINGLE_DATA_DECL);
-	tnode_c* equals_sign = NULL;
+	tree_c* self = parent->InsR("Single data decl", NT_SINGLE_DATA_DECL);
+	tree_c* equals_sign = NULL;
 	kv_c kv;
 
 	if (CL(IDENTIFIER, self))
@@ -340,13 +339,13 @@ GF_DEF(SINGLE_DATA_DECL)
 }
 
 GF_DEF(TYPE_DEF)
-{// 'type' '{' <data_decl>+ '}' <identifier> ';'
+{// 'flags' '{' <data_decl>+ '}' <identifier> ';'
 	kv_c kv;
 	node_c* saved = list->Save();
-	tnode_c* self = parent->InsR("Type def", NT_TYPE_DEF);
+	tree_c* self = parent->InsR("Type def", NT_TYPE_DEF);
 
 	if (GETCP(CODE_TYPE))
-	{// 'type'
+	{// 'flags'
 		list->Pop(&kv);
 		self->InsR(&kv);
 
@@ -393,8 +392,8 @@ GF_DEF(INITIALIZER_LIST)
 {// <constant_expression> { ',' <constant_expression> }*
 	node_c* saved = list->Save();
 	node_c* comma_saved;
-	tnode_c* self;
-	tnode_c* comma_op;
+	tree_c* self;
+	tree_c* comma_op;
 	kv_c kv;
 
 	self = parent->InsR("Initializer list", NT_INITIALIZER_LIST);
@@ -431,7 +430,7 @@ GF_DEF(INITIALIZER_LIST)
 GF_DEF(PARAMETER)
 { // <data_type> <identifier>
 	node_c* saved = list->Save();
-	tnode_c* self = parent->InsR("Parameter", NT_PARAMETER);
+	tree_c* self = parent->InsR("Parameter", NT_PARAMETER);
 
 	if (CL(DATA_TYPE, self))
 	{// <data_type>
@@ -452,8 +451,8 @@ GF_DEF(PARAMETER_LIST)
 { //<parameter> { ',' <parameter> }*
 	node_c* saved = list->Save();
 	node_c* comma_saved;
-	tnode_c* self = NULL;
-	tnode_c* comma_op;
+	tree_c* self = NULL;
+	tree_c* comma_op;
 	kv_c kv;
 
 	self = parent->InsR("Parameter list", NT_PARAMETER_LIST);
@@ -543,7 +542,7 @@ parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
 
 
 	
-	if (debug)
+	if (debug > 1)
 	{
 		printf("%s%s", tabstr, funcname);
 		printf("\n");

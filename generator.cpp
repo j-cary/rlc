@@ -1,30 +1,39 @@
 #include "generator.h"
 
 const char* asmfilename = "C:/ti83/rl/test.z80";
-const char* asmheader = ".nolist\n#include \"../inc/ti83p.inc\"\n.list\n.org\tuserMem - 2\n.db\t\tt2ByteTok, tAsmCmp\n\n";
+const unsigned short outflags = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 
-void generator_c::Generate(tnode_c* _root)
+void generator_c::Generate(tree_c* _root, data_t* symbols, unsigned* symbol_top)
 {
 	printf("Generating code...\n");
 
 	InitFile(asmfilename);
 
+	symtbl = symbols;
+	symtbl_top = *symbol_top;
 	root = _root;
 	VisitNode(root);
+	*symbol_top = symtbl_top;
 
+	SetOutFlags(outflags);
+	printf("\n");
+	PrintFile();
+	ResetOutFlags();
+	printf("\n");
 	fclose(f);
 }
 
-void generator_c::VisitNode(tnode_c* node)
+//program control
+void generator_c::VisitNode(tree_c* node)
 {
-	tnode_c* child;
+	tree_c* child;
 	const kv_c* kv = node->Hash();
 
 	//printf("%s\n", kv->K());
 	switch (kv->V())
 	{
 	case NT_FUNC_DEF:
-		VisitFuncDef(node);
+		CG_FuncDef(node);
 		break;
 	default:
 		for (int i = 0; child = node->Get(i); i++)
@@ -36,60 +45,64 @@ void generator_c::VisitNode(tnode_c* node)
 
 }
 
-void generator_c::VisitFuncDef(tnode_c* node)
-{
-	tnode_c* child;
-	int i;
+void generator_c::CG_FuncDef(tree_c* node)
+{//'subr' <identifier> '(' <parameter_list>* ')' <compound_statement>
+	tree_c* child;
+	int i = 4;
 
 	//should maybe get rid of func def, then pass the root as the parent and use and offset to get the name and the rest of the stuff
 
 	child = node->Get(1); //Func name
-	Label(child->Hash()->K());
+	stack[stack_top++] = child;
+	ASM_Label(child->Hash()->K());
 
-	for (i = 0; child = node->Get(i); i++)
+	child = node->Get(3);
+	if (child->Hash()->V() != CODE_RPAREN)
+		Error("parameter lists are unsupported\n"); //i needs to be changed here
+
+	child = node->Get(i);
+	CG_CompoundStatement(child);
+
+	ASM_Ret(NULL);
+}
+
+void generator_c::CG_DataDeclaration(tree_c* node)
+{
+	tree_c* child;
+	int i = 1;
+	int code;
+
+	switch (node->Get(0)->Hash()->V())
 	{
-		if (child->Hash()->V() == CODE_LBRACKET)
-		{//skip the parms and the bracket
+	case CODE_BYTE:
+	{
+		do
+		{
+			child = node->Get(i);
+			code = child->Hash()->V();
 			i++;
-			break;
-		}
+
+			if (code == CODE_COMMA)
+				continue;
+			if (code == CODE_SEMICOLON)
+				break;
+
+			if (code == NT_SINGLE_DATA_DECL)
+			{//constant expression
+				int res = Constant_Expression(child->Get(2));
+
+				ASM_Data(".db", child->Get(0), res);
+			}
+			else
+				ASM_Data(".db", child, "0");
+
+		} while (1);
+
 	}
-
-	/*
-	child = node->Get(i); //closed statement
-	child = child->Get(0); 
-
-	switch (child->Hash()->V())
-	{
-	case CODE_ADD:
-		//child = child->Get(1);
-		printf("");
 		break;
-	default:
-		Error("Compilation for %s has not been implemented yet\n", child->Hash()->K());
+	default: break;
 	}
-	*/
+
 }
 
 
-//
-//ASSEMBLER FILE FUNCTIONS
-//
-void generator_c::Label(const char* name)
-{
-	fprintf(f, name);
-	fprintf(f, ":\n");
-}
-
-
-
-
-void generator_c::InitFile(const char* filename)
-{
-	fopen_s(&f, filename, "w+");
-
-	if (!f)
-		Error("Couldn't open assembler file %s\n", filename);
-
-	fprintf(f, asmheader);
-}

@@ -126,7 +126,7 @@ void llist_c::Disp()
 
 	for (; curs; curs = curs->next)
 	{
-		printf("%c%s%c%i%c\n", 0xB2, curs->kv.K(), 0xB1, curs->kv.V(), 0xB0);
+		printf("%c%s\t%c%i\t%c\n", 0xB2, curs->kv.K(), 0xB1, curs->kv.V(), 0xB0);
 	}
 	printf("\n");
 }

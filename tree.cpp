@@ -1,8 +1,8 @@
 #include "common.h"
 
-tnode_c* tnode_c::_InsL(tnode_c* t)
+tree_c* tree_c::_InsL(tree_c* t)
 {
-	std::vector<tnode_c*>::iterator it = children.begin();
+	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (!t)
 		Error("Ran out of memory\n");
@@ -13,7 +13,7 @@ tnode_c* tnode_c::_InsL(tnode_c* t)
 	return t;
 }
 
-tnode_c* tnode_c::_InsR(tnode_c* t)
+tree_c* tree_c::_InsR(tree_c* t)
 {
 	if (!t)
 		Error("Ran out of memory\n");
@@ -24,54 +24,54 @@ tnode_c* tnode_c::_InsR(tnode_c* t)
 	return t;
 }
 
-tnode_c* tnode_c::InsL(kv_c* _kv)
+tree_c* tree_c::InsL(kv_c* _kv)
 {
-	tnode_c* t = new tnode_c;
+	tree_c* t = new tree_c;
 	t->kv.Copy(_kv);
 
 	return _InsL(t);
 }
 
-tnode_c* tnode_c::InsL(const char* str, int code)
+tree_c* tree_c::InsL(const char* str, int code)
 {
-	tnode_c* t = new tnode_c;
+	tree_c* t = new tree_c;
 	t->kv.Set(str, code);
 
 	return _InsL(t);
 }
 
-tnode_c* tnode_c::InsL(kv_t _kv)
+tree_c* tree_c::InsL(kv_t _kv)
 {
-	tnode_c* t = new tnode_c(_kv);
+	tree_c* t = new tree_c(_kv);
 	return _InsL(t);
 }
 
-tnode_c* tnode_c::InsR(kv_c* _kv)
+tree_c* tree_c::InsR(kv_c* _kv)
 {
-	tnode_c* t = new tnode_c;
+	tree_c* t = new tree_c;
 	t->kv.Copy(_kv);
 
 	return _InsR(t);
 }
 
-tnode_c* tnode_c::InsR(const char* str, int code)
+tree_c* tree_c::InsR(const char* str, int code)
 {
-	tnode_c* t = new tnode_c;
+	tree_c* t = new tree_c;
 	t->kv.Set(str, code);
 	return _InsR(t);
 }
 
-tnode_c* tnode_c::InsR(kv_t _kv)
+tree_c* tree_c::InsR(kv_t _kv)
 {
-	tnode_c* t = new tnode_c(_kv);
+	tree_c* t = new tree_c(_kv);
 	return _InsR(t);
 }
 
-void tnode_c::Ins(kv_t _kv, int idx)
+void tree_c::Ins(kv_t _kv, int idx)
 {
-	tnode_c* t = new tnode_c(_kv);
+	tree_c* t = new tree_c(_kv);
 	int sz = (int)children.size();
-	std::vector<tnode_c*>::iterator it = children.begin();
+	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (!t)
 		Error("Ran out of memory\n");
@@ -84,11 +84,11 @@ void tnode_c::Ins(kv_t _kv, int idx)
 	children.insert(it, t);
 }
 
-tnode_c* tnode_c::Ins(const char* str, int code, int idx)
+tree_c* tree_c::Ins(const char* str, int code, int idx)
 {
-	tnode_c* t = new tnode_c;
+	tree_c* t = new tree_c;
 	int sz = (int)children.size();
-	std::vector<tnode_c*>::iterator it = children.begin();
+	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (!t)
 		Error("Ran out of memory\n");
@@ -104,10 +104,10 @@ tnode_c* tnode_c::Ins(const char* str, int code, int idx)
 	return t;
 }
 
-tnode_c* tnode_c::Ins(tnode_c* t, int idx)
+tree_c* tree_c::Ins(tree_c* t, int idx)
 {
 	int sz = (int)children.size();
-	std::vector<tnode_c*>::iterator it = children.begin();
+	std::vector<tree_c*>::iterator it = children.begin();
 
 	//if (!t)
 	//	Error("Ran out of memory\n");
@@ -121,21 +121,21 @@ tnode_c* tnode_c::Ins(tnode_c* t, int idx)
 	return t;
 }
 
-tnode_c* tnode_c::GetL()
+tree_c* tree_c::GetL()
 {
 	if(!children.size())
 		return NULL;
 	return children.front();
 }
 
-tnode_c* tnode_c::GetR()
+tree_c* tree_c::GetR()
 {
 	if (!children.size())
 		return NULL;
 	return children.back();
 }
 
-tnode_c* tnode_c::Get(int idx)
+tree_c* tree_c::Get(int idx)
 {
 	int sz = (int)children.size();
 
@@ -145,7 +145,7 @@ tnode_c* tnode_c::Get(int idx)
 	return children.at(idx);
 }
 
-int tnode_c::GetIndex(tnode_c* child)
+int tree_c::GetIndex(tree_c* child)
 {
 	int index = -1;
 	int sz = (int)children.size();
@@ -162,26 +162,26 @@ int tnode_c::GetIndex(tnode_c* child)
 	return index;
 }
 
-void tnode_c::Delete()
+void tree_c::Delete()
 {
 	//call clear and then remove
 }
 
-void tnode_c::KillAllChildren()
+void tree_c::KillAllChildren()
 {//clear out the list below, but not including, the root
 	if (leaf) //this should also be caught in the condition below
 		return;
 
-	for (std::vector<tnode_c*>::iterator it = children.begin(); it != this->children.end(); it++)
+	for (std::vector<tree_c*>::iterator it = children.begin(); it != this->children.end(); it++)
 		delete* it;
 
 	children.clear();//Hopefully clear the list...
 }
 
-bool tnode_c::KillChild(tnode_c* removee)
+bool tree_c::KillChild(tree_c* removee)
 {
 	//recursively look through all the child nodes, delete removee
-	std::vector<tnode_c*>::iterator it = children.begin();
+	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (this == removee)
 	{
@@ -201,7 +201,7 @@ bool tnode_c::KillChild(tnode_c* removee)
 	return false;
 }
 
-void tnode_c::DetachChild(tnode_c* removee)
+void tree_c::DetachChild(tree_c* removee)
 {
 	//loop through, find the child, detach it 
 	int i = GetIndex(removee);
@@ -213,7 +213,7 @@ void tnode_c::DetachChild(tnode_c* removee)
 char g_tabstr[DEPTH_MAX * 2];
 int g_tabs;
 
-void tnode_c::Disp()
+void tree_c::Disp()
 {
 	//Clear tab string out.
 	memset(g_tabstr, '\0', DEPTH_MAX * 2 * sizeof(char));
@@ -222,9 +222,9 @@ void tnode_c::Disp()
 	R_Disp();
 }
 
-void tnode_c::R_Disp()
+void tree_c::R_Disp()
 {//preorder traversal of a non-binary tree...
-	std::vector<tnode_c*>::iterator it = children.begin();
+	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (g_tabs > (DEPTH_MAX * 2) - 2)
 		Error("Parser: Attempted to display too many recursive tree nodes!\n");
@@ -246,10 +246,10 @@ void tnode_c::R_Disp()
 	g_tabstr[--g_tabs] = '\0';
 }
 
-void tnode_c::Collapse(tnode_c* child)
+void tree_c::Collapse(tree_c* child)
 {
 	int start = GetIndex(child);
-	tnode_c* grandchild;
+	tree_c* grandchild;
 
 	for (int i = 0; grandchild = child->Get(i); i++)
 		Ins(grandchild, start + i);

@@ -251,43 +251,43 @@ public:
 };
 
 
-class tnode_c
+class tree_c
 {
 private:
 	bool leaf;
 	kv_c kv;
-	std::vector<tnode_c*> children;
+	std::vector<tree_c*> children;
 
 	void R_Disp();
-	tnode_c* _InsL(tnode_c* t);
-	tnode_c* _InsR(tnode_c* t);
+	tree_c* _InsL(tree_c* t);
+	tree_c* _InsR(tree_c* t);
 public:
 
 	//need to have copies of these for a kv_c* and a const char/int pair
-	tnode_c* InsR(kv_c* _kv);
-	tnode_c* InsR(const char* str, int code);
-	tnode_c* InsR(kv_t _kv);
-	tnode_c* InsL(kv_c* _kv);
-	tnode_c* InsL(const char* str, int code);
-	tnode_c* InsL(kv_t _kv);
+	tree_c* InsR(kv_c* _kv);
+	tree_c* InsR(const char* str, int code);
+	tree_c* InsR(kv_t _kv);
+	tree_c* InsL(kv_c* _kv);
+	tree_c* InsL(const char* str, int code);
+	tree_c* InsL(kv_t _kv);
 	void Ins(kv_t _kv, int idx); //needs work. Currently will only add a child if the list is not empty
-	tnode_c* Ins(const char* str, int code, int idx);
-	tnode_c* Ins(tnode_c* t, int idx);
+	tree_c* Ins(const char* str, int code, int idx);
+	tree_c* Ins(tree_c* t, int idx);
 
-	tnode_c* Save(); //make copy of current sub-tree
-	void Restore(tnode_c* saved);
+	tree_c* Save(); //make copy of current sub-tree
+	void Restore(tree_c* saved);
 
 	void Delete(); //Delete this sub-tree, including the root
 	void KillAllChildren(); //Delete this sub-tree, minus the root
-	bool KillChild(tnode_c* removee); //Delete a single node. Must be called from an ancestor node
-	void DetachChild(tnode_c* removee); //Get a node out of the list, but don't delete it
+	bool KillChild(tree_c* removee); //Delete a single node. Must be called from an ancestor node
+	void DetachChild(tree_c* removee); //Get a node out of the list, but don't delete it
 
 	//Getting children
-	tnode_c* GetL();
-	tnode_c* GetR();
-	tnode_c* Get(int idx); //rename this
+	tree_c* GetL();
+	tree_c* GetR();
+	tree_c* Get(int idx); //rename this
 
-	int GetIndex(tnode_c* child); //-1 if non-existant
+	int GetIndex(tree_c* child); //-1 if non-existant
 
 	void Set(const kv_c* _kv) { kv.Copy(_kv); }
 	void Set(const char* str, int code) { kv.Set(str, code); }
@@ -297,19 +297,19 @@ public:
 
 	void Disp();
 
-	void Collapse(tnode_c* child);
+	void Collapse(tree_c* child);
 
-	tnode_c()
+	tree_c()
 	{
 		kv.kv_c::kv_c();
 		leaf = true;
 	}
-	tnode_c(kv_t _kv)
+	tree_c(kv_t _kv)
 	{
 		kv = _kv;
 		leaf = true;
 	}
-	~tnode_c()
+	~tree_c()
 	{
 		kv.~kv_c();
 		KillAllChildren();
@@ -318,3 +318,31 @@ public:
 
 void Warning(const char* msg, ...);
 void Error(const char* msg, ...);
+void SetOutFlags(unsigned short flags); //same as WORD
+void ResetOutFlags();
+
+//same as in consoleapi2.h - don't want to include this in every file
+#ifndef FOREGROUND_BLUE
+#define FOREGROUND_BLUE      0x0001 // text color contains blue.
+#endif
+#ifndef FOREGROUND_GREEN
+#define FOREGROUND_GREEN     0x0002 // text color contains green.
+#endif
+#ifndef FOREGROUND_RED
+#define FOREGROUND_RED       0x0004 // text color contains red.
+#endif
+#ifndef FOREGROUND_INTENSITY
+#define FOREGROUND_INTENSITY 0x0008 // text color is intensified.
+#endif
+#ifndef BACKGROUND_BLUE
+#define BACKGROUND_BLUE      0x0010 // background color contains blue.
+#endif
+#ifndef BACKGROUND_GREEN
+#define BACKGROUND_GREEN     0x0020 // background color contains green.
+#endif
+#ifndef BACKGROUND_RED
+#define BACKGROUND_RED       0x0040 // background color contains red.
+#endif
+#ifndef BACKGROUND_INTENSITY
+#define BACKGROUND_INTENSITY 0x0080 // background color is intensified.
+#endif

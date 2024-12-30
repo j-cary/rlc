@@ -13,9 +13,15 @@ parse_c parse;
 semantic_c semantic;
 generator_c generator;
 
+CONSOLE_SCREEN_BUFFER_INFO	base_csbi;
+HANDLE console;
+
 //TODO:
-//turn the parse tree into an AST. Ex. collapse expr->shift->add->mult->postf->primary->2 to just 2
-//Typedef stuff - declaring variables of a type, how are arrays going to work? 
+//Register allocation
+//	keep track of what block and which the range of statements that a variable is in use
+//	register coloring - not a
+//Fix memory leaks when using Error()
+//Typedef stuff - declaring variables of a flags, how are arrays going to work? 
 //preprocessing
 //symbol table - make this part of IDENTIFIER?
 
@@ -31,9 +37,15 @@ int main()
 	char* line = program;
 
 	llist_c list;
-	tnode_c tree;
+	tree_c tree;
+	cfg_c graph;
+	data_t symtbl[SYMBOLS_MAX];
+	unsigned symtbl_top = 0;
 
 	ftime(&start);
+
+	console = GetStdHandle(STD_OUTPUT_HANDLE);
+	GetConsoleScreenBufferInfo(console, &base_csbi);
 
 	fopen_s(&fin, tmp_filename, "rb");
 
@@ -64,14 +76,14 @@ int main()
 	}
 
 	//printf("%s\n", program);
-	lex.Lex(program, &list, false);
+	lex.Lex(program, &list, 0);
 	//actually do the preprocessing here
-	parse.Parse(&list, &tree, false);
-	semantic.GenerateAST(&tree);
-	generator.Generate(&tree);
+	parse.Parse(&list, &tree, 0);
+	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top);
+	generator.Generate(&tree, symtbl, &symtbl_top);
 
 	ftime(&end);
-	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0;
+	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
 	printf("Compilation finished in %.4f second(s)\n", time_seconds);
 
 	return 0;
@@ -80,11 +92,10 @@ int main()
 
 void Warning(const char* msg, ...)
 {
-	HANDLE cons;
+	HANDLE cons = console;
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	va_list args;
 
-	cons = GetStdHandle(STD_OUTPUT_HANDLE);
 	GetConsoleScreenBufferInfo(cons, &csbi);
 	SetConsoleTextAttribute(cons, BACKGROUND_RED | BACKGROUND_GREEN);
 
@@ -98,19 +109,26 @@ void Warning(const char* msg, ...)
 
 void Error(const char* msg, ...)
 {
-	HANDLE cons;
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	HANDLE cons = console;
 	va_list args;
 
-	cons = GetStdHandle(STD_OUTPUT_HANDLE);
-	GetConsoleScreenBufferInfo(cons, &csbi);
-	SetConsoleTextAttribute(cons, BACKGROUND_RED);
+	SetConsoleTextAttribute(cons, BACKGROUND_RED | BACKGROUND_INTENSITY);
 
 	printf("\nError | Line no. %i col no. %i | ", 1, 2);
 	va_start(args, msg);
 	vprintf(msg, args);
 	va_end(args);
 
-	SetConsoleTextAttribute(cons, csbi.wAttributes);
+	SetConsoleTextAttribute(cons, base_csbi.wAttributes);
 	exit(0);
+}
+
+void SetOutFlags(unsigned short flags)
+{
+	SetConsoleTextAttribute(console, flags);
+}
+
+void ResetOutFlags()
+{
+	SetConsoleTextAttribute(console, base_csbi.wAttributes);
 }

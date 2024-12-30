@@ -128,6 +128,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="generator.cpp" />
+    <ClCompile Include="generator_asm.cpp" />
+    <ClCompile Include="generator_instruction.cpp" />
+    <ClCompile Include="generator_statement.cpp" />
+    <ClCompile Include="generator_stdlib.cpp" />
+    <ClCompile Include="generator_util.cpp" />
+    <ClCompile Include="cfg.cpp" />
+    <ClCompile Include="igraph.cpp" />
     <ClCompile Include="lex.cpp" />
     <ClCompile Include="llist.cpp" />
     <ClCompile Include="parse.cpp" />
