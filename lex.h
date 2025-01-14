@@ -2,7 +2,7 @@
 #include <functional>
 #include "common.h"
 
-class lex_c
+class scanner_c
 {
 private:
 

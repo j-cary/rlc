@@ -123,7 +123,7 @@ GF_DEF(OPEN_STATEMENT)
 			}
 		}
 	}
-#if 0
+#if 1
 	if (GETCP(CODE_WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);
@@ -188,7 +188,7 @@ GF_DEF(CLOSED_STATEMENT)
 			}
 		}
 	}
-#if 0
+#if 1
 	if (GETCP(CODE_WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);

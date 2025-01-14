@@ -104,7 +104,7 @@ kv_t reservedwords[] =
 	"define",	CODE_PP_DEFINE,
 };
 
-void lex_c::Lex(const char* prog, llist_c* _list, bool _debug)
+void scanner_c::Lex(const char* prog, llist_c* _list, bool _debug)
 {
 	struct timeb start, end;
 	float time_seconds;
@@ -233,7 +233,7 @@ void lex_c::Lex(const char* prog, llist_c* _list, bool _debug)
 		list->Disp();
 }
 
-void lex_c::AddReservedChar(char c, int code)
+void scanner_c::AddReservedChar(char c, int code)
 {
 	kv_t ins;
 	ins.k[0] = c;
@@ -241,7 +241,7 @@ void lex_c::AddReservedChar(char c, int code)
 	list->Insert(NULL, ins);
 }
 
-void lex_c::AddLexeme(char* lexeme)
+void scanner_c::AddLexeme(char* lexeme)
 {
 	kv_t ins;
 

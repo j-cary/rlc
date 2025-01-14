@@ -22,7 +22,7 @@
 static int maxtab = 0;
 static int calls = 0;
 
-void parse_c::Parse(llist_c* _list, tree_c* _root, int _debug)
+void parser_c::Parse(llist_c* _list, tree_c* _root, int _debug)
 {
 	struct timeb start, end;
 	float time_seconds;
@@ -512,7 +512,7 @@ GF_DEF(CONSTANT)
 }
 
 
-parse_c::rcode_t parse_c::Call(gfunc_t func, GF_ARGS)
+parser_c::rcode_t parser_c::Call(gfunc_t func, GF_ARGS)
 {
 	rcode_t rc;
 	char funcname[DBG_STR_MAX] = "Unknown";

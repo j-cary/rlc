@@ -20,7 +20,9 @@ Reserved chars:
 # . , " ' ;
 = + - * / ^
 
-new bnf:
+//TODO: special rule in for clause to allow for more than constant expressions
+
+
 //
 //	MAIN PROG CONTROL
 //

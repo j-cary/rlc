@@ -13,23 +13,23 @@ GF_DEF(INSTRUCTION)
 	case CODE_INC:
 	case CODE_DEC:
 	case CODE_IM:
-	case CODE_NEG:	func = &parse_c::OPERANDS_ONE;			break;
+	case CODE_NEG:	func = &parser_c::OPERANDS_ONE;			break;
 
 	case CODE_RES:
 	case CODE_SET:
 	case CODE_FLP:
 	case CODE_IN:
-	case CODE_OUT:	func = &parse_c::OPERANDS_TWO;			break;
+	case CODE_OUT:	func = &parser_c::OPERANDS_TWO;			break;
 
 	case CODE_LDM:
 	case CODE_OUTM:
-	case CODE_INM:	func = &parse_c::OPERANDS_THREE;		break;
+	case CODE_INM:	func = &parser_c::OPERANDS_THREE;		break;
 
 	case CODE_RR:
-	case CODE_RL:	func = &parse_c::OPERANDS_ONE_TO_TWO;	break;
+	case CODE_RL:	func = &parser_c::OPERANDS_ONE_TO_TWO;	break;
 
 	case CODE_SL:
-	case CODE_SR:	func = &parse_c::OPERANDS_ONE_TO_THREE;	break;
+	case CODE_SR:	func = &parser_c::OPERANDS_ONE_TO_THREE;	break;
 
 	case CODE_LD:
 	case CODE_ADD:
@@ -39,15 +39,15 @@ GF_DEF(INSTRUCTION)
 	case CODE_MOD:
 	case CODE_AND:
 	case CODE_OR:
-	case CODE_XOR:	func = &parse_c::OPERANDS_TWO_TO_INF;	break;
+	case CODE_XOR:	func = &parser_c::OPERANDS_TWO_TO_INF;	break;
 
-	case CODE_COMP:	func = &parse_c::OPERANDS_COMP;			break;
+	case CODE_COMP:	func = &parser_c::OPERANDS_COMP;			break;
 
-	case CODE_CPM:	func = &parse_c::OPERANDS_CPM;			break;
+	case CODE_CPM:	func = &parser_c::OPERANDS_CPM;			break;
 
-	case CODE_RET:	func = &parse_c::OPERANDS_RET;			break;
+	case CODE_RET:	func = &parser_c::OPERANDS_RET;			break;
 
-	case CODE_CALL:	func = &parse_c::OPERANDS_CALL;			break;
+	case CODE_CALL:	func = &parser_c::OPERANDS_CALL;			break;
 
 	default:	parent->KillChild(self);	return false;	break;
 	}

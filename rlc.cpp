@@ -7,21 +7,24 @@
 #include "generator.h"
 
 const char tmp_filename[] = "c:/ti83/rl/test.rls";
-lex_c lex;
-preprocessor_c preproc;
-parse_c parse;
-semantic_c semantic;
-generator_c generator;
+scanner_c		lex;
+preprocessor_c	preproc;
+parser_c		parse;
+analyzer_c		semantic;
+generator_c		generator;
 
 CONSOLE_SCREEN_BUFFER_INFO	base_csbi;
 HANDLE console;
 
 //TODO:
 //Register allocation
-//	keep track of what block and which the range of statements that a variable is in use
-//	register coloring - not a
+//	Reserve b in for loops 
+//	only make data entries for values using software registers 
+//	^don't initialize a data entry if a register is holding it. Just load the initial value 
+//	don't allocate registers for data used 0-0 or 7-7
+//	^need to skip data decls and instructions with only un allocated-vars
 //Fix memory leaks when using Error()
-//Typedef stuff - declaring variables of a flags, how are arrays going to work? 
+//Typedef stuff - declaring variables of a typedef, how are arrays going to work? 
 //preprocessing
 //symbol table - make this part of IDENTIFIER?
 
@@ -37,9 +40,9 @@ int main()
 	char* line = program;
 
 	llist_c list;
-	tree_c tree;
-	cfg_c graph;
-	data_t symtbl[SYMBOLS_MAX];
+	tree_c	tree;
+	cfg_c	graph;
+	data_t	symtbl[SYMBOLS_MAX];
 	unsigned symtbl_top = 0;
 
 	ftime(&start);
@@ -80,7 +83,7 @@ int main()
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, 0);
 	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top);
-	generator.Generate(&tree, symtbl, &symtbl_top);
+	//generator.Generate(&tree, &graph, symtbl, &symtbl_top);
 
 	ftime(&end);
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;

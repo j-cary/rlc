@@ -9,16 +9,16 @@ enum RETURNCODES
 
 #define GF_ARGS	tree_c* parent
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
-#define GF_DEF(x)	parse_c::rcode_t parse_c::x(GF_ARGS)
-#define FS_ENTRY(func, string)	&parse_c::func,string
+#define GF_DEF(x)	parser_c::rcode_t parser_c::x(GF_ARGS)
+#define FS_ENTRY(func, string)	&parser_c::func,string
 #define DBG_STR_MAX	32
 
 
-class parse_c
+class parser_c
 {
 private:
 	typedef uint64_t rcode_t;
-	typedef rcode_t (parse_c::*gfunc_t) (GF_ARGS);
+	typedef rcode_t (parser_c::*gfunc_t) (GF_ARGS);
 	typedef struct fstrans_s
 	{
 		gfunc_t f;
@@ -202,7 +202,7 @@ private:
 
 public:
 	void Parse(llist_c* _list, tree_c* _root, int debug);
-	parse_c()
+	parser_c()
 	{
 		list = NULL;
 		//root.tree_c::tree_c();
@@ -211,6 +211,6 @@ public:
 
 #define PEEKCP(x)	(list->Peek()->V() == x)
 #define GETCP(x)	(list->Get()->V() == x)
-//#define CL(x, y)	(Call(&parse_c::x, y, NULL))
-//#define CL(x,y,z)	(Call(&parse_c::x, y, z))
-#define CL(x, y)	(Call(&parse_c::x, y))
+//#define CL(x, y)	(Call(&parser_c::x, y, NULL))
+//#define CL(x,y,z)	(Call(&parser_c::x, y, z))
+#define CL(x, y)	(Call(&parser_c::x, y))

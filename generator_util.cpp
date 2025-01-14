@@ -10,7 +10,7 @@ data_t* generator_c::SymbolEntry(tree_c* symb)
 
 	for (unsigned i = 0; i < symtbl_top; i++)
 	{
-		if (!strcmp(symb->Hash()->K(), symtbl[i].var->Hash()->K()))
+		if (!strcmp(symb->Hash()->K(), symtbl[i].var->K()))
 			return &symtbl[i];
 	}
 
@@ -21,110 +21,178 @@ void generator_c::UpdateSymbol(tree_c* symb, int set)
 {
 	for (unsigned i = 0; i < symtbl_top; i++)
 	{
-		if (!strcmp(symb->Hash()->K(), symtbl[i].var->Hash()->K()))
+		if (!strcmp(symb->Hash()->K(), symtbl[i].var->K()))
 		{
 			symtbl[i].val = set;
 		}
 	}
 }
 
-//which: 0 - hi, 1 - low, 2 - full
-const char* generator_c::RegToS(register_t* r, int which)
+void generator_c::PrintSourceLine(tree_c* node)
 {
-	if (r == af)
-	{
-		switch (which)
-		{
-		case 0: return "a"; break;
-		case 1: Error("Attempted to access f"); break;
-		case 2: return "af"; break;
-		default: Error("Attempted to access non-existent register slot"); break;
-		}
-	}
-	else if (r == bc)
-	{
-		switch (which)
-		{
-		case 0: return "b"; break;
-		case 1: return "c"; break;
-		case 2: return "bc"; break;
-		default: Error("Attempted to access non-existent register slot"); break;
-		}
-	}
-	else if (r == de)
-	{
-		switch (which)
-		{
-		case 0: return "d"; break;
-		case 1: return "e"; break;
-		case 2: return "de"; break;
-		default: Error("Attempted to access non-existent register slot"); break;
-		}
-	}
-	else if (r = hl)
-	{
-		switch (which)
-		{
-		case 0: return "h"; break;
-		case 1: return "l"; break;
-		case 2: return "hl"; break;
-		default: Error("Attempted to access non-existent register slot"); break;
-		}
-	}
+	tree_c* child;
 
-	return NULL;
+	fprintf(f, "; ");
+
+	for (int i = 0; child = node->Get(i); i++)
+		R_PrintSourceLine(child);
+	fprintf(f, "\n");
 }
 
-const char* generator_c::RegToS(int r, int which)
+void generator_c::R_PrintSourceLine(tree_c* node)
 {
-	return RegToS(&regs[r], which);
-}
+	tree_c* child;
 
-register_t* generator_c::SToReg(const char* reg, int* w)
-{
-	register_t* r = NULL;
-	int			which;
-
-	switch (reg[0])
-	{
-	case 'a':
-		r = af;
-		if (reg[1] == 'f')
-			which = 2;
-		else
-			which = 0;
-		break;
-	case 'f': Error("Tried loading into f"); break;
-	case 'b':
-		r = bc;
-		if (reg[1] == 'c')
-			which = 2;
-		else
-			which = 0;
-		break;
-	case 'c': r = bc; which = 1; break;
-	case 'd':
-		r = de;
-		if (reg[1] == 'e')
-			which = 2;
-		else
-			which = 0;
-		break;
-	case 'e': r = de; which = 1; break;
-	case 'h':
-		r = hl;
-		if (reg[1] == 'j')
-			which = 2;
-		else
-			which = 0;
-		break;
-	case 'l': r = hl; which = 1; break;
-	default: Error("Tried loading into a bad register"); break;
+	if (!node->Get(0))
+	{//leaf
+		fprintf(f, "%s ", Str(node));
 	}
 
-	*w = which;
-	return r;
+
+	for (int i = 0; child = node->Get(i); i++)
+		R_PrintSourceLine(child);
 }
+
+char* generator_c::RegToS(regi_t reg)
+{
+	const char* name = "";
+	const int	max_strs = 32;
+	const int	longest = 6; //longest name is wr127\0
+
+	static char str[max_strs][longest];
+	static int	strcnt = 0;
+
+	strcnt = strcnt % max_strs;
+
+
+	switch (reg)
+	{
+	case REG_A: name = "a"; break;
+	case REG_B: name = "b"; break;
+	case REG_C: name = "c"; break;
+	case REG_D: name = "d"; break;
+	case REG_E: name = "e"; break;
+	case REG_H: name = "h"; break;
+	case REG_L: name = "l"; break;
+
+	case REG_IYH: name = "iyh"; break;
+	case REG_IYL: name = "iyl"; break;
+	case REG_IXH: name = "ixh"; break;
+	case REG_IXL: name = "ixl"; break;
+
+	case REG_BC: 
+	case REG_BC + 1:
+		name = "bc"; break;
+	case REG_DE: 
+	case REG_DE + 1: 
+		name = "de"; break;
+	case REG_HL: 
+	case REG_HL + 1: 
+		name = "hl"; break;
+
+	case REG_IX: name = "ix"; break;
+	case REG_IY: name = "iy"; break;
+
+	default: break;
+	}
+
+	if (reg >= REG_R0 && reg <= REG_R255)
+	{
+		regi_t i = reg - REG_R0;
+		snprintf(str[strcnt], longest, "r%i", i);
+	}
+	else if (reg >= REG_WR0 && reg <= REG_WR127)
+	{
+		regi_t i = (reg - REG_WR0) / 2; //also allow 1 + reg
+		snprintf(str[strcnt], longest, "wr%i", i);
+	}
+	else if (*name)
+		strncpy_s(str[strcnt], name, longest);
+	else
+		Error("Bad reg");
+
+	return str[strcnt++];
+}
+
+regi_t generator_c::RegAlloc(colori_t color)
+{
+	if (color > REG_L)
+		Error("Unable to handle spill regs");
+
+	return color + 1; //save a
+}
+
+void generator_c::RegFree(regi_t r)
+{
+	if (r <= REG_IXL)
+	{//direct index
+		regs[r].held = -1;
+	}
+	else
+	{
+		int i = ((r - REG_BC) / 2) + REG_BC;
+		regs[i].held = -1;
+
+		//also held the corresponding 8-bit regs
+		regs[r - REG_BC + 1].held = -1;
+		regs[r - REG_BC + 2].held = -1;
+	}
+}
+
+void generator_c::MarkReg(regi_t reg, paralleli_t data)
+{
+	if (reg <= REG_IXL)
+	{//direct index
+		regs[reg].held = data;
+	}
+	else
+	{
+		int i = ((reg - REG_BC) / 2) + REG_BC;
+		regs[i].held = data;
+
+		//also held the corresponding 8-bit regs
+		regs[reg - REG_BC + 1].held = data;
+		regs[reg - REG_BC + 2].held = data;
+	}
+}
+
+bool generator_c::IsMarked(regi_t reg, paralleli_t data)
+{
+	if (reg <= REG_IXL)
+	{//direct index
+		if (regs[reg].held == data)
+			return true;
+	}
+	else
+	{
+		/*
+		int i = ((reg - REG_BC) / 2) + REG_BC;
+		regs[i].held = data;
+
+		//also held the corresponding 8-bit regs
+		regs[reg - REG_BC + 1].held = data;
+		regs[reg - REG_BC + 2].held = data;
+		*/
+	}
+
+	return false;
+}
+
+paralleli_t generator_c::DataOfs(cfg_c* block, tree_c* node)
+{
+	const char* name;
+
+	for(int i = 0; name = block->DataName(i); i++)
+	{
+		if (!strcmp(Str(node), name))
+			return i;
+	}
+
+	//Warning("Data %s not found in block %s\n", Str(node), block->id);
+	return -1;
+}
+
+
 
 inline int generator_c::Code(tree_c* node)
 {
@@ -136,48 +204,6 @@ inline const char* generator_c::Str(tree_c* node)
 	if (!node)
 		return "";
 	return node->Hash()->K();
-}
-
-int generator_c::Linked(const char* reg, tree_c* var)
-{
-	register_t* r;
-	int			which;
-	data_t*		regdata, * data;
-
-	r = SToReg(reg, &which);
-	
-	return Linked(r, which, var);
-}
-
-int generator_c::Linked(register_t* reg, int which, tree_c* var)
-{
-	data_t* regdata, * data;
-
-	if (which == 2)
-		Error("16-bit loads not supported");
-
-	regdata = &reg->held[which];
-
-	if (!TreeCmp(regdata->var, var))
-	{
-		unsigned bits;
-		data = SymbolEntry(var);
-		bits = RegToDF(reg, which);
-
-		//does the variable remember this register?
-		if (data->flags & bits)
-			return true;
-	}
-
-	return false;
-}
-
-int generator_c::TreeCmp(tree_c* t1, tree_c* t2)
-{
-	if (!t1 || !t2)
-		return 1;
-
-	return strcmp(Str(t1), Str(t2));
 }
 
 int generator_c::Constant_Expression(tree_c* head)
@@ -301,67 +327,13 @@ int generator_c::Constant_Expression_Helper(tree_c* head, int num_kids,  int off
 	return ret;
 }
 
-
-
-
-unsigned generator_c::RegStrToDF(const char* reg)
+int generator_c::GetForLabel(char* buf)
 {
-	unsigned flag = 0;
+	static int count = 0;
+	const char* base = "_for%i";
+	int len = strlen(base);
 
-	switch (reg[0])
-	{
-	case 'a': flag |= DF_A; break;
-	case 'b': flag |= DF_B; break;
-	case 'c': flag |= DF_C; break;
-	case 'd': flag |= DF_D; break;
-	case 'e': flag |= DF_E; break;
-	case 'h': flag |= DF_H; break;
-	case 'l': flag |= DF_L; break;
-	default: break;
-	}
+	sprintf_s(buf, len, base, count);
 
-	switch (reg[1])
-	{
-	case 'a': flag |= DF_A; break;
-	case 'b': flag |= DF_B; break;
-	case 'c': flag |= DF_C; break;
-	case 'd': flag |= DF_D; break;
-	case 'e': flag |= DF_E; break;
-	case 'h': flag |= DF_H; break;
-	case 'l': flag |= DF_L; break;
-	default: break;
-	}
-
-	return flag;
-}
-
-unsigned generator_c::RegToDF(register_t* reg, unsigned which)
-{
-	unsigned flag = 0;
-	if (which == 0)
-	{//hi
-		if (reg == af)
-			flag |= DF_A;
-		else if (reg == bc)
-			flag |= DF_B;
-		else if (reg == de)
-			flag |= DF_D;
-		else if (reg == hl)
-			flag |= DF_H;
-	}
-	else if (which == 1)
-	{//low
-		if (reg == af)
-			Error("Can't use f");
-		else if (reg == bc)
-			flag |= DF_C;
-		else if (reg == de)
-			flag |= DF_E;
-		else if (reg == hl)
-			flag |= DF_L;
-	}
-	else
-		Error("No 16-bit loads");
-
-	return flag;
+	return count++;
 }
