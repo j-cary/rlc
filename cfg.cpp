@@ -14,7 +14,6 @@ void cfg_c::AddStmt(tree_c* s)
 cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type)
 {
 	cfg_c* l = new cfg_c;
-	data_t* sym;
 	l->Set(_id, _type);
 
 	links.push_back(l);
@@ -53,7 +52,6 @@ cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type, cfg_c* sibling)
 cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type, data_t* init)
 {
 	cfg_c* l = new cfg_c;
-	data_t* sym;
 	l->Set(_id, _type);
 
 	links.push_back(l);
@@ -105,6 +103,7 @@ void cfg_c::AddData(data_t* _d)
 	end.push_back(pos);
 	startb.push_back(this);
 	endb.push_back(this);
+	uses.push_back(0);
 	//flags.push_back(_flags);
 }
 
@@ -149,53 +148,17 @@ void cfg_c::SetDataEndBlock(const char* name, cfg_c* block)
 	Warning("%s is not a recorded variable\n", name);
 }
 
-//return -1 in the following cases: constants, std vars, unused variables
-colori_t cfg_c::DataColor(const char* name)
+void cfg_c::IncDataUses(const char* name)
 {
-	Error("fix data color");
-
 	for (int i = 0; i < data.size(); i++)
 	{
-		//if (!strcmp(name, data[i]->var->K()))
-		//	return igraph[i]->color;
-	}
-
-	if (!strcmp(name, "print"))
-		return -1;
-
-	//Error("Data %s not found", name);
-	return -1;
-}
-
-const char* cfg_c::DataName(paralleli_t ofs)
-{
-	int sz = (int)data.size();
-
-	if (!sz || (ofs >= sz))
-		return NULL;
-
-	return data.at(ofs)->var->K();
-}
-
-bool cfg_c::IsUsedInTree( const char* dataname)
-{
-	for (int i = 0; i < links.size(); i++)
-	{
-		if (links[i]->IsUsedInTree(dataname))
-			return true;
-	}
-
-	for (paralleli_t i = 0; i < data.size(); i++)
-	{
-		bool cp = strcmp(DataName(i), dataname);
-
-		if (!cp && (start[i] != end[i]))
+		if (!strcmp(name, data[i]->var->K()))
 		{
-			return true;
+			uses[i]++;
+			return;
 		}
 	}
-
-	return false;
+	Warning("%s is not a recorded variable\n", name);
 }
 
 int cfg_c::TrimVars(cfg_c* parent, int count )
@@ -213,7 +176,7 @@ int cfg_c::TrimVars(cfg_c* parent, int count )
 
 			//check if its needed for any children younger than this
 
-			Warning("Unused variable %s\n", DataName(i));
+			//Warning("Unused variable %s\n", DataName(i));
 			start.erase(start.begin() + i);
 			end.erase(end.begin() + i);
 			data.erase(data.begin() + i);
@@ -274,26 +237,26 @@ void cfg_c::R_BuildTDataList(tdata_t* tdata, cfg_c** offsets)
 {
 	for (int ti = 0; ti < (int)data.size(); ti++)
 	{
-		tdata_t* t = &tdata[tdatai++];
+		tdata_t* t = &tdata[tdatai];
 		t->var = data[ti]->var;
 		t->start = start[ti];
 		t->end = end[ti];
+		t->flags = data[ti]->flags;
+		data[ti]->tdata = tdatai++;
 
 		//generate the block offsets for the start and end blocks of this variable
 		int gotone = 0;
 		for (int linki = 0; linki < total_links; linki++)
 		{
-			if (!strcmp(offsets[linki]->id, startb[ti]->id))
+			if (offsets[linki] == startb[ti])
 			{
 				t->startb = linki;
 				if (gotone)
 					break;
 				gotone++;
 			}
-
-			if (!strcmp(offsets[linki]->id, endb[ti]->id))
+			if (offsets[linki] == endb[ti])
 			{
-
 				t->endb = linki;
 				if (gotone)
 					break;
@@ -305,6 +268,106 @@ void cfg_c::R_BuildTDataList(tdata_t* tdata, cfg_c** offsets)
 
 	for (int i = 0; i < (int)links.size(); i++)
 		links[i]->R_BuildTDataList(tdata, offsets);
+}
+
+bool cfg_c::R_SwapTDataIndices(tdatai_t old, tdatai_t _new)
+{
+	for (int i = 0; i < data.size(); i++)
+	{
+		if (data[i]->tdata == old)
+		{//done
+			data[i]->tdata = _new;
+			return true;
+		}
+	}
+
+	for (int i = 0; i < links.size(); i++)
+	{
+		if (links[i]->R_SwapTDataIndices(old, _new))
+			return true;
+	}
+
+	return false;
+}
+
+void cfg_c:: SortTDataList(tdata_t** tdata, int count)
+{
+	//for loop control vars always come first to hopefully grab b. Everything else is sorted by frequency
+
+	//insertion sort
+	for (int i = 1; i < count; i++)
+	{
+		tdata_t x = (*tdata)[i];
+		int j = i;
+
+		if (x.flags & DF_FORCTRL)
+		{
+			for (; j > 0; j--)
+			{
+				tdata_t* y, * z;
+
+				if (((*tdata)[j - 1].flags & DF_FORCTRL))
+					break;
+
+				//non-control var. Shift it to the right
+				y = &(*tdata)[j];
+				z = &(*tdata)[j - 1];
+				*y = *z;
+
+				if (j == i)
+					R_SwapTDataIndices(j - 1, -1); //this can't just be set to j since the source is already j
+				else
+					R_SwapTDataIndices(j - 1, j);
+			}
+			(*tdata)[j] = x; //this will be to the right of all previous control vars. Order shouldn't really matter between these
+			R_SwapTDataIndices(i, j);
+			R_SwapTDataIndices(-1, i);
+		}
+		else
+		{//regular var - sort it by most frequent usage
+			//TODO: need to keep track of usage in tdata.
+			/*
+			for (; j > 0; j--)
+			{
+				tdata_t* y, * z;
+
+				if (((*tdata)[j - 1].flags & DF_FORCTRL))
+					break;
+
+				//var with less usages, shift it to the right
+				y = &(*tdata)[j];
+				z = &(*tdata)[j - 1];
+				*y = *z;
+			}
+			(*tdata)[j] = x;
+			*/
+		}
+	}
+}
+
+int	cfg_c::FirstValidColor(unsigned flags)
+{
+	int first = REG_B;
+
+	//important: registers are incremented from their initial color value
+
+	if (flags & DF_GLOBAL)
+	{
+		if (flags & DF_BYTE)
+			first = REG_L;
+		else
+			first = REG_HL;
+	}
+	else
+	{
+		if (flags & DF_BYTE)
+			first = REG_B;
+		else
+			first = REG_DE; //save BC
+	}
+
+	//first = 0;
+	return first;
 }
 
 //todo: make this an analyzer function
@@ -322,7 +385,9 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 	igraph->num_nodes = symbol_cnt;
 	R_GenBlockOfs(offsets); //generate block indices
 	R_BuildTDataList(*tdata, offsets);//get a plain list of all the data and their respective lifetimes
+	SortTDataList(tdata, symbol_cnt);//control vars first, then sort by usage, globals go last 
 
+	//check for interference between vars
 	for (int i = 0; i < symbol_cnt; i++)
 	{
 		tdata_t* t1 = &(*tdata)[i];
@@ -367,15 +432,14 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 	}
 
 	//color in the graph
-	available = new bool[symbol_cnt];
-	memset(available, false, symbol_cnt);
+	available = new bool[REGS_TOTAL];
+	memset(available, true, REGS_TOTAL);
 
-	//!!!TESTME!!!
-	(*igraph)[0]->color = 0;
-	for (int i = 1; i < symbol_cnt; i++)
+	for (int i = 0; i < symbol_cnt; i++)
 	{
-		inode_c* n = (*igraph)[i];
+		inode_c*	n = (*igraph)[i];
 		int			k;
+		tdata_t*	x = &(*tdata)[i];
 		link_cnt = n->LinkCnt();
 
 		//flag colors used by adjacent vertices as unavailable
@@ -383,14 +447,36 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 		{
 			inode_c* l = (*igraph)[n->Link(j)];
 			if (l->color != -1)
-				available[l->color] = true;
+				available[l->color] = false;
 		}
 
+		
 		//find first available color - assign it
-		for (k = 0; k < symbol_cnt; k++)
+		int iteratend = 1 + !(x->flags & DF_BYTE); //everything except for bytes are inc'd by 2. FIXME - byte array
+		for (k = FirstValidColor(x->flags); k < REGS_TOTAL; k += iteratend)
 		{
-			if (!available[k])
-				break;
+			//check for interference with aliased registers
+			if (x->flags & DF_BYTE)
+			{
+				int basereg = k;
+
+				if (!(k % 2))
+					basereg--;
+
+				if (basereg > -1 && !available[basereg + REG_IXL])
+					continue; //check if tehe 16-bit reg is used
+			}
+			else
+			{
+				if (k == REG_HL)
+					continue; //'hl' is reserved
+
+				if (!available[k - REG_IXL] || !available[k - REG_IXL + 1])
+					continue; //check if the hi or low nibble is already used
+			}
+
+			if (available[k])
+				break; //got one
 		}
 
 		n->color = k;
@@ -400,17 +486,188 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 		{
 			inode_c* l = (*igraph)[n->Link(j)];
 			if (l->color != -1)
-				available[l->color] = false;
+				available[l->color] = true;
 		}
-
-		//color - lowest numbered color not used on any previously colored adjacent vertices
-		//If all previously used colors appear on adjacent vertices, assigne a new color
 	}
 
 	delete[] available;
 }
 
 
+
+//To check for redefs, recurse down the tree until the block holding the variable in question is found.
+//From there, go back up the tree and check each node, its younger siblings, but NOT and of their children, has defined the symbol
+
+#define CRD_DEADEND 0
+#define CRD_NOREDEF	1 //first set after finding the block the data in question is in
+#define CRD_REDEF	2
+
+//no need to pass these as parameters every time
+const char* redef_name;
+cfg_c*		redef_block;
+//dataflags_t redef_flags;
+
+//set above vars before calling
+int cfg_c::R_CheckRedef()
+{
+	if (this == redef_block)
+		return CRD_NOREDEF; //found the right block
+
+	for (int i = 0; i < (int)links.size(); i++)
+	{
+		cfg_c* link = links[i];
+		int ret = link->R_CheckRedef();
+
+		if (!ret)
+			continue;
+
+		if (ret == CRD_REDEF)
+			return CRD_REDEF;
+
+		//just found the block, check it and any of its previous siblings for the symbol
+		for (int li = 0; li <= i; li++)
+		{
+			cfg_c* sibling = links[li];
+
+			for (int di = 0; di < (int)sibling->data.size(); di++)
+			{
+				if (!strcmp(sibling->data[di]->var->K(), redef_name))
+				{//redefinition
+					return CRD_REDEF;
+				}
+			}
+
+			if (sibling == link)
+				return CRD_NOREDEF;
+		}
+	}
+
+	return CRD_DEADEND; //this should never be the final return value from this function
+}
+
+int cfg_c::R_CheckGlobalRedef()
+{
+	cfg_c* c;
+	for (int i = 0; i < links.size(); i++)
+	{
+		c = links[i];
+		for (int j = 0; j < c->data.size(); j++)
+		{
+			if (!strcmp(redef_name, c->data[j]->var->K()))
+				return CRD_REDEF;
+		}
+
+		if (c->R_CheckGlobalRedef() == CRD_REDEF)
+			return CRD_REDEF;
+	}
+
+	return CRD_NOREDEF;
+}
+
+bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags)
+{
+	redef_name = name;
+	redef_block = this;
+	//redef_flags = flags;
+
+	if (flags & DF_GLOBAL) //also top == NULL
+	{//these are visible from everywhere in the program, and can only be defined in ROOT
+		if(root->R_CheckGlobalRedef() == CRD_REDEF)
+			return 0;
+	}
+	else
+	{
+		if (top->R_CheckRedef() == CRD_REDEF)
+			return 0; //found it in the local scope
+	}
+
+
+	//might still be a global
+	for (int i = 0; i < root->data.size(); i++)
+	{
+		if (!strcmp(name, root->data[i]->var->K()))
+			return 0;
+	}
+
+	return 1; //not in our function or global scope
+}
+
+#define GSD_DEADEND	0
+#define GSD_NODECL	1
+#define GSD_DECL	2
+
+//these are set by the function
+data_t* scopedata;
+cfg_c* scopeblock;
+
+int cfg_c::R_GetScopedData()
+{
+	if (this == redef_block)
+		return GSD_NODECL; //found the right block
+
+	for (int i = 0; i < (int)links.size(); i++)
+	{
+		cfg_c* link = links[i];
+		int ret = link->R_GetScopedData();
+
+		if (!ret)
+			continue;
+
+		if (ret == GSD_DECL)
+			return GSD_DECL;
+
+		//just found the block, check it and any of its previous siblings for the symbol
+		for (int li = 0; li <= i; li++)
+		{
+			cfg_c* sibling = links[li];
+
+			for (int di = 0; di < (int)sibling->data.size(); di++)
+			{
+				if (!strcmp(sibling->data[di]->var->K(), redef_name))
+				{//found the symbol
+					scopedata = sibling->data[di];
+					scopeblock = sibling;
+					return GSD_DECL;
+				}
+			}
+
+			if (sibling == link)
+				return GSD_NODECL;
+		}
+	}
+
+	return CRD_DEADEND; //this should never be the final return value from this function
+}
+
+data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock)
+{
+	redef_name = name;
+	redef_block = this;
+
+	if (top->R_GetScopedData() != GSD_DECL)
+	{//could still be a global var
+		for (int i = 0; i < root->data.size(); i++)
+		{
+			if (!strcmp(name, root->data[i]->var->K()))
+			{
+				scopedata = root->data[i];
+				*localblock = root;
+				return scopedata;
+			}
+		}
+		return NULL;
+	}
+
+	*localblock = scopeblock;
+	return scopedata;
+}
+
+#undef CRD_DEADEND
+#undef CRD_NOREDEF
+#undef CRD_REDEF
+#undef GSD_DEADEND
+#undef GSD_NODECL
+#undef GSD_DECL
 
 
 cfg_c::~cfg_c()
@@ -425,6 +682,7 @@ cfg_c::~cfg_c()
 	end.clear();
 	startb.clear();
 	endb.clear();
+	uses.clear();
 	//flags.clear();
 }
 
@@ -469,7 +727,6 @@ void cfg_c::R_Disp( igraph_c* igraph, tdata_t* tdata)
 {
 	std::vector<cfg_c*>::iterator	it = links.begin();
 	std::vector<tree_c*>::iterator	s_it = statements.begin();
-	int link_cnt;
 
 	if (g_ctabs > (DEPTH_MAX * 2) - 2)
 		Error("Parser: Attempted to display too many recursive tree nodes!\n");
@@ -485,7 +742,7 @@ void cfg_c::R_Disp( igraph_c* igraph, tdata_t* tdata)
 		printf(":%s ", data[i]->var->K());
 		if (startb[i] != endb[i])
 			printf("[[%s]] ", endb[i]->id);
-		printf("%i-%i ", start[i], end[i]);
+		printf("%ix %i-%i #%i#", uses[i], start[i], end[i], data[i]->tdata);
 
 	}
 	printf("\n");

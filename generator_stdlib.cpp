@@ -1,6 +1,6 @@
 #include "generator.h"
 
-void generator_c::SL_Print(tree_c* n, cfg_c* block, int op_cnt, int* ofs, colori_t* colors)
+void generator_c::SL_Print(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg)
 {//print, op1, op2, ..., opn;
 	const char* str;
 

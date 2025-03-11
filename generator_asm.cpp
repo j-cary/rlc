@@ -25,11 +25,18 @@ void generator_c::ASM_Ret(const char* parm)
 
 void generator_c::ASM_Data(const char* type, tree_c* var, const char* init)
 {
-	char lblname[KEY_MAX_LEN + 2] = {};
-	data_t* data = &symtbl[symtbl_top];
+	
 
-	//Do we need to make a data entry?
-	 //graph->DataName
+	
+}
+
+void generator_c::ASM_Data(const char* type, tree_c* var, int init)
+{
+	char buf[64];
+	char lblname[KEY_MAX_LEN + 2] = {};
+
+
+	_itoa_s(init, buf, 10);
 
 	sprintf_s(lblname, "_%s:", var->Hash()->K());
 
@@ -38,22 +45,15 @@ void generator_c::ASM_Data(const char* type, tree_c* var, const char* init)
 	strcat_s(dataqueue, "\n");
 	strcat_s(dataqueue, type);
 	strcat_s(dataqueue, " ");
-	strcat_s(dataqueue, init);
+	strcat_s(dataqueue, buf);
+	if(type[2] == 'w' && init <= 255)
+		strcat_s(dataqueue, ", 0"); //CHECKME
 	strcat_s(dataqueue, "\n");
 }
 
-void generator_c::ASM_Data(const char* type, tree_c* var, int init)
+void generator_c::ASM_DLoad(regi_t reg, tdatai_t data)
 {
-	char buf[64];
-	_itoa_s(init, buf, 10);
-	ASM_Data(type, var, buf);
-}
-
-void generator_c::ASM_DLoad(cfg_c* block, regi_t reg, paralleli_t data)
-{
-	//mark the reg as holding this var
-	//MarkReg(reg, data);
-	fprintf(f, "\tld\t%s, (_%s)\n", RegToS(reg), block->DataName(data));
+	fprintf(f, "\tld\t%s, (_%s)\n", RegToS(reg), DataName(data));
 }
 
 void generator_c::ASM_RLoad(regi_t dst, regi_t src)
@@ -66,47 +66,50 @@ void generator_c::ASM_CLoad(regi_t reg, int value)
 	fprintf(f, "\tld\t%s, %i\n", RegToS(reg), value);
 }
 
-
-void generator_c::ASM_Store(tree_c* var, const char* reg)
+void generator_c::ASM_ALoad(regi_t reg, tdatai_t data)
 {
-	data_t*		data;
-	register_t* r;
-	int			which;
-
-	if (!reg || !*reg)
-		return;
-
-	if (Code(var) != CODE_TEXT)
-		Error("Tried loading into non-sensical location %s", Str(var));
-
-	if (!(data = SymbolEntry(var)))
-		Error("%s is undeclared or inaccessible", Str(var));
-
-	fprintf(f, "ld\t(_%s), %s\n", var->Hash()->K(), reg);
-
-	/*
-	data->flags &= ~DF_REGMASK; //clear out any registers this symbol has flagged
-	data->flags |= RegStrToDF(reg);
-	//have the register hold this flag?
-
-	r = SToReg(reg, &which);
-	r->held[0] = *data;
-	r->held[0].var = var;
-	r->held[0].val = 0;
-	r->held[0].func = 0;
-	r->held[0].flags = DF_BYTE;
-	*/
+	fprintf(f, "\tld\t%s, _%s\n", RegToS(reg), DataName(data));
 }
 
-void generator_c::ASM_Add(regi_t dst_reg, regi_t src_reg)
+
+void generator_c::ASM_Store(tdatai_t var, regi_t reg)
 {
+	//fprintf(f, "ld\t(_%s), %s\n", var->Hash()->K(), reg);
+	fprintf(f, "\tld\t(_%s), %s\n", DataName(var), RegToS(reg));
+}
+
+void generator_c::ASM_RAdd(regi_t dst_reg, regi_t src_reg)
+{
+	if (dst_reg == REG_A && src_reg == REG_HL)
+	{//indirect add
+		fprintf(f, "\tadd\ta, (hl)\n");
+
+		return;
+	}
+
 	fprintf(f, "\tadd\t%s, %s\n", RegToS(dst_reg), RegToS(src_reg));
+}
+
+void generator_c::ASM_CAdd(regi_t dst_reg, int value)
+{
+	fprintf(f, "\tadd\t%s, %i\n", RegToS(dst_reg), value);
 }
 
 void generator_c::ASM_Djnz(const char* label)
 {
 	fprintf(f, "\tdjnz\t%s\n", label);
 }
+
+void generator_c::ASM_Push(regi_t reg)
+{
+	fprintf(f, "\tpush\t%s\n", RegToS(reg));
+}
+
+void generator_c::ASM_Pop(regi_t reg)
+{
+	fprintf(f, "\tpop\t%s\n", RegToS(reg));
+}
+
 
 
 

@@ -42,7 +42,6 @@ private:
 	//ASM_Data types
 	//
 	GF_DECL(DATA_TYPE);
-	GF_DECL(ARRAY_DATA_TYPE);
 
 	//
 	//Statements
@@ -135,7 +134,6 @@ private:
 
 		//data
 		FS_ENTRY(DATA_TYPE, "Data"),
-		FS_ENTRY(ARRAY_DATA_TYPE, "Array data"),
 
 		//statements
 		FS_ENTRY(COMPOUND_STATEMENT, "Compound statement"),
@@ -154,9 +152,9 @@ private:
 		FS_ENTRY(OPERANDS_ONE, "One op"),
 		FS_ENTRY(OPERANDS_TWO, "Two ops"),
 		FS_ENTRY(OPERANDS_THREE, "Three ops"),
-		FS_ENTRY(OPERANDS_ONE_TO_TWO, "One or two op(s)"),
-		FS_ENTRY(OPERANDS_ONE_TO_THREE, "One to three op(s)"),
-		FS_ENTRY(OPERANDS_TWO_TO_INF, "At least two ops"),
+		FS_ENTRY(OPERANDS_ONE_TO_TWO, "1/2 op(s)"),
+		FS_ENTRY(OPERANDS_ONE_TO_THREE, "1-3 op(s)"),
+		FS_ENTRY(OPERANDS_TWO_TO_INF, "2+ ops"),
 		FS_ENTRY(OPERANDS_COMP, "COMP op"),
 		FS_ENTRY(OPERANDS_CPM, "CPM ops"),
 		FS_ENTRY(OPERANDS_RET, "RET ops"),

@@ -33,21 +33,21 @@ Reserved chars:
 <function_def> ::= 'subr' <identifier> '(' <parameter_list>* ')' ';'
 <function_decl> ::= 'subr' <identifier> '(' <parameter_list>* ')' <compound_statement>
 
-<data_decl> ::= <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
-				<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
-				<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' }+ ';'  |
-				<unitializeable_data_type> <identifier> ';'
+<data_decl> ::= 'signed'? <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
+				'signed'? <data_type> <identifier> '[' <const_expression> ']' { '{' <initializer_list> '}' }? ';' |
+				'struct' <identifier> <identifier> { '[' <const_expression> ']' }? ';' |
+				'label' <identifier> ';'
+
 <single_data_decl> ::= <identifier> { '=' <arithmetic_expression> }?
 
-<type_def> ::= 'type' '{' <data_decl>+ '}' <identifier> ';'
+<type_def> ::= 'struct' '{' <data_decl>+ '}' <identifier> ';'
 
 //
 //	DATA TYPES
 //
 
-<unitializeable_data_type> ::= lbl | label
-<data_type> ::= fxd | db | dw | ptr | fixed | byte | word | pointer | { 'type' <identifier> }
-<array_data_type> ::= dfa | dba | dwa | dpa | fixedarray | bytearray | wordarray | ptrarray
+<data_type> ::= 'byte' | 'word' | 'dword' | 'fixed' | 'dfixed'
+//struct arrays are initialized from within the struct def itself, not upon an object decl
 
 //
 //	STATEMENTS

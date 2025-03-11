@@ -4,13 +4,13 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 {
 	char label[32];
 	tree_c* child;
-	colori_t color;
 	regi_t reg;
-	paralleli_t data;
+	tdatai_t data;
 
 	PrintSourceLine(node);
 	child = node->Get(3);
 
+	//move this to analysis
 	//did the var get initialized?
 	if (Code(child) != NT_SINGLE_DATA_DECL)
 	{//no init value will replace the decl with the var name
@@ -18,10 +18,11 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 	}
 
 	//TODO: the control variable should also be initializeable with a mem/arith expression
-	//initialize b - the control variable should ALWAYS be assigned to b
-	color = body->DataColor(Str(child->Get(0)));
-	reg = RegAlloc(color);
-	data = DataOfs(body, child->Get(0));
+	//color = DataColor(body, Str(child->Get(0)));
+	data = DataOfs(body, child->Get(0)); //even though the preceding block technically uses it, the control var is stored in the actual loop body
+	//color = DataColor(data);
+	//reg = RegAlloc(color);
+	reg = RegAlloc(data);
 	ASM_CLoad(reg, Constant_Expression(child->Get(2)));
 	MarkReg(reg, data);
 
@@ -33,7 +34,13 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 	CG_RegBlock(body);
 	//CG_ForBlock(body);
 
-	ASM_Djnz(label);
+	if(reg == REG_B)
+		ASM_Djnz(label);
+	else
+	{
+		ASM_Djnz(label);
+
+	}
 }
 
 

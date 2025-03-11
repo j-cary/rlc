@@ -42,15 +42,13 @@ kv_t reservedwords[] =
 	//data types
 	"db",		CODE_BYTE,		"byte",		CODE_BYTE,
 	"dw",		CODE_WORD,		"word",		CODE_WORD,
-	"ptr",		CODE_PTR,		"pointer",	CODE_PTR,
+	"ddw",		CODE_DWORD,		"dword",	CODE_DWORD,
 	"fxd",		CODE_FIXED,		"fixed",	CODE_FIXED,
+	"dfxd",		CODE_DFIXED,	"dfixed",	CODE_DFIXED,
 	"lbl",		CODE_LABEL,		"label",	CODE_LABEL,
-	"dba",		CODE_BYTEARRAY,	"bytearray",CODE_BYTEARRAY,
-	"dwa",		CODE_WORDARRAY,	"wordarray",CODE_WORDARRAY,
-	"dpa",		CODE_PTRARRAY,	"ptrarray",	CODE_PTRARRAY,
-	"dfa",		CODE_FXDARRAY,	"fxdarray",	CODE_FXDARRAY,
 
-	"type",		CODE_TYPE,
+	"struct",	CODE_STRUCT,
+	"signed",	CODE_SIGNED,
 
 	//control flow
 	"repeat",	CODE_REPEAT,

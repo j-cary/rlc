@@ -4,30 +4,6 @@
 //UTILITY FUNCTIONS
 //
 
-data_t* generator_c::SymbolEntry(tree_c* symb)
-{
-	//TODO: check for function here. i.e. if this symbol is inaccessible
-
-	for (unsigned i = 0; i < symtbl_top; i++)
-	{
-		if (!strcmp(symb->Hash()->K(), symtbl[i].var->K()))
-			return &symtbl[i];
-	}
-
-	return NULL;
-}
-
-void generator_c::UpdateSymbol(tree_c* symb, int set)
-{
-	for (unsigned i = 0; i < symtbl_top; i++)
-	{
-		if (!strcmp(symb->Hash()->K(), symtbl[i].var->K()))
-		{
-			symtbl[i].val = set;
-		}
-	}
-}
-
 void generator_c::PrintSourceLine(tree_c* node)
 {
 	tree_c* child;
@@ -114,12 +90,20 @@ char* generator_c::RegToS(regi_t reg)
 	return str[strcnt++];
 }
 
-regi_t generator_c::RegAlloc(colori_t color)
+regi_t generator_c::RegAlloc(tdatai_t index)
 {
-	if (color > REG_L)
-		Error("Unable to handle spill regs");
+	colori_t color = (*igraph)[index]->color;
+	return color ;
+}
 
-	return color + 1; //save a
+regi_t generator_c::HiByte(regi_t r)
+{
+	return r - REG_IXL;
+}
+
+regi_t generator_c::LoByte(regi_t r)
+{
+	return HiByte(r) + 1;
 }
 
 void generator_c::RegFree(regi_t r)
@@ -139,7 +123,7 @@ void generator_c::RegFree(regi_t r)
 	}
 }
 
-void generator_c::MarkReg(regi_t reg, paralleli_t data)
+void generator_c::MarkReg(regi_t reg, tdatai_t data)
 {
 	if (reg <= REG_IXL)
 	{//direct index
@@ -156,7 +140,7 @@ void generator_c::MarkReg(regi_t reg, paralleli_t data)
 	}
 }
 
-bool generator_c::IsMarked(regi_t reg, paralleli_t data)
+bool generator_c::IsMarked(regi_t reg, tdatai_t data)
 {
 	if (reg <= REG_IXL)
 	{//direct index
@@ -178,35 +162,49 @@ bool generator_c::IsMarked(regi_t reg, paralleli_t data)
 	return false;
 }
 
-paralleli_t generator_c::DataOfs(cfg_c* block, tree_c* node)
+tdatai_t generator_c::DataOfs(cfg_c* block, tree_c* node)
 {
-	const char* name;
+	cfg_c* localblock = NULL;
+	data_t* data = block->ScopedDataEntry(Str(node), graph, graph, &localblock); //recurse through the graph, find the ONLY matching data in scope.
 
-	for(int i = 0; name = block->DataName(i); i++)
-	{
-		if (!strcmp(Str(node), name))
-			return i;
-	}
+	//fixme: first graph parm should be the current function
 
-	//Warning("Data %s not found in block %s\n", Str(node), block->id);
-	return -1;
+	return data->tdata;
+
+	//plan: 
+	// tdata only needs to be in dataname - the indices will suffice elsewhere
+	//fix asm_dload
+}
+/*
+colori_t generator_c::DataColor(tdatai_t index)
+{
+	return (*igraph)[index]->color;
+}
+*/
+
+const char* generator_c::DataName(tdatai_t data)
+{
+	if (data < 0 || data >= (tdatai_t)symtbl_top)
+		Error("Bad data index %i", data);
+
+	return tdata[data].var->K();
 }
 
 
 
-inline int generator_c::Code(tree_c* node)
+ int generator_c::Code(tree_c* node)
 {
 	return node->Hash()->V();
 }
 
-inline const char* generator_c::Str(tree_c* node)
+ const char* generator_c::Str(tree_c* node)
 {
 	if (!node)
-		return "";
+		return "BADNODE";
 	return node->Hash()->K();
 }
 
-int generator_c::Constant_Expression(tree_c* head)
+int Constant_Expression(tree_c* head)
 {
 	int		kids;
 	int		ret = 0;
@@ -214,9 +212,9 @@ int generator_c::Constant_Expression(tree_c* head)
 
 	for (kids = 0; head->Get(kids); kids++);
 
-	switch (Code(head))
+	switch (head->Hash()->V())
 	{
-	case CODE_NUM_DEC:				ret = atoi(Str(head)); break;
+	case CODE_NUM_DEC:				ret = atoi(head->Hash()->K()); break;
 	case NT_SHIFT_EXPR:				ret = Constant_Expression_Helper(head, kids, 0, 0);break;
 	case NT_ADDITIVE_EXPR:			ret = Constant_Expression_Helper(head, kids, 0, 1);break;
 	case NT_MULTIPLICATIVE_EXPR:	ret = Constant_Expression_Helper(head, kids, 0, 2);break;
@@ -249,7 +247,7 @@ int generator_c::Constant_Expression(tree_c* head)
 	return ret;
 }
 
-int generator_c::Constant_Expression_Helper(tree_c* head, int num_kids,  int offset, int type)
+int Constant_Expression_Helper(tree_c* head, int num_kids,  int offset, int type)
 {
 	int	r1, r2, ret = 0;
 	int	op_code;
@@ -330,10 +328,23 @@ int generator_c::Constant_Expression_Helper(tree_c* head, int num_kids,  int off
 int generator_c::GetForLabel(char* buf)
 {
 	static int count = 0;
-	const char* base = "_for%i";
-	int len = strlen(base);
+	const char* base = "for%i";
+	int len = (int)strlen(base);
 
 	sprintf_s(buf, len, base, count);
 
 	return count++;
+}
+
+bool generator_c::IsSReg(regi_t r)
+{
+	bool eightbit = r >= REG_R0 && r <= REG_R255;
+	bool sixteenbit = r >= REG_WR0 && r <= REG_WR127;
+
+	return eightbit || sixteenbit;
+}
+
+bool generator_c::IsWord(regi_t r)
+{
+	return r >= REG_BC;
 }

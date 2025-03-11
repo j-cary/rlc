@@ -5,63 +5,12 @@
 #define STACK_MAX	16
 #define DATALUMP_SIZE		1024
 
-#if 0
-//regs
-#define REG_AF		0
-#define REG_BC		1
-#define REG_DE		2
-#define REG_HL		3
-#define REGS_MAX	4
 
-typedef struct register_s
-{
-	data_t			held[2]; //keep a snapshot of the data so we can tell if it is current later
-} register_t;
-
-#else
-
-#define REG_A		0
-#define REG_B		1
-#define REG_C		2
-#define REG_D		3
-#define REG_E		4
-#define REG_H		5
-#define REG_L		6
-#define REG_R0		7
-#define REG_R255	(REG_R0 + 255) //Maximum of 256 spill regs. Only allocate space for the maximum number of used regs
-#define REG_IYH		(REG_R255 + 1) //only used for struct/array indexing
-#define REG_IYL		(REG_R255 + 2)
-#define REG_IXH		(REG_R255 + 3)
-#define REG_IXL		(REG_R255 + 4) 
-
-#define REG_BC		(REG_B + REG_IXL)
-#define REG_DE		(REG_D + REG_IXL)
-#define REG_HL		(REG_H + REG_IXL)
-#define REG_WR0		(REG_R0 + REG_IXL) //r0 and r1
-#define REG_WR127	(REG_R255 - 1 + REG_IXL) //r254 and r255
-#define REG_IY		(REG_IYH + REG_IXL)
-#define REG_IX		(REG_IXH + REG_IXL)
-
-#define REGS_TOTAL	(REG_IXL + 2 + ((REG_IX - REG_BC) / 2)) //400
-
-//0-6 : a-l
-//7-262 : r0-r255
-//263-266 : iyh-ixl
-//267 : bc
-//269 : de
-//271 : hl
-//273 : wr0
-//275 : wr1
-//...
-//527 : wr127
-//529 : iy
-//531 : ix
 
 typedef struct 
 {
-	int held; //hold the index of the data that this is holding per block
+	tdatai_t held; //hold the index of the data that this is holding per block
 } register_t;
-#endif
 
 //ld a, (nn)/n/(bc)/(de)/(hl)/a/b/c/d/e/h/l
 //ld (nn)/(bc)/(de)/(hl)/a/b/c/d/e/h/l, a
@@ -74,10 +23,12 @@ class generator_c
 	cfg_c*		graph;
 	char*		stack[STACK_MAX];
 	unsigned	stack_top = 0;
-	data_t*		symtbl = {};
-	unsigned	symtbl_top;
+	//data_t*		symtbl = {};
+	tdata_t*	tdata;
+	unsigned	symtbl_top; //rename - sizeof tdata
 	char		dataqueue[DATALUMP_SIZE] = {}; //per-function text lump containing data declarations
 	FILE*		f;
+	igraph_c*	igraph;
 
 	register_t	regs[REGS_TOTAL];
 
@@ -86,6 +37,7 @@ class generator_c
 	//
 
 	//program control
+	void CG_Global();
 	void CG_FunctionBlock(cfg_c* block);
 	void CG_RegBlock(cfg_c* block);
 	void CG_ExitBlock(cfg_c* block);
@@ -100,9 +52,9 @@ class generator_c
 
 	//instructions
 	void CG_Instruction(tree_c* node, cfg_c* block);
-	void CG_Add(tree_c* node, cfg_c* block, int op_cnt, int* ofs, colori_t* colors);
-	void CG_Load(tree_c*, cfg_c* block, int op_cnt, int* ofs, colori_t* colors);
-	void CG_Call(tree_c* n, cfg_c* block, int op_cnt, int* ofs, colori_t* colors);
+	void CG_Add (tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg);
+	void CG_Load(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg);
+	void CG_Call(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg);
 
 
 	//
@@ -118,19 +70,27 @@ class generator_c
 
 	
 	char* RegToS(regi_t reg); //No more than 32 strings can be requested from this function at once!
-	regi_t RegAlloc(colori_t color); //data_ofs is the index of the data value in the block
+	regi_t RegAlloc(tdatai_t index);
+	regi_t HiByte(regi_t r);
+	regi_t LoByte(regi_t r);
+	//regi_t AliasReg(regi_t r);
 	void RegFree(regi_t reg);
-	void MarkReg(regi_t reg, paralleli_t data);
+	void MarkReg(regi_t reg, tdatai_t data);
 	bool IsMarked(regi_t reg, paralleli_t data);
-	paralleli_t DataOfs(cfg_c* block, tree_c* n);
 
-	inline int Code(tree_c* node);
-	inline const char* Str(tree_c* node);
+	tdatai_t DataOfs(cfg_c* block, tree_c* n);
+	const char* DataName(tdatai_t data);
 
-	int Constant_Expression(tree_c* head);
-	int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type);
+	 int Code(tree_c* node);
+	 const char* Str(tree_c* node);
+
+	//int Constant_Expression(tree_c* head);
+	//int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type);
 
 	int GetForLabel(char* buf); //returns label id
+
+	bool IsSReg(regi_t r);
+	bool IsWord(regi_t r);
 
 
 	//
@@ -145,17 +105,21 @@ class generator_c
 	void ASM_Data(const char* type, tree_c* var, const char* init);
 	void ASM_Data(const char* type, tree_c* var, int init);
 
-	void ASM_DLoad(cfg_c* block, regi_t reg, paralleli_t data); //Load Data from this block into a reg
+	void ASM_DLoad(regi_t reg, tdatai_t data); //Load Data from this block into a reg
 	void ASM_RLoad(regi_t dst_reg, regi_t src_reg); //Load from reg to reg
 	void ASM_CLoad(regi_t reg, int value); //Load a const
+	void ASM_ALoad(regi_t reg, tdatai_t data); //load an addr
+	void ASM_Store(tdatai_t data, regi_t reg); //var <- reg
 
-	void ASM_Store(tree_c* var, const char* reg); //var <- reg
-
-	void ASM_Add(regi_t dst_reg, regi_t src_reg);
+	void ASM_RAdd(regi_t dst_reg, regi_t src_reg);
+	void ASM_CAdd(regi_t dst_reg, int value);
 	void ASM_Djnz(const char* label);
 
+	void ASM_Push(regi_t reg);
+	void ASM_Pop(regi_t reg);
+
 public:
-	void Generate(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbol_top);
+	void Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, igraph_c* igraph);
 
 
 	//
@@ -163,12 +127,12 @@ public:
 	//
 
 	//Here so stdcalls can access the functions
-	void SL_Print(tree_c*n, cfg_c* block, int op_cnt, int* ofs, colori_t* colors);
+	void SL_Print(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg);
 
 	generator_c()
 	{
 		for (int i = 0; i < REGS_TOTAL; i++)
-			regs[i].held = -1;
+			regs[i].held = REG_BAD;
 
 	}
 };

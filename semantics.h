@@ -1,42 +1,122 @@
 #pragma once
 #include "common.h"
 
-#define SYMBOLS_MAX	16
+#define REG_BAD		(-1)
+#define REG_A		0
+#define REG_B		1
+#define REG_C		2
+#define REG_D		3
+#define REG_E		4
+#define REG_H		5
+#define REG_L		6
+#define REG_R0		7
+#define REG_R255	(REG_R0 + 255) //Maximum of 256 spill regs. Only allocate space for the maximum number of used regs
+#define REG_IYH		(REG_R255 + 1)//unused
+#define REG_IYL		(REG_R255 + 2)//unused
+#define REG_IXH		(REG_R255 + 3)
+#define REG_IXL		(REG_R255 + 4) 
+
+#define REG_BC		(REG_B + REG_IXL)
+#define REG_DE		(REG_D + REG_IXL)
+#define REG_HL		(REG_H + REG_IXL)
+#define REG_WR0		(REG_R0 + REG_IXL) //r0 and r1
+#define REG_WR127	(REG_R255 - 1 + REG_IXL) //r254 and r255
+#define REG_IY		(REG_IYH + REG_IXL)//unused
+#define REG_IX		(REG_IXH + REG_IXL)//only used for struct/array indexing
+
+#define REGS_TOTAL	(REG_IXL + 2 + ((REG_IX - REG_BC) / 2)) //400
+
+//0-6 : a-l
+//7-262 : r0-r255
+//263-266 : iyh-ixl
+//267 : bc
+//269 : de
+//271 : hl
+//273 : wr0
+//275 : wr1
+//...
+//527 : wr127
+//529 : iy
+//531 : ix
+
+#define SYMBOLS_MAX	32
+#define STRUCTURES_MAX	32
 
 //0x4-0x100 are not used by registers
-#define DF_NONE	0x0
-#define DF_BYTE	0x1
-#define DF_WORD	0x2
-#define DF_A	0x4
-#define DF_B	0x8
-#define DF_C	0x10
-#define DF_D	0x20
-#define DF_E	0x40
-#define DF_H	0x80
-#define DF_L	0x100
-#define DF_USED	0x200 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
+#define DF_NONE		0x0
+#define DF_BYTE		0x1
+#define DF_WORD		0x2
+#define DF_LABEL	0x4
+#define DF_FXD		0x8
+#define DF_DOUBLE	0x10
+#define DF_SIGNED	0x20
+#define DF_STRUCT	0x40
+#define DF_ARRAY	0x80
 
-#define DF_REGMASK (DF_A | DF_B | DF_C | DF_D | DF_E | DF_H | DF_L)
+#define DF_USED		0x200 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
+#define DF_FORCTRL	0x400 //control variable for a for loop - try to store this in 'b'
+#define DF_GLOBAL	0x800 //visible from absolutely everywhere in the program
+
+typedef unsigned dataflags_t;
+
+//for type checking
+typedef int colori_t; //register coloring. [0 - a lot] -1 is reserved for constants, std vars, unused variables
+typedef int regi_t; //index into generator_c's regs array [1 - a lot] 0 is unused
+typedef int paralleli_t; //index into the parallel arrays in cfg_c
+typedef int tdatai_t; //tdata/igrpah index
 
 typedef struct data_s
 {
 	const kv_c*	var;
 	int			val;
-	void*		block; //FIXME: pointer to cfg_c*
-	unsigned	flags;
+	void*		block; //FIXME: unnecessary
+	dataflags_t	flags;
+	tdatai_t	tdata; //link to respective tdata
 } data_t;
 
-//for type checking
-typedef int colori_t; //register coloring. [0 - a lot] -1 is reserved for constants, std vars, unused variables
-typedef int regi_t; //index into generator_c's regs array [1 - a lot] 0 is unused
-typedef int paralleli_t; //index into the parallel arrays in cfg_c as well as the igraph member [0 - inf] -1 for unused vars
+typedef struct member_s
+{
+	const char* name;
+	const char* struct_name; //NULL unless this is a struct 
+	dataflags_t flags;
+	int			length;
+	int			offset; //redundant
+	tree_c*		val; //node so that arrays can be initialized
+	member_s*	next = NULL;
+} member_t;
+
+typedef struct struct_s
+{
+	const char* name;
+	int			length;
+	member_t*	first_member;
+} struct_t;
+
+class structlist_c
+{
+private:
+	struct_t structs[STRUCTURES_MAX];
+	int struct_cnt = 0;
+public:
+	int AddStruct(const char* name); //returns index of the new struct
+	void AddMemberVar(int struct_idx, const char* name, dataflags_t flags, int length, tree_c* init_val, const char* structname);
+
+	int GetStruct(const char* name);
+	int StructLen(int struct_idx) { return structs[struct_idx].length; }
+	void SetLen(int struct_idx, int len) { structs[struct_idx].length = len; }
+
+	const struct_t* StructInfo(int idx);
+
+	~structlist_c(); //delete all member vars
+};
+
 
 //purpose: simplify the parse tree 
 //	check for symbol predefinition
 //	generate CFG
 //	determine lifetime of every variable
 
-//Interference Graph - one of these per block
+//Interference Graph
 
 #define LINKS_MAX	32
 
@@ -90,21 +170,21 @@ enum BLOCK_TYPE
 };
 
 //temporary convenience struct for global register allocation
-typedef struct
+typedef struct tdata_s
 {
 	const kv_c* var;
-	int		start, end;
-	int		startb, endb;
+	int			start, end;
+	int			startb, endb;
+	dataflags_t	flags;
 } tdata_t;
 
 //Control flow graph
 class cfg_c
 {
 private:
-	
-
 	std::vector<tree_c*>	statements; //this will be clear()'d on deletion, but the actual nodes will be deleted by the parse tree
 	std::vector<cfg_c*>		links;
+	std::vector<struct_t>	structs; //only ROOT really needs this
 
 	//parallel
 	std::vector<data_t*>	data;
@@ -112,22 +192,21 @@ private:
 	std::vector<int>		end; //statement number in the end block
 	std::vector<cfg_c*>		startb;
 	std::vector<cfg_c*>		endb;
-	//igraph_c				igraph; //should only need one of these now.
-	//tdata_t*				tdata;
-
-	//todo: pass igraph from analyzer to generator. use symbol table instead of cfg data array. 
-	// Note: all scoping should be checked in the analyzer
-	// what should be done about potential index mismatch between tdata and symtbl?
-	//dataname - move to generator. regular int parm. 
-	//datacolor - move to generator. go through symbol table
-	//dataofs - remove cfg* parm, change return to int, search symbol table
+	std::vector<int>		uses; //statement number in the end block
 
 	int TrimVars(cfg_c* parent, int count );
-	bool IsUsedInTree( const char* dataname);
 
+	//igraph building
 	void R_TotalLinks();
 	void R_GenBlockOfs(cfg_c** offsets);
 	void R_BuildTDataList(tdata_t* tdata, cfg_c** offsets);
+	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
+	void SortTDataList(tdata_t** tdata, int count);
+	int	 FirstValidColor(unsigned flags);
+
+	int R_CheckGlobalRedef();
+	int R_CheckRedef();
+	int R_GetScopedData();
 
 	void R_Disp( igraph_c* igraph, tdata_t* tdata);
 public:
@@ -150,14 +229,20 @@ public:
 	bool SetDataStart(const char* name, int _start); //returns true if the data was local to this block
 	bool SetDataEnd(const char* name, int _end); //ditto above
 	void SetDataEndBlock(const char* name, cfg_c* block);
-	colori_t DataColor(const char* name);
-	const char* DataName(paralleli_t ofs);
+	void IncDataUses(const char* name);
+
+
 	
 	void BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata);
+
+	bool CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags);
+	data_t* ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock);
 
 	void Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata);
 	~cfg_c();
 };
+
+#define BLOCKSTACK_MAX	128
 
 class analyzer_c
 {
@@ -165,12 +250,13 @@ private:
 	tree_c* root;
 	cfg_c*	graph;
 	cfg_c*	cur_func;
-	cfg_c*	cur_link;
 	data_t*	symtbl;
 	unsigned symtbl_top;
 
-	igraph_c igraph;
+	igraph_c* igraph;
 	tdata_t* tdata;
+
+	structlist_c* slist;
 
 	void SimplifyTree(tree_c* node, tree_c* parent); //Pass 1
 
@@ -183,12 +269,21 @@ private:
 	cfg_c* CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ancestor); //todo: merge these two
 	void CFG_DataDeclaration(tree_c* node, cfg_c* block);
 	void CFG_Instruction(tree_c* node, cfg_c* block);
+	void CFG_TypeDef(tree_c* node, cfg_c* block);
 
 	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, int exit_code);
 
 	void BuildIGraphs(cfg_c* block);
 
 	data_t* DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock);
+	void MakeDataEntry(const kv_c* _var, cfg_c* block, unsigned _flags);
+	int MakeStructEntry(const kv_c* _var, cfg_c* _block); //returns new struct index
+	//void MakeFunctionEntry(const kv_c* var);
+
 public:
-	void GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top);
+	void GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, igraph_c* igraph, structlist_c* sl);
 };
+
+//generator_util
+int Constant_Expression(tree_c* head);
+int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type);

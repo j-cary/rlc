@@ -3,7 +3,7 @@
 const char* asmfilename = "C:/ti83/rl/test.z80";
 const unsigned short outflags = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 
-void generator_c::Generate(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbol_top)
+void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, igraph_c* _igraph)
 {
 	cfg_c* block;
 
@@ -11,12 +11,13 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, data_t* symbols, unsign
 
 	InitFile(asmfilename);
 
-	symtbl = symbols;
+	//symtbl = symbols;
+	tdata = _tdata;
 	symtbl_top = *symbol_top;
 	root = _root;
 	graph = _graph;
+	igraph = _igraph;
 
-	//VisitNode(root);
 	for (int i = 0; block = graph->GetLink(i); i++)
 	{
 		if (block->block_type == BLOCK_FUNC)
@@ -24,6 +25,9 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, data_t* symbols, unsign
 		else
 			Error("Bad block %s", block->id);
 	}
+
+	//allocate global vars
+	CG_Global();
 
 	*symbol_top = symtbl_top;
 
@@ -38,6 +42,23 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, data_t* symbols, unsign
 //
 //program control
 //
+
+void generator_c::CG_Global()
+{
+	tree_c* stmt;
+
+	for (int i = 0; stmt = graph->GetStmt(i); i++)
+	{
+		if (Code(stmt) != NT_DATA_DECL)
+			Error("Unhandled global block '%s'", Str(stmt));
+
+		PrintSourceLine(stmt);
+		CG_DataDeclaration(stmt, graph);
+	}
+
+	//dump the dataqueue - no need to zero this
+	fprintf(f, "%s", dataqueue);
+}
 
 void generator_c::CG_FunctionBlock(cfg_c* block)
 {
@@ -103,8 +124,6 @@ void generator_c::CG_ExitBlock(cfg_c* block)
 		ASM_Ret("");
 		return;
 	}
-
-
 }
 
 void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
@@ -114,57 +133,48 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 	int		code;
 	int		res;
 	regi_t	reg;
-	paralleli_t		dataofs;
+	tdatai_t	dataofs;
 
-	switch (node->Get(0)->Hash()->V())
+	do
 	{
-	case CODE_BYTE:
-	{
-		do
-		{
-			child = node->Get(i);
-			code = child->Hash()->V();
-			i++;
-			res = 0;
+		child = node->Get(i);
+		code = child->Hash()->V();
+		i++;
+		res = 0;
 
-			if (code == CODE_COMMA)
-				continue;
-			if (code == CODE_SEMICOLON)
-				break;
+		if (code == CODE_COMMA)
+			continue;
+		if (code == CODE_SEMICOLON)
+			break;
 
+		if (code == NT_SINGLE_DATA_DECL)
+		{//constant expression
+			res = Constant_Expression(child->Get(2));
+			child = child->Get(0); //get the actual name
+		}
+
+		if ((dataofs = DataOfs(block, child)) < 0)
+			continue; //unused var
+
+		reg = RegAlloc(DataOfs(block, child));
+		if (!IsSReg(reg))
+		{//non-global hardware reg
 			if (code == NT_SINGLE_DATA_DECL)
-			{//constant expression
-				res = Constant_Expression(child->Get(2));
-				child = child->Get(0); //get the actual name
+			{//initialize it
+				ASM_CLoad(reg, res);
+				MarkReg(reg, dataofs);
 			}
+			//otherwise, this variable gets initialized later in the program
+			continue;
+		}
 
-			if ((dataofs = DataOfs(block, child)) < 0)
-				continue; //unused var
-
-			//what todo about globals here?
-			reg = RegAlloc(block->DataColor(Str(child)));
-			if (reg < REG_L && block->block_type != BLOCK_ROOT)
-			{
-				if (code == NT_SINGLE_DATA_DECL)
-				{//initialize it
-					ASM_CLoad(reg, res);
-					MarkReg(reg, dataofs);
-				}
-				//otherwise, this variable gets initialized later in the program
-
-				continue;
-			}
-
-			//an actual data entry is used iff - the data is used && (it is held in a software reg || it is global)
+		//an actual data entry is used iff - the data is used && (it is held in a software reg || it is global)
+		if (node->Get(0)->Hash()->V() == CODE_BYTE)
 			ASM_Data(".db", child, res);
-
-		} while (1);
-
-	}
-		break;
-	default: break;
-	}
-
+		else
+			ASM_Data(".dw", child, res);
+		MarkReg(reg, dataofs);
+	} while (1);
 }
 
 

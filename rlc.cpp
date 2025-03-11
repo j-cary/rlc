@@ -6,7 +6,7 @@
 #include "semantics.h"
 #include "generator.h"
 
-const char tmp_filename[] = "c:/ti83/rl/test.rls";
+const char		tmp_filename[] = "c:/ti83/rl/test.rls";
 scanner_c		lex;
 preprocessor_c	preproc;
 parser_c		parse;
@@ -18,15 +18,22 @@ HANDLE console;
 
 //TODO:
 //Register allocation
-//	Reserve b in for loops 
-//	only make data entries for values using software registers 
-//	^don't initialize a data entry if a register is holding it. Just load the initial value 
 //	don't allocate registers for data used 0-0 or 7-7
 //	^need to skip data decls and instructions with only un allocated-vars
+//	re-use software regs - use the name of the first var to use each sreg
+//Semantic analysis
+//	in generator-check out dataofs with redefs
+//	also check dload
+//Mark 'a' with the last loaded sreg
+//Whole new data decl syntax. Pointers must be typed.
+//symbol declarations in expressions
 //Fix memory leaks when using Error()
-//Typedef stuff - declaring variables of a typedef, how are arrays going to work? 
+//structs
+//	reeeeealy should allow stuff like ptr ptr, array ptr, etc.
+//	in semantics check that only valid member variables are used for an object
+//	structlist args
+//	add structs to list in makedataentry
 //preprocessing
-//symbol table - make this part of IDENTIFIER?
 
 
 int main()
@@ -44,6 +51,9 @@ int main()
 	cfg_c	graph;
 	data_t	symtbl[SYMBOLS_MAX];
 	unsigned symtbl_top = 0;
+	tdata_t* tdata; //dynamically allocated by the analyzer
+	igraph_c igraph;
+	structlist_c sl;
 
 	ftime(&start);
 
@@ -82,12 +92,14 @@ int main()
 	lex.Lex(program, &list, 0);
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, 0);
-	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top);
-	//generator.Generate(&tree, &graph, symtbl, &symtbl_top);
+	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top, &tdata, &igraph, &sl);
+	//generator.Generate(&tree, &graph, tdata, &symtbl_top, &igraph);
 
 	ftime(&end);
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
 	printf("Compilation finished in %.4f second(s)\n", time_seconds);
+
+	//delete[] tdata;
 
 	return 0;
 }

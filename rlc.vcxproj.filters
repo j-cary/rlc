@@ -81,6 +81,9 @@
     <ClCompile Include="igraph.cpp">
       <Filter>Source Files\structs</Filter>
     </ClCompile>
+    <ClCompile Include="structs.cpp">
+      <Filter>Source Files\structs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h">
