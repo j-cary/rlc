@@ -46,7 +46,7 @@ Reserved chars:
 //	DATA TYPES
 //
 
-<data_type> ::= 'byte' | 'word' | 'dword' | 'fixed' | 'dfixed'
+<data_type> ::= 'byte' | 'word' | 'dword' 
 //struct arrays are initialized from within the struct def itself, not upon an object decl
 
 //
@@ -171,7 +171,7 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 <and_expression> ::=			<equality_expression> { '&&' <equality_expression> }*
 <equality_expression> ::=		<relational_expression> { { '==' | '!=' } <relational_expression> }*
 <relational_expression> ::=		<logical_postfix_expression> { {'<' | '>' | '<=' | '>=' } <logical_postfix_expression> }*
-<logical_postfix_expression> ::=<logical_primary_expression> { { { '.' | '..' } <logical_primary_expression> } | '[' <constant_expression> ']' }*
+<logical_postfix_expression> ::=<logical_primary_expression> { { { '.' | '..' } <identifier> } | '[' <constant_expression> ']' }*
 <logical_primary_expression> ::=<identifier> | <constant> | <string> | '(' <logical_expression> ')' | { '&' | '*' | '!' } <logical_expression>
 
 
@@ -186,7 +186,7 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 <additive_expression> ::=			<multiplicative_expression> { { '+' | '-' } <multiplicative_expression> }*
 <multiplicative_expression> ::=		<arithmetic_postfix_expression> { { '*' | '/' | '%' } <arithmetic_postfix_expression> }*
 <arithmetic_postfix_expression> ::=	<arithmetic_primary_expression> 
-									{ { { '.' | '..' } <arithmetic_primary_expression> } | '[' <arithmetic_expression> ']' }*
+									{ { { '.' | '..' } <identifier> } | '[' <arithmetic_expression> ']' }*
 <arithmetic_primary_expression> ::=	<identifier> | <constant> | '(' <arithmetic_expression> ')' | { '&' | '*' | '-' } <arithmetic_expression>
 
 //
@@ -197,4 +197,4 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 
 <mem_or_const_expression> ::= <memory_expression> | <constant_expression> //implementation: test mem first, then const
 <memory_expression> ::= <memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <mem_or_const_expression> ']' }*
-<memory_primary_expression> ::= <identifier> | { '&' | '*' } <memory_expression>
+<memory_primary_expression> ::= <identifier> | { '&' | '*' } <identifier>

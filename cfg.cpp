@@ -352,7 +352,7 @@ int	cfg_c::FirstValidColor(unsigned flags)
 	//important: registers are incremented from their initial color value
 
 	if (flags & DF_GLOBAL)
-	{
+	{//don't use hregs for globals
 		if (flags & DF_BYTE)
 			first = REG_L;
 		else
@@ -363,7 +363,7 @@ int	cfg_c::FirstValidColor(unsigned flags)
 		if (flags & DF_BYTE)
 			first = REG_B;
 		else
-			first = REG_DE; //save BC
+			first = REG_BC; //save BC
 	}
 
 	//first = 0;
@@ -397,6 +397,9 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 		int eb1 = t1->endb;
 
 		if (sb1 == eb1 && s1 == e1)
+			continue; //totally unused
+
+		if (t1->flags & DF_LABEL)
 			continue;
 
 		for (int j = 0; j < symbol_cnt; j++)
@@ -408,6 +411,9 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 			int eb2 = t2->endb;
 
 			if (i == j) //don't check for interference with ourselves
+				continue;
+
+			if (t2->flags & DF_LABEL)
 				continue;
 
 			//TESTME!!!
@@ -438,9 +444,14 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 	for (int i = 0; i < symbol_cnt; i++)
 	{
 		inode_c*	n = (*igraph)[i];
-		int			k;
 		tdata_t*	x = &(*tdata)[i];
 		link_cnt = n->LinkCnt();
+
+		if (x->flags & DF_LABEL)
+		{//pseudo data type
+			n->color = -1;
+			continue;
+		}
 
 		//flag colors used by adjacent vertices as unavailable
 		for (int j = 0; j < link_cnt; j++)
@@ -453,7 +464,7 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 		
 		//find first available color - assign it
 		int iteratend = 1 + !(x->flags & DF_BYTE); //everything except for bytes are inc'd by 2. FIXME - byte array
-		for (k = FirstValidColor(x->flags); k < REGS_TOTAL; k += iteratend)
+		for (int k = FirstValidColor(x->flags); k < REGS_TOTAL; k += iteratend)
 		{
 			//check for interference with aliased registers
 			if (x->flags & DF_BYTE)
@@ -476,10 +487,11 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 			}
 
 			if (available[k])
+			{
+				n->color = k;
 				break; //got one
+			}
 		}
-
-		n->color = k;
 
 		//clean up available vertices
 		for (int j = 0; j < link_cnt; j++)

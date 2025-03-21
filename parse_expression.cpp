@@ -226,7 +226,7 @@ GF_DEF(RELATIONAL_EXPRESSION)
 
 GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 {//<logical_primary_expression> 
-//	{ { { '.' | '..' } <logical_primary_expression> } | '[' <constant_expression> ']' }*
+//	{ { { '.' | '..' } <identifier> } | '[' <constant_expression> ']' }*
 	//basically an identifier followed by any number of .<ident> or [<expr>]
 	node_c* saved = list->Save();
 	node_c* saved_op;
@@ -253,7 +253,7 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 				else
 					child = self->InsR(&kv);
 
-				if (!CL(LOGICAL_PRIMARY_EXPRESSION,  self))
+				if (!CL(IDENTIFIER,  self))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);
@@ -517,7 +517,7 @@ GF_DEF(MULTIPLICATIVE_EXPRESSION)
 
 GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 {//<arithmetic_primary_expression> 
-//	{ { { '.' | '..' } <arithmetic_primary_expression> } | '[' <arithmetic_expression> ']' }*
+//	{ { { '.' | '..' } <identifier> } | '[' <arithmetic_expression> ']' }*
 	//basically an identifier followed by any number of .<ident> or [<expr>]
 	node_c* saved = list->Save();
 	node_c* saved_op;
@@ -544,7 +544,7 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 				else
 					child = self->InsR(&kv);
 
-				if (!CL(ARITHMETIC_PRIMARY_EXPRESSION,  self))
+				if (!CL(IDENTIFIER,  self))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);
@@ -654,7 +654,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 //
 
 GF_DEF(MEMORY_EXPRESSION)
-{//<memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <mem_or_const_expression> ']' }*
+{//<memory_primary_expression> { { { '.' | '..' } <identifier> } | '[' <mem_or_const_expression> ']' }*
 	node_c* saved = list->Save();
 	node_c* saved_op;
 	tree_c* child = NULL;
@@ -680,7 +680,7 @@ GF_DEF(MEMORY_EXPRESSION)
 				else
 					child = self->InsR(&kv);
 
-				if (!CL(MEMORY_PRIMARY_EXPRESSION, self))
+				if (!CL(IDENTIFIER, self))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);

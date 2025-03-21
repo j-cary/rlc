@@ -1,7 +1,5 @@
 #include "semantics.h"
 
-//<identifier> - need to be forward declared. Thinking a stack which pops stuff off after completing a compound statement
-
 void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, igraph_c* _igraph, structlist_c* sl)
 {
 	struct timeb start, end;
@@ -47,19 +45,9 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 				if (m->flags & DF_BYTE)
 					printf(" byte");
 				else if (m->flags & DF_WORD)
-				{
-					if (m->flags & DF_DOUBLE)
-						printf(" dword");
-					else
-						printf(" word");
-				}
+					printf(" word");
 				else if (m->flags & DF_FXD)
-				{
-					if (m->flags & DF_DOUBLE)
-						printf(" dfixed");
-					else
-						printf(" fixed");
-				}
+					printf(" fixed");
 				else if (m->flags & DF_STRUCT)
 					printf(" %s", m->struct_name);
 
@@ -387,8 +375,6 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	case CODE_BYTE:		flags |= DF_BYTE; break;
 	case CODE_WORD:		flags |= DF_WORD; break;
 	case CODE_LABEL:	flags |= DF_LABEL; break;
-	case CODE_DWORD:	flags |= DF_WORD | DF_DOUBLE; break;
-	case CODE_DFIXED:	flags |= DF_WORD | DF_FXD; break;
 	case CODE_STRUCT:	flags |= DF_STRUCT; start = 2; break;
 	default: break;
 	}
@@ -617,9 +603,7 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 		case CODE_LABEL:		Error("Structures cannot contain labels"); break;
 		case CODE_BYTE:			flags |= DF_BYTE; break;
 		case CODE_WORD:			flags |= DF_WORD; break;
-		case CODE_DWORD:		flags |= DF_WORD | DF_DOUBLE; break;
 		case CODE_FIXED:		flags |= DF_FXD; break;
-		case CODE_DFIXED:		flags |= DF_FXD | DF_DOUBLE; break;
 		case CODE_STRUCT:		flags |= DF_STRUCT; break;
 		default: break;
 		}
@@ -690,9 +674,6 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 				Error("Structure '%s' cannot contain itself", structname);
 			length = slist->StructLen(s1) * arraylength;
 		}
-
-		if (flags & DF_DOUBLE)
-			length *= 2;
 
 		slist->AddMemberVar(s, dname->Hash()->K(), flags, length, init, structname);
 		total_length += length;

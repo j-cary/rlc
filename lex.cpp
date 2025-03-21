@@ -42,9 +42,7 @@ kv_t reservedwords[] =
 	//data types
 	"db",		CODE_BYTE,		"byte",		CODE_BYTE,
 	"dw",		CODE_WORD,		"word",		CODE_WORD,
-	"ddw",		CODE_DWORD,		"dword",	CODE_DWORD,
 	"fxd",		CODE_FIXED,		"fixed",	CODE_FIXED,
-	"dfxd",		CODE_DFIXED,	"dfixed",	CODE_DFIXED,
 	"lbl",		CODE_LABEL,		"label",	CODE_LABEL,
 
 	"struct",	CODE_STRUCT,

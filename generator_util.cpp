@@ -92,7 +92,7 @@ char* generator_c::RegToS(regi_t reg)
 
 regi_t generator_c::RegAlloc(tdatai_t index)
 {
-	colori_t color = (*igraph)[index]->color;
+	regi_t color = (*igraph)[index]->color;
 	return color ;
 }
 

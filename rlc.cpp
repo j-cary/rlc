@@ -24,16 +24,20 @@ HANDLE console;
 //Semantic analysis
 //	in generator-check out dataofs with redefs
 //	also check dload
+//	manage checking inside expressions in general:
+//	handle expression operands in instructions - check for def, update usage
+//	don't allow [][] in mem exprs
+//	check that constant exprs in [] are really const
+//	check that the operators make sense ex. 1.member is a valid logical expression
 //Mark 'a' with the last loaded sreg
-//Whole new data decl syntax. Pointers must be typed.
 //symbol declarations in expressions
 //Fix memory leaks when using Error()
 //structs
-//	reeeeealy should allow stuff like ptr ptr, array ptr, etc.
 //	in semantics check that only valid member variables are used for an object
 //	structlist args
-//	add structs to list in makedataentry
 //preprocessing
+//labels
+//	only one assignment in a function
 
 
 int main()

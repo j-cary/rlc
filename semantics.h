@@ -42,13 +42,12 @@
 #define SYMBOLS_MAX	32
 #define STRUCTURES_MAX	32
 
-//0x4-0x100 are not used by registers
 #define DF_NONE		0x0
 #define DF_BYTE		0x1
 #define DF_WORD		0x2
 #define DF_LABEL	0x4
 #define DF_FXD		0x8
-#define DF_DOUBLE	0x10
+
 #define DF_SIGNED	0x20
 #define DF_STRUCT	0x40
 #define DF_ARRAY	0x80
@@ -60,7 +59,6 @@
 typedef unsigned dataflags_t;
 
 //for type checking
-typedef int colori_t; //register coloring. [0 - a lot] -1 is reserved for constants, std vars, unused variables
 typedef int regi_t; //index into generator_c's regs array [1 - a lot] 0 is unused
 typedef int paralleli_t; //index into the parallel arrays in cfg_c
 typedef int tdatai_t; //tdata/igrpah index
@@ -192,7 +190,7 @@ private:
 	std::vector<int>		end; //statement number in the end block
 	std::vector<cfg_c*>		startb;
 	std::vector<cfg_c*>		endb;
-	std::vector<int>		uses; //statement number in the end block
+	std::vector<int>		uses; 
 
 	int TrimVars(cfg_c* parent, int count );
 
