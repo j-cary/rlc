@@ -610,7 +610,7 @@ bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t fl
 
 //these are set by the function
 data_t* scopedata;
-cfg_c* scopeblock;
+cfg_c*	scopeblock;
 
 int cfg_c::R_GetScopedData()
 {
@@ -622,7 +622,7 @@ int cfg_c::R_GetScopedData()
 		cfg_c* link = links[i];
 		int ret = link->R_GetScopedData();
 
-		if (!ret)
+		if (ret == GSD_DEADEND)
 			continue;
 
 		if (ret == GSD_DECL)
@@ -680,6 +680,86 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 #undef GSD_DEADEND
 #undef GSD_NODECL
 #undef GSD_DECL
+
+#define ISI_NOTSTRUCT	0
+#define ISI_ISSTRUCT	1
+#define ISI_NOTFOUND	2
+
+//recurse until the source block is found
+//then search from the bottom up for the declaration
+cfg_c* instanceblock; //the block that the instance is being used in
+
+int cfg_c::R_IsStructInstance(const char* name)
+{
+	if (instanceblock == this)
+		return ISI_NOTSTRUCT;
+
+	for (int i = 0; i < (int)links.size(); i++)
+	{
+		cfg_c* link = links[i];
+		int ret = link->R_IsStructInstance(name);
+
+		if (ret == ISI_NOTFOUND)
+			continue;
+
+		if (ret == ISI_ISSTRUCT)
+			return ISI_ISSTRUCT; 
+
+		//just found the block, check it and any of its previous siblings for the symbol
+		for (int li = 0; li <= i; li++)
+		{
+			cfg_c* sibling = links[li];
+
+			for (int di = 0; di < (int)sibling->data.size(); di++)
+			{
+				if (!strcmp(sibling->data[di]->var->K(), name))
+				{//found it, see if its actually a struct
+					if(sibling->data[di]->flags & DF_STRUCT)
+						return ISI_ISSTRUCT;
+					else 
+						return ISI_NOTSTRUCT;
+				}
+			}
+
+			if (sibling == link)
+				return ISI_NOTFOUND;
+		}
+	}
+
+	return ISI_NOTFOUND;
+}
+
+bool cfg_c::IsStructInstance(const char* name, cfg_c* func, cfg_c* root)
+{
+	int ret;
+
+	instanceblock = this;
+	ret = func->R_IsStructInstance(name);
+
+	if (ret == ISI_ISSTRUCT)
+		return true;
+	else if (ret == ISI_NOTSTRUCT)
+		return false;
+
+	//didn't find it in the function - check if its a global
+	for (int i = 0; i < root->data.size(); i++)
+	{
+		if (!strcmp(root->data[i]->var->K(), name))
+		{//found it
+			if (root->data[i]->flags & DF_STRUCT)
+				return true;
+			else
+				return false;
+		}
+	}
+
+	Error("IsStructInstance: Couldn't find '%s' anywhere", name); //should never reach this
+	return false;
+}
+
+#undef ISI_NOTSTRUCT
+#undef ISI_ISSTRUCT
+#undef ISI_NOTFOUND
 
 
 cfg_c::~cfg_c()

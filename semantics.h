@@ -47,7 +47,7 @@
 #define DF_WORD		0x2
 #define DF_LABEL	0x4
 #define DF_FXD		0x8
-
+#define DF_PTR		0x10
 #define DF_SIGNED	0x20
 #define DF_STRUCT	0x40
 #define DF_ARRAY	0x80
@@ -99,7 +99,7 @@ public:
 	int AddStruct(const char* name); //returns index of the new struct
 	void AddMemberVar(int struct_idx, const char* name, dataflags_t flags, int length, tree_c* init_val, const char* structname);
 
-	int GetStruct(const char* name);
+	int GetStruct(const char* name); // < 0 if invalid
 	int StructLen(int struct_idx) { return structs[struct_idx].length; }
 	void SetLen(int struct_idx, int len) { structs[struct_idx].length = len; }
 
@@ -205,6 +205,7 @@ private:
 	int R_CheckGlobalRedef();
 	int R_CheckRedef();
 	int R_GetScopedData();
+	int R_IsStructInstance(const char* name);
 
 	void R_Disp( igraph_c* igraph, tdata_t* tdata);
 public:
@@ -235,6 +236,7 @@ public:
 
 	bool CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags);
 	data_t* ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock);
+	bool IsStructInstance(const char* name, cfg_c* func, cfg_c* root); 
 
 	void Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata);
 	~cfg_c();
@@ -284,4 +286,3 @@ public:
 
 //generator_util
 int Constant_Expression(tree_c* head);
-int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type);

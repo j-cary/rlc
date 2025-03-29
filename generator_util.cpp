@@ -192,16 +192,96 @@ const char* generator_c::DataName(tdatai_t data)
 
 
 
- int generator_c::Code(tree_c* node)
+int generator_c::Code(tree_c* node)
 {
 	return node->Hash()->V();
 }
 
- const char* generator_c::Str(tree_c* node)
+const char* generator_c::Str(tree_c* node)
 {
 	if (!node)
 		return "BADNODE";
 	return node->Hash()->K();
+}
+
+
+
+int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type)
+{
+	int	r1, r2, ret = 0;
+	int	op_code;
+
+	r1 = Constant_Expression(head->Get(offset));
+	op_code = head->Get(offset + 1)->Hash()->V();
+	r2 = Constant_Expression(head->Get(offset + 2));
+
+	if (type == 0)
+	{
+		switch (op_code)
+		{
+		case T_LEFT_SHIFT: ret = r1 << r2; break;
+		case T_RIGHT_SHIFT: ret = r1 >> r2; break;
+		default: Error("Bad shift operator"); break;
+		}
+	}
+	else if (type == 1)
+	{
+		switch (op_code)
+		{
+		case CODE_PLUS: ret = r1 + r2; break;
+		case CODE_MINUS: ret = r1 - r2; break;
+		default: Error("Bad additive operator"); break;
+		}
+	}
+	else if (type == 2)
+	{
+		switch (op_code)
+		{
+		case CODE_STAR: ret = r1 * r2; break;
+		case CODE_FSLASH: ret = r1 / r2; break;
+		case CODE_PERCENT: ret = r1 % r2; break;
+		default: Error("Bad additive operator"); break;
+		}
+	}
+
+
+
+	for (int i = offset + 3; i < num_kids; i += 2)
+	{
+		op_code = head->Get(i)->Hash()->V();
+		r1 = Constant_Expression(head->Get(i + 1));
+
+		if (type == 0)
+		{
+			switch (op_code)
+			{
+			case T_LEFT_SHIFT: ret <<= r1; break;
+			case T_RIGHT_SHIFT: ret >>= r1; break;
+			default: Error("Bad shift operator"); break;
+			}
+		}
+		else if (type == 1)
+		{
+			switch (op_code)
+			{
+			case CODE_PLUS: ret += r1; break;
+			case CODE_MINUS: ret -= r1; break;
+			default: Error("Bad additive operator"); break;
+			}
+		}
+		else if (type == 2)
+		{
+			switch (op_code)
+			{
+			case CODE_STAR: ret *= r1; break;
+			case CODE_FSLASH: ret /= r1; break;
+			case CODE_PERCENT: ret %= r1; break;
+			default: Error("Bad additive operator"); break;
+			}
+		}
+	}
+
+	return ret;
 }
 
 int Constant_Expression(tree_c* head)
@@ -247,83 +327,7 @@ int Constant_Expression(tree_c* head)
 	return ret;
 }
 
-int Constant_Expression_Helper(tree_c* head, int num_kids,  int offset, int type)
-{
-	int	r1, r2, ret = 0;
-	int	op_code;
 
-	r1 = Constant_Expression(head->Get(offset));
-	op_code = head->Get(offset + 1)->Hash()->V();
-	r2 = Constant_Expression(head->Get(offset + 2));
-
-	if (type == 0)
-	{
-		switch (op_code)
-		{
-		case T_LEFT_SHIFT: ret = r1 << r2; break;
-		case T_RIGHT_SHIFT: ret = r1 >> r2; break;
-		default: Error("Bad shift operator"); break;
-		}
-	}
-	else if (type == 1)
-	{
-		switch (op_code)
-		{
-		case CODE_PLUS: ret = r1 + r2; break;
-		case CODE_MINUS: ret = r1 - r2; break;
-		default: Error("Bad additive operator"); break;
-		}
-	}
-	else if (type == 2)
-	{
-		switch (op_code)
-		{
-		case CODE_STAR: ret = r1 * r2; break;
-		case CODE_FSLASH: ret = r1 / r2; break;
-		case CODE_PERCENT: ret = r1 % r2; break;
-		default: Error("Bad additive operator"); break;
-		}
-	}
-
-	
-
-	for (int i = offset + 3; i < num_kids; i += 2)
-	{
-		op_code = head->Get(i)->Hash()->V();
-		r1 = Constant_Expression(head->Get(i + 1));
-
-		if (type == 0)
-		{
-			switch (op_code)
-			{
-			case T_LEFT_SHIFT: ret <<= r1; break;
-			case T_RIGHT_SHIFT: ret >>= r1; break;
-			default: Error("Bad shift operator"); break;
-			}
-		}
-		else if (type == 1)
-		{
-			switch (op_code)
-			{
-			case CODE_PLUS: ret += r1; break;
-			case CODE_MINUS: ret -= r1; break;
-			default: Error("Bad additive operator"); break;
-			}
-		}
-		else if (type == 2)
-		{
-			switch (op_code)
-			{
-			case CODE_STAR: ret *= r1; break;
-			case CODE_FSLASH: ret /= r1; break;
-			case CODE_PERCENT: ret %= r1; break;
-			default: Error("Bad additive operator"); break;
-			}
-		}
-	}
-
-	return ret;
-}
 
 int generator_c::GetForLabel(char* buf)
 {

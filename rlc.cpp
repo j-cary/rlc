@@ -17,6 +17,9 @@ CONSOLE_SCREEN_BUFFER_INFO	base_csbi;
 HANDLE console;
 
 //TODO:
+//Syntax
+//	pointers. need these for structs since member access doesn't work on implicit pointers stored in words
+//	also need ptrs for all data types. 
 //Register allocation
 //	don't allocate registers for data used 0-0 or 7-7
 //	^need to skip data decls and instructions with only un allocated-vars
@@ -38,6 +41,7 @@ HANDLE console;
 //preprocessing
 //labels
 //	only one assignment in a function
+//figure out how 'program' is big enough for a whole source file
 
 
 int main()
@@ -92,7 +96,7 @@ int main()
 		}
 	}
 
-	//printf("%s\n", program);
+	printf("%s\n", program);
 	lex.Lex(program, &list, 0);
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, 0);

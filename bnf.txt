@@ -33,9 +33,9 @@ Reserved chars:
 <function_def> ::= 'subr' <identifier> '(' <parameter_list>* ')' ';'
 <function_decl> ::= 'subr' <identifier> '(' <parameter_list>* ')' <compound_statement>
 
-<data_decl> ::= 'signed'? <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
-				'signed'? <data_type> <identifier> '[' <const_expression> ']' { '{' <initializer_list> '}' }? ';' |
-				'struct' <identifier> <identifier> { '[' <const_expression> ']' }? ';' |
+<data_decl> ::= 'signed'? <data_type> '*'? <single_data_decl> { ',' <single_data_decl> }* ';' |
+				'signed'? <data_type> '*'? <identifier> '[' <const_expression> ']' { '{' <initializer_list> '}' }? ';' |
+				'struct' <identifier> '*'? <identifier>  { '[' <const_expression> ']' }? ';' |
 				'label' <identifier> ';'
 
 <single_data_decl> ::= <identifier> { '=' <arithmetic_expression> }?
@@ -196,5 +196,5 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 //ex. ld var1.var2[var3], var4[1].var5[2 * 4];
 
 <mem_or_const_expression> ::= <memory_expression> | <constant_expression> //implementation: test mem first, then const
-<memory_expression> ::= <memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <mem_or_const_expression> ']' }*
+<memory_expression> ::= <memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <const_expression> ']' }*
 <memory_primary_expression> ::= <identifier> | { '&' | '*' } <identifier>

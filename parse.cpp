@@ -160,15 +160,10 @@ GF_DEF(FUNC)
 }
 
 GF_DEF(DATA_DECL)
-{//<data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
-//<array_data_type> <identifier> '=' '{' <initializer_list> '}' ';' |
-//<array_data_type> <identifier> '[' <constant_expression> ']' { '=' '{' <initializer_list> '}' } + ';' |
-//<unitializeable_data_type> <identifier> ';'
-
-//'signed'? <data_type> <single_data_decl> { ',' <single_data_decl> }* ';' |
-//'signed'? <data_type> <identifier> '[' < const_expression > ']' { '{' < initializer_list > '}' }?';' |
-//'struct' <identifier> <identifier> { '[' < const_expression > ']' } ? ';' |
-//'label' <identifier> ';'
+{//	'signed'? <data_type> '*'? <single_data_decl> { ',' <single_data_decl> }* ';' |
+//	'signed'? <data_type> '*'? <identifier> '[' <const_expression > ']' { '{' <initializer_list > '}' }? ';' |
+//	'struct' <identifier> '*'? <identifier>  { '[' <const_expression> ']' }? ';' |
+//	'label' <identifier> ';'
 
 	node_c* saved = list->Save();
 	node_c* comma_saved;
@@ -199,8 +194,14 @@ GF_DEF(DATA_DECL)
 
 		if (CL(IDENTIFIER, self)) 
 		{//<identifier>
+			if (GETCP(CODE_STAR))
+			{//'*'
+				list->Pop(&kv);
+				self->InsR(&kv);
+			}
+
 			if (!CL(IDENTIFIER, self)) //<identifier>
-				Error("Expected identifier after struct name\n");
+				Error("Expected identifier in struct instance declaration\n");
 
 			if (GETCP(CODE_LBRACE))
 			{//'['
@@ -249,6 +250,12 @@ GF_DEF(DATA_DECL)
 				list->Restore(saved);
 				return false;
 			}
+		}
+
+		if (GETCP(CODE_STAR))
+		{//'*'?
+			list->Pop(&kv);
+			self->InsR(&kv);
 		}
 
 		if (CL(SINGLE_DATA_DECL, self))

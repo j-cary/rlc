@@ -1,4 +1,4 @@
-<control-line> ::= '@define' <ident> <tokens> \n |
+<control-line> ::=	'@define' <ident> <tokens> \n |
 					'@macro' ( <ident> { , <ident> }* ) <tokens> @ |
 					'@include' <string> \n |
 					'@undef' <ident> |

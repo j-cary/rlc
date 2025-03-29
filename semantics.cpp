@@ -39,6 +39,12 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 			{
 				printf("  %s\t%3i %3i", m->name, m->offset, m->length);
 
+				if (m->flags & DF_ARRAY)
+					printf(" array");
+
+				if (m->flags & DF_PTR)
+					printf(" pointer");
+
 				if (m->flags & DF_SIGNED)
 					printf(" signed");
 
@@ -51,8 +57,7 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 				else if (m->flags & DF_STRUCT)
 					printf(" %s", m->struct_name);
 
-				if (m->flags & DF_ARRAY)
-					printf(" array");
+				
 
 
 				printf("\n");
@@ -358,7 +363,7 @@ void analyzer_c::CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start,
 
 void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 {
-	tree_c* child;
+	tree_c* child, * varname;
 	unsigned flags = DF_NONE;
 	int		code = node->Get(0)->Hash()->V();
 	int		start = 1;
@@ -379,21 +384,23 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	default: break;
 	}
 
-	//is this an array decl?
-	if (child = node->Get(start + 1))
-	{
-		if (child->Hash()->V() == CODE_LBRACE)
-		{//it is
-			child = node->Get(start);
+	varname = node->Get(start);
+	if (varname->Hash()->V() == CODE_STAR) 
+	{//ptr decl
+		flags |= DF_PTR;
+		varname = node->Get(++start);
+	}
 
-			if (block == graph)
-				flags |= DF_GLOBAL;
-			flags |= DF_ARRAY;
+	child = node->Get(start + 1);
+	if (child->Hash()->V() == CODE_LBRACE)
+	{//array decl
+		if (block == graph)
+			flags |= DF_GLOBAL;
+		flags |= DF_ARRAY;
 
-			MakeDataEntry(child->Hash(), block, flags);
-			block->AddStmt(node);
-			return;
-		}
+		MakeDataEntry(varname->Hash(), block, flags);
+		block->AddStmt(node);
+		return;
 	}
 
 	for (int i = start; child = node->Get(i); i += 2)
@@ -531,7 +538,7 @@ void analyzer_c::CFG_Instruction(tree_c* node, cfg_c* block)
 		block->SetDataEnd(name, block->StmtCnt());
 		block->IncDataUses(name);
 	}
-		
+
 
 	//handle the rest of the operands
 	for (int i = 2; op = child->Get(i); i += 2)
@@ -551,7 +558,7 @@ void analyzer_c::CFG_Instruction(tree_c* node, cfg_c* block)
 			localblock->IncDataUses(op->Hash()->K());
 		}
 	}
-	
+
 
 	block->AddStmt(node);
 }
@@ -564,7 +571,7 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 	int total_length = 0;
 
 	//check for redefinition
-	for ( i = 0; name = node->Get(i); i++) {}
+	for (i = 0; name = node->Get(i); i++) {}
 	name = node->Get(i - 2);
 	//MakeDataEntry(name->Hash(), block, DF_STRUCT | DF_GLOBAL);
 	//s = slist->AddStruct(name->Hash()->K());
@@ -610,37 +617,11 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 
 		dname = child->Get(++k); //the name or a data decl
 
-		/*
-		if (flags & DF_ARRAY && !(flags & DF_STRUCT))
-		{//built in array, different syntax
-			if (child->Get(++k)->Hash()->V() == CODE_LBRACE)
-			{//explicit size
-				arraylength = Constant_Expression(child->Get(++k));
-				init = child->Get(k + 4); //get the initializer list, if there is one
-			}
-			else
-			{//implicit size
-				arraylength = 0;
-				init = child->Get(k += 2);
-				if (init->Hash()->V() == NT_INITIALIZER_LIST)
-				{//more than just one const
-					for (int l = 0; subchild = init->Get(l); l++)
-					{
-						if (subchild->Hash()->V() == CODE_COMMA)
-							arraylength++;
-					}
-				}
-				arraylength++;
-			}
-
-			if(arraylength < 2)
-				Error("Array '%s' must have a length greater than 1", dname->Hash()->K());
+		if (dname->Hash()->V() == CODE_STAR)
+		{//ptr
+			flags |= DF_PTR;
+			dname = child->Get(++k);
 		}
-		else if (flags & DF_ARRAY && flags & DF_STRUCT)
-		{//fixme: rewrite syntax for arrays of structs
-
-		}
-		*/
 
 		if (dname->Hash()->V() == NT_SINGLE_DATA_DECL)
 		{//figure out any initial value for simple decls
@@ -661,6 +642,7 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 		}
 
 		//calculate the length of the data
+		/*
 		if (flags & DF_WORD || flags & DF_FXD)
 			length = 2 * arraylength;
 		else if (flags & DF_BYTE)
@@ -670,9 +652,34 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 			int s1 = slist->GetStruct(structname);
 			if (s1 < 0)
 				Error("Undeclared struct '%s'", structname);
-			if (!strcmp(structname, name->Hash()->K()))
+			if (!(flags & DF_PTR) && !strcmp(structname, name->Hash()->K()))
 				Error("Structure '%s' cannot contain itself", structname);
-			length = slist->StructLen(s1) * arraylength;
+
+			if (flags & DF_PTR)
+				length = 2 * arraylength;
+			else
+				length = slist->StructLen(s1) * arraylength;
+		}
+		*/
+		if (flags & DF_STRUCT)
+		{
+			int s1 = slist->GetStruct(structname);
+			if (s1 < 0)
+				Error("Undeclared struct '%s'", structname);
+			if (!(flags & DF_PTR) && !strcmp(structname, name->Hash()->K()))
+				Error("Structure '%s' cannot contain itself", structname);
+
+			if (flags & DF_PTR)
+				length = 2 * arraylength;
+			else
+				length = slist->StructLen(s1) * arraylength;
+		}
+		else
+		{
+			if (flags & (DF_WORD | DF_FXD | DF_PTR))
+				length = 2 * arraylength;
+			else
+				length = arraylength; //byte array
 		}
 
 		slist->AddMemberVar(s, dname->Hash()->K(), flags, length, init, structname);
@@ -716,6 +723,7 @@ data_t* analyzer_c::DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 {
 	data_t* data;
 	const char* name = d->Hash()->K();
+	bool simple_ident = true; //set if the expression is just an identifier
 
 	//FIXME: variables inside these expressions need to be checked for.
 	//problem for arithmetic and mem expressions - this will do for now.
@@ -723,21 +731,33 @@ data_t* analyzer_c::DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 		return NULL;
 
 	if (d->Hash()->V() == NT_MEMORY_EXPR)
-	{//get the name of the object
+	{//ident.member
 		name = d->Get(0)->Hash()->K();
-		//also have to check out if the members are valid
+
+		if(!block->IsStructInstance(name, cur_func, graph))
+			Error("Cannot use member access operator on non-struct variable '%s'", name); //check if this is a valid struct instance
+
+		simple_ident = false;
 	}
 	else if (d->Hash()->V() == NT_MEMORY_PRIMARY_EXPR)
-	{//checkme
+	{//*ident
 		name = d->Get(1)->Hash()->K();
+		//TODO: this can either be an ident or a mem expr. recursively call this func if its an expr
+		simple_ident = false;
 	}
 
 	//check if the data here is in scope
 	if (!(data = block->ScopedDataEntry(name, cur_func, graph, localblock)))
 		Error("Symbol '%s' is undeclared", name);
 
+	if (!simple_ident)
+	{//
+
+	}
+
 	return data;
 
+	/*
 	//check for reserved words - TMP
 	//maybe add these to the symbol table...
 	if(!strcmp(name, "print"))
@@ -746,6 +766,7 @@ data_t* analyzer_c::DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 
 	//Error("Undeclared identifier %s", d->Hash()->K());
 	return NULL;
+	*/
 }
 
 void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, unsigned _flags)

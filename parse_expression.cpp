@@ -234,7 +234,7 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Postfix expression", NT_LOGICAL_POSTFIX_EXPR);
+	self = parent->InsR("LPostfix expression", NT_LOGICAL_POSTFIX_EXPR);
 
 	if (CL(LOGICAL_PRIMARY_EXPRESSION,  self))
 	{//<logical_primary_expression>
@@ -304,7 +304,7 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Primary expression", NT_LOGICAL_PRIMARY_EXPR);
+	self = parent->InsR("LPrimary expression", NT_LOGICAL_PRIMARY_EXPR);
 
 	if (CL(IDENTIFIER,  self))
 	{// <identifier>
@@ -525,7 +525,7 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Postfix expression", NT_ARITHMETIC_POSTFIX_EXPR);
+	self = parent->InsR("APostfix expression", NT_ARITHMETIC_POSTFIX_EXPR);
 
 	if (CL(ARITHMETIC_PRIMARY_EXPRESSION,  self))
 	{//<logical_primary_expression>
@@ -595,7 +595,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Primary expression", NT_ARITHMETIC_PRIMARY_EXPR);
+	self = parent->InsR("APrimary expression", NT_ARITHMETIC_PRIMARY_EXPR);
 
 	//<constant>
 
@@ -654,7 +654,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 //
 
 GF_DEF(MEMORY_EXPRESSION)
-{//<memory_primary_expression> { { { '.' | '..' } <identifier> } | '[' <mem_or_const_expression> ']' }*
+{//<memory_primary_expression> { { { '.' | '..' } <identifier> } | '[' <const_expression> ']' }*
 	node_c* saved = list->Save();
 	node_c* saved_op;
 	tree_c* child = NULL;
@@ -693,10 +693,11 @@ GF_DEF(MEMORY_EXPRESSION)
 				list->Pop(&kv);// '['
 				child = self->InsR(&kv);
 
-				if (!CL(MEM_OR_CONST_EXPRESSION, self))
+				if (!CL(CONSTANT_EXPRESSION, self))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);
+					Error("Expected a constant expression after '['");
 					break;
 				}
 				//<constant_expression>
@@ -756,7 +757,7 @@ GF_DEF(MEMORY_PRIMARY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Primary expression", NT_MEMORY_PRIMARY_EXPR);
+	self = parent->InsR("MPrimary expression", NT_MEMORY_PRIMARY_EXPR);
 
 	if (CL(IDENTIFIER, self))
 	{// <identifier>

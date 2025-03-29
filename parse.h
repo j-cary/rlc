@@ -176,8 +176,8 @@ private:
 		FS_ENTRY(AND_EXPRESSION, "And expression"),
 		FS_ENTRY(EQUALITY_EXPRESSION, "Equality expression"),
 		FS_ENTRY(RELATIONAL_EXPRESSION, "Relational expression"),
-		FS_ENTRY(LOGICAL_POSTFIX_EXPRESSION, "Postfix expression"),
-		FS_ENTRY(LOGICAL_PRIMARY_EXPRESSION, "Primary expression"),
+		FS_ENTRY(LOGICAL_POSTFIX_EXPRESSION, "LPostfix expression"),
+		FS_ENTRY(LOGICAL_PRIMARY_EXPRESSION, "LPrimary expression"),
 
 		//Arithmetic expressions
 
@@ -187,14 +187,14 @@ private:
 		FS_ENTRY(SHIFT_EXPRESSION, "Shift expression"),
 		FS_ENTRY(ADDITIVE_EXPRESSION, "Additive expression"),
 		FS_ENTRY(MULTIPLICATIVE_EXPRESSION, "Multiplicative expression"),
-		FS_ENTRY(ARITHMETIC_POSTFIX_EXPRESSION, "Postfix expression"),
-		FS_ENTRY(ARITHMETIC_PRIMARY_EXPRESSION, "Primary expression"),
+		FS_ENTRY(ARITHMETIC_POSTFIX_EXPRESSION, "APostfix expression"),
+		FS_ENTRY(ARITHMETIC_PRIMARY_EXPRESSION, "APrimary expression"),
 		
 		//Memory expressions
 
 		FS_ENTRY(MEMORY_EXPRESSION, "Memory expression"),
 		FS_ENTRY(MEM_OR_CONST_EXPRESSION, "Mem or const expression"),
-		FS_ENTRY(MEMORY_PRIMARY_EXPRESSION, "Primary expression"),
+		FS_ENTRY(MEMORY_PRIMARY_EXPRESSION, "MPrimary expression"),
 
 	};
 
