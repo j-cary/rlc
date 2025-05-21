@@ -17,20 +17,15 @@ CONSOLE_SCREEN_BUFFER_INFO	base_csbi;
 HANDLE console;
 
 //TODO:
-//Syntax
-//	pointers. need these for structs since member access doesn't work on implicit pointers stored in words
-//	also need ptrs for all data types. 
 //Register allocation
 //	don't allocate registers for data used 0-0 or 7-7
 //	^need to skip data decls and instructions with only un allocated-vars
-//	re-use software regs - use the name of the first var to use each sreg
 //Semantic analysis
 //	in generator-check out dataofs with redefs
 //	also check dload
 //	manage checking inside expressions in general:
 //	handle expression operands in instructions - check for def, update usage
 //	don't allow [][] in mem exprs
-//	check that constant exprs in [] are really const
 //	check that the operators make sense ex. 1.member is a valid logical expression
 //Mark 'a' with the last loaded sreg
 //symbol declarations in expressions
@@ -42,6 +37,7 @@ HANDLE console;
 //labels
 //	only one assignment in a function
 //figure out how 'program' is big enough for a whole source file
+//identifiers directly copied from the program should start with '_'. Anything the compiler generates should not be prefixed with this.
 
 
 int main()

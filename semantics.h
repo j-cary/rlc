@@ -39,6 +39,19 @@
 //529 : iy
 //531 : ix
 
+//New register system description:
+//Hardware regs: a, b, c, d, e, f, h, l, af, bc, de, hl, ixh, ixl, iyh, iyl, ix, iy, sp, i, r - 21 total
+//Stack sregs: 8 bit signed offset from (ix). i.e., 128 bytes max offset.
+//Static sregs: theoretically viable across the entire address space - 65536 total
+
+typedef struct registerinfo_s
+{
+	unsigned int reg : 5; 
+	unsigned int stack : 8; //store the full signed index- -128:127
+	unsigned int local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
+	unsigned int padding : 3;
+} registerinfo_t;
+
 #define SYMBOLS_MAX	32
 #define STRUCTURES_MAX	32
 
@@ -124,11 +137,62 @@ private:
 	short	num_links;
 	int		links[LINKS_MAX];
 public:
-	int		color;
+	regi_t		color;
 
 	bool AddLink(int l); //false if out of space
 	inline int LinkCnt() { return num_links; }
 	inline int Link(int i) { return links[i]; }
+
+	const char* ToStr()
+	{
+		const size_t maxstrlen = 6;
+		switch (color)
+		{
+		case REG_BAD:	return "BAD  ";
+		case REG_A:		return "a    ";
+		case REG_B:		return "b    ";
+		case REG_C:		return "c    ";
+		case REG_D:		return "d    ";
+		case REG_E:		return "e    ";
+		case REG_H:		return "h    ";
+		case REG_L:		return "l    ";
+		case REG_BC:	return "bc   ";
+		case REG_DE:	return "de   ";
+		case REG_HL:	return "hl   ";
+		case REG_IXH:	return "ixh  ";
+		case REG_IXL:	return "ixl  ";
+		case REG_IYH:	return "iyh  ";
+		case REG_IYL:	return "iyl  ";
+		}
+
+		if (color >= REG_R0 && color <= REG_R255)
+		{
+			static char r[maxstrlen];
+			size_t len;
+
+			snprintf(r, maxstrlen, "%c%i", 'r', color - REG_R0); //snprintf just in case
+			len = strlen(r);
+
+			for (size_t i = len; i < maxstrlen - 1; i++)
+				r[i] = ' ';
+			return r;
+		}
+
+		if (color >= REG_WR0 && color <= REG_WR127)
+		{
+			static char wr[maxstrlen];
+			size_t len;
+
+			snprintf(wr, 6, "%s%i", "wr", (color - REG_WR0) / 2);
+			len = strlen(wr);
+
+			for (size_t i = len; i < maxstrlen - 1; i++)
+				wr[i] = ' ';
+			return wr;
+		}
+
+		return "REALLYBAD";
+	}
 
 	inode_c()
 	{
@@ -201,6 +265,7 @@ private:
 	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
 	void SortTDataList(tdata_t** tdata, int count);
 	int	 FirstValidColor(unsigned flags);
+	int	 Iteratend(unsigned flags);
 
 	int R_CheckGlobalRedef();
 	int R_CheckRedef();

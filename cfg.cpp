@@ -370,6 +370,13 @@ int	cfg_c::FirstValidColor(unsigned flags)
 	return first;
 }
 
+int	cfg_c::Iteratend(unsigned flags)
+{
+	int iteratend;
+	iteratend = 1 + !(flags & DF_BYTE);
+	return iteratend;
+}
+
 //todo: make this an analyzer function
 void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 {
@@ -463,7 +470,7 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 
 		
 		//find first available color - assign it
-		int iteratend = 1 + !(x->flags & DF_BYTE); //everything except for bytes are inc'd by 2. FIXME - byte array
+		int iteratend = Iteratend(x->flags); //everything except for bytes are inc'd by 2. FIXME - byte array
 		for (int k = FirstValidColor(x->flags); k < REGS_TOTAL; k += iteratend)
 		{
 			//check for interference with aliased registers
@@ -479,8 +486,8 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 			}
 			else
 			{
-				if (k == REG_HL)
-					continue; //'hl' is reserved
+				//if (k == REG_HL)
+				//	continue; //'hl' is reserved
 
 				if (!available[k - REG_IXL] || !available[k - REG_IXL + 1])
 					continue; //check if the hi or low nibble is already used
@@ -797,7 +804,8 @@ void cfg_c::Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata)
 			inode_c* node = &igraph->nodes[i];
 			tdata_t* t1 = &tdata[i];
 
-			printf("%s:%s\t%i - ", g_ctabstr, t1->var->K(), node->color);
+			//printf("%s:%s\t%i - ", g_ctabstr, t1->var->K(), node->color);
+			printf("%s:%s\t%s - ", g_ctabstr, t1->var->K(), node->ToStr());
 
 			for (int j = 0; j < node->LinkCnt(); j++)
 			{

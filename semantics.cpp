@@ -39,26 +39,16 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 			{
 				printf("  %s\t%3i %3i", m->name, m->offset, m->length);
 
-				if (m->flags & DF_ARRAY)
-					printf(" array");
+				if (m->flags & DF_ARRAY) printf(" array");
 
-				if (m->flags & DF_PTR)
-					printf(" pointer");
+				if (m->flags & DF_PTR) printf(" pointer");
 
-				if (m->flags & DF_SIGNED)
-					printf(" signed");
+				if (m->flags & DF_SIGNED) printf(" signed");
 
-				if (m->flags & DF_BYTE)
-					printf(" byte");
-				else if (m->flags & DF_WORD)
-					printf(" word");
-				else if (m->flags & DF_FXD)
-					printf(" fixed");
-				else if (m->flags & DF_STRUCT)
-					printf(" %s", m->struct_name);
-
-				
-
+				if		(m->flags & DF_BYTE) printf(" byte");
+				else if (m->flags & DF_WORD) printf(" word");
+				else if (m->flags & DF_FXD ) printf(" fixed");
+				else if (m->flags & DF_STRUCT) printf(" %s", m->struct_name);
 
 				printf("\n");
 			}
@@ -396,6 +386,8 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	{//array decl
 		if (block == graph)
 			flags |= DF_GLOBAL;
+		Constant_Expression(node->Get(start + 2)); //check if the size is const
+
 		flags |= DF_ARRAY;
 
 		MakeDataEntry(varname->Hash(), block, flags);
