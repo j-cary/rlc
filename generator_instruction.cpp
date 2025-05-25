@@ -2,6 +2,7 @@
 
 void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 {
+#if OLD_REG_CODE
 	const int max_ops = 8;
 
 	int		i = 1;
@@ -75,11 +76,13 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 	default:
 		Error("Unsupported instruction\n"); 
 	}
+#endif
 }
 
 //TODO: mark the a reg - loading into multiple sregs in succession
 void generator_c::CG_Load(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg)
 {
+#if OLD_REG_CODE
 	bool	sreg = false;
 	bool	word = false;
 	bool	byte = false;
@@ -273,11 +276,13 @@ void generator_c::CG_Load(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, re
 		}
 	}
 #endif
+#endif
 }
 
 
 void generator_c::CG_Add(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg)
 {
+#if OLD_REG_CODE
 	if (op_cnt == 2)
 	{//compound assignment
 		//init
@@ -399,6 +404,7 @@ void generator_c::CG_Add(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, reg
 	//STORE SECTION
 	ASM_RLoad(reg[0], REG_A);//load into op1
 	MarkReg(reg[0], data[0]);
+#endif
 }
 
 

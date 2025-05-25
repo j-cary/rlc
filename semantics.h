@@ -1,6 +1,7 @@
 #pragma once
 #include "common.h"
 
+/*
 #define REG_BAD		(-1)
 #define REG_A		0
 #define REG_B		1
@@ -25,6 +26,7 @@
 #define REG_IX		(REG_IXH + REG_IXL)//only used for struct/array indexing
 
 #define REGS_TOTAL	(REG_IXL + 2 + ((REG_IX - REG_BC) / 2)) //400
+*/
 
 //0-6 : a-l
 //7-262 : r0-r255
@@ -40,17 +42,42 @@
 //531 : ix
 
 //New register system description:
-//Hardware regs: a, b, c, d, e, f, h, l, af, bc, de, hl, ixh, ixl, iyh, iyl, ix, iy, sp, i, r - 21 total
+//Hardware regs: a, b, c, d, e, h, l, af, bc, de, hl, ixh, ixl, iyh, iyl, ix, iy, sp, i, r - 20 total
 //Stack sregs: 8 bit signed offset from (ix). i.e., 128 bytes max offset.
 //Static sregs: theoretically viable across the entire address space - 65536 total
 
-typedef struct registerinfo_s
+#define OLD_REG_CODE 0
+
+enum class REG : unsigned char //really only 5 bits
 {
-	unsigned int reg : 5; 
-	unsigned int stack : 8; //store the full signed index- -128:127
-	unsigned int local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
-	unsigned int padding : 3;
-} registerinfo_t;
+	A = 0, B, C, D, E, H, L,
+	AF, BC, DE, HL, 
+	IXH, IXL, IYH, IYL, 
+	IX, IY,
+	SP, I, R,
+	_SIZE
+};
+#define SI_REG_COUNT (static_cast<size_t>(REG::_SIZE))
+#define SI_STACK_MIN	((signed char)(-128))
+#define SI_STACK_MAX	((signed char)(+127))
+#define SI_STACK_COUNT	((size_t)(128))
+#define SI_LOCAL_MIN	((unsigned short)(0))
+#define SI_LOCAL_MAX	((unsigned short)(65535))
+#define SI_LOCAL_COUNT	((size_t)(65536))
+
+typedef union storageinfo_u
+{
+	struct
+	{
+		unsigned int	reg : 5; //0-21 
+		signed int		stack : 8; //store the full signed index- -128:127
+		unsigned int	local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
+		unsigned int	reg_flag : 1;
+		unsigned int	stack_flag : 1;
+		unsigned int	local_flag : 1;
+	};
+	unsigned int data;
+} storageinfo_t;
 
 #define SYMBOLS_MAX	32
 #define STRUCTURES_MAX	32
@@ -64,7 +91,7 @@ typedef struct registerinfo_s
 #define DF_SIGNED	0x20
 #define DF_STRUCT	0x40
 #define DF_ARRAY	0x80
-
+#define DF_STATIC	0x100
 #define DF_USED		0x200 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
 #define DF_FORCTRL	0x400 //control variable for a for loop - try to store this in 'b'
 #define DF_GLOBAL	0x800 //visible from absolutely everywhere in the program
@@ -82,6 +109,7 @@ typedef struct data_s
 	int			val;
 	void*		block; //FIXME: unnecessary
 	dataflags_t	flags;
+	int			size;
 	tdatai_t	tdata; //link to respective tdata
 } data_t;
 
@@ -137,7 +165,8 @@ private:
 	short	num_links;
 	int		links[LINKS_MAX];
 public:
-	regi_t		color;
+	//regi_t		color; //removeme
+	storageinfo_t si;
 
 	bool AddLink(int l); //false if out of space
 	inline int LinkCnt() { return num_links; }
@@ -146,6 +175,7 @@ public:
 	const char* ToStr()
 	{
 		const size_t maxstrlen = 6;
+		/*
 		switch (color)
 		{
 		case REG_BAD:	return "BAD  ";
@@ -190,6 +220,7 @@ public:
 				wr[i] = ' ';
 			return wr;
 		}
+		*/
 
 		return "REALLYBAD";
 	}
@@ -200,7 +231,8 @@ public:
 			links[i] = -1;
 
 		num_links = 0;
-		color = -1;
+		//color = -1;
+		si.data = 0;
 	}
 };
 
@@ -237,6 +269,7 @@ typedef struct tdata_s
 	const kv_c* var;
 	int			start, end;
 	int			startb, endb;
+	int			size;
 	dataflags_t	flags;
 } tdata_t;
 
@@ -264,8 +297,10 @@ private:
 	void R_BuildTDataList(tdata_t* tdata, cfg_c** offsets);
 	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
 	void SortTDataList(tdata_t** tdata, int count);
-	int	 FirstValidColor(unsigned flags);
-	int	 Iteratend(unsigned flags);
+	//int	 FirstValidColor(unsigned flags);
+	//int	 Iteratend(unsigned flags);
+	unsigned short DataSize() { return 1U; } //FIXME:
+	void ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata);
 
 	int R_CheckGlobalRedef();
 	int R_CheckRedef();
@@ -338,10 +373,14 @@ private:
 
 	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, int exit_code);
 
+	//Parms:
+	int EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags);
+	int EvaluateSuccessiveDataSize(tree_c* node);
+
 	void BuildIGraphs(cfg_c* block);
 
-	data_t* DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock);
-	void MakeDataEntry(const kv_c* _var, cfg_c* block, unsigned _flags);
+	data_t* GetDataEntry(tree_c* d, cfg_c* block, cfg_c** localblock);
+	void MakeDataEntry(const kv_c* _var, cfg_c* block, int size, unsigned _flags);
 	int MakeStructEntry(const kv_c* _var, cfg_c* _block); //returns new struct index
 	//void MakeFunctionEntry(const kv_c* var);
 

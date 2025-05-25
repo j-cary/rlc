@@ -30,7 +30,9 @@ class generator_c
 	FILE*		f;
 	igraph_c*	igraph;
 
+#if OLD_REG_CODE
 	register_t	regs[REGS_TOTAL];
+#endif
 
 	//
 	//code generation functions
@@ -131,8 +133,9 @@ public:
 
 	generator_c()
 	{
+#if OLD_REG_CODE
 		for (int i = 0; i < REGS_TOTAL; i++)
 			regs[i].held = REG_BAD;
-
+#endif
 	}
 };

@@ -80,12 +80,14 @@ void generator_c::ASM_Store(tdatai_t var, regi_t reg)
 
 void generator_c::ASM_RAdd(regi_t dst_reg, regi_t src_reg)
 {
+#if OLD_REG_CODE
 	if (dst_reg == REG_A && src_reg == REG_HL)
 	{//indirect add
 		fprintf(f, "\tadd\ta, (hl)\n");
 
 		return;
 	}
+#endif
 
 	fprintf(f, "\tadd\t%s, %s\n", RegToS(dst_reg), RegToS(src_reg));
 }

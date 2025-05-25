@@ -17,6 +17,8 @@ CONSOLE_SCREEN_BUFFER_INFO	base_csbi;
 HANDLE console;
 
 //TODO:
+//Parsing
+//	'stack' specifier parsing
 //Register allocation
 //	don't allocate registers for data used 0-0 or 7-7
 //	^need to skip data decls and instructions with only un allocated-vars
@@ -126,7 +128,7 @@ void Warning(const char* msg, ...)
 	SetConsoleTextAttribute(cons, csbi.wAttributes);
 }
 
-void Error(const char* msg, ...)
+[[noreturn]] void Error(const char* msg, ...)
 {
 	HANDLE cons = console;
 	va_list args;

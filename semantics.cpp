@@ -39,16 +39,17 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 			{
 				printf("  %s\t%3i %3i", m->name, m->offset, m->length);
 
-				if (m->flags & DF_ARRAY) printf(" array");
-
-				if (m->flags & DF_PTR) printf(" pointer");
-
 				if (m->flags & DF_SIGNED) printf(" signed");
 
 				if		(m->flags & DF_BYTE) printf(" byte");
 				else if (m->flags & DF_WORD) printf(" word");
 				else if (m->flags & DF_FXD ) printf(" fixed");
 				else if (m->flags & DF_STRUCT) printf(" %s", m->struct_name);
+
+				if (m->flags & DF_ARRAY) printf(" array");
+
+				if (m->flags & DF_PTR) printf(" pointer");
+
 
 				printf("\n");
 			}
@@ -260,6 +261,7 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 	{
 		unsigned flags = DF_FORCTRL;
 		int dt_code = node->Get(0)->Get(2)->Hash()->V();
+		int length;
 
 		child = child->Get(3)->Get(0);//get the data name
 		if (!child)
@@ -268,11 +270,19 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 		if_link = parent->AddLink("CLOSED_FOR", BLOCK_FOR);
 
 		if (dt_code == CODE_BYTE)
+		{
 			flags |= DF_BYTE;
+			length = 1;
+		}
 		else if (dt_code == CODE_WORD)
+		{
 			flags |= DF_WORD;
+			length = 2;
+		}
+		else
+			Error("A for loop control variable may only be a byte or a word"); 
 
-		MakeDataEntry(child->Hash(), if_link, flags);
+		MakeDataEntry(child->Hash(), if_link, length, flags);
 	}
 	else if (code == NT_WHILE_CLAUSE)
 		if_link = parent->AddLink("CLOSED_WHILE", BLOCK_WHILE);
@@ -353,11 +363,15 @@ void analyzer_c::CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start,
 
 void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 {
+	dataflags_t flags = DF_NONE;
 	tree_c* child, * varname;
-	unsigned flags = DF_NONE;
 	int		code = node->Get(0)->Hash()->V();
-	int		start = 1;
+	int		length;
+	int		k = 0;
 
+	length = EvaluateFirstDataSize(node, NULL, &k, &varname, NULL, &flags);
+
+	/*
 	if (code == CODE_SIGNED)
 	{
 		flags = DF_SIGNED;
@@ -394,8 +408,16 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 		block->AddStmt(node);
 		return;
 	}
+	*/
 
-	for (int i = start; child = node->Get(i); i += 2)
+	MakeDataEntry(varname->Hash(), block, length, flags);
+	if (flags & (DF_ARRAY | DF_STRUCT))
+	{//arrays and structs can only have one decl per statement
+		block->AddStmt(node);
+		return;
+	} 
+
+	for (int i = k + 2; child = node->Get(i); i += 2)
 	{
 		if (child->Hash()->V() == NT_SINGLE_DATA_DECL)
 			child = child->Get(0); //initialized - get the actual text
@@ -403,7 +425,7 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 		if (block == graph)
 			flags |= DF_GLOBAL;
 
-		MakeDataEntry(child->Hash(), block, flags);
+		MakeDataEntry(child->Hash(), block, length, flags);
 	}
 
 	block->AddStmt(node);
@@ -486,7 +508,7 @@ void analyzer_c::CFG_Instruction(tree_c* node, cfg_c* block)
 	bool local;
 	cfg_c* localblock = NULL;
 	op = child->Get(0);
-	symbol = DataEntry(op, block, &localblock);
+	symbol = GetDataEntry(op, block, &localblock);
 	name = symbol->var->K();
 
 	//check if the symbol is local
@@ -535,7 +557,7 @@ void analyzer_c::CFG_Instruction(tree_c* node, cfg_c* block)
 	//handle the rest of the operands
 	for (int i = 2; op = child->Get(i); i += 2)
 	{
-		symbol = DataEntry(op, block, &localblock);
+		symbol = GetDataEntry(op, block, &localblock);
 		if (block == localblock)
 			block->SetDataEnd(op->Hash()->K(), block->StmtCnt());
 		else
@@ -565,8 +587,7 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 	//check for redefinition
 	for (i = 0; name = node->Get(i); i++) {}
 	name = node->Get(i - 2);
-	//MakeDataEntry(name->Hash(), block, DF_STRUCT | DF_GLOBAL);
-	//s = slist->AddStruct(name->Hash()->K());
+
 	s = MakeStructEntry(name->Hash(), block);
 
 	//add the member vars to the struct
@@ -576,103 +597,10 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 		dataflags_t flags = DF_NONE;
 		tree_c* subchild, * dname, * init = NULL;
 		const char* structname = NULL;
-		int dtype;
 		int length = 0;
-		int arraylength = 1;
 		child = node->Get(j);
 
-		subchild = child->Get(k);
-
-		switch (subchild->Hash()->V())
-		{
-		case CODE_STRUCT:
-			structname = child->Get(++k)->Hash()->K();
-			dtype = subchild->Hash()->V();
-			break;
-		case CODE_SIGNED:
-			flags |= DF_SIGNED;
-			subchild = child->Get(++k);
-		default:
-			dtype = subchild->Hash()->V();
-			break;
-		}
-
-		switch (dtype)
-		{
-		case CODE_LABEL:		Error("Structures cannot contain labels"); break;
-		case CODE_BYTE:			flags |= DF_BYTE; break;
-		case CODE_WORD:			flags |= DF_WORD; break;
-		case CODE_FIXED:		flags |= DF_FXD; break;
-		case CODE_STRUCT:		flags |= DF_STRUCT; break;
-		default: break;
-		}
-
-		dname = child->Get(++k); //the name or a data decl
-
-		if (dname->Hash()->V() == CODE_STAR)
-		{//ptr
-			flags |= DF_PTR;
-			dname = child->Get(++k);
-		}
-
-		if (dname->Hash()->V() == NT_SINGLE_DATA_DECL)
-		{//figure out any initial value for simple decls
-			init = dname->Get(2);
-			dname = dname->Get(0);
-		}
-		else
-		{//definitely not a simple decl
-			tree_c* lbrace = child->Get(k + 1); //don't advance k since this might still be a simple decl
-
-			if (lbrace->Hash()->V() == CODE_LBRACE)
-			{//array
-				k++;
-				arraylength = Constant_Expression(child->Get(++k));
-				init = child->Get(k + 4); //get the initializer list if there is one
-				flags |= DF_ARRAY;
-			}
-		}
-
-		//calculate the length of the data
-		/*
-		if (flags & DF_WORD || flags & DF_FXD)
-			length = 2 * arraylength;
-		else if (flags & DF_BYTE)
-			length = arraylength;
-		else if (flags & DF_STRUCT)
-		{
-			int s1 = slist->GetStruct(structname);
-			if (s1 < 0)
-				Error("Undeclared struct '%s'", structname);
-			if (!(flags & DF_PTR) && !strcmp(structname, name->Hash()->K()))
-				Error("Structure '%s' cannot contain itself", structname);
-
-			if (flags & DF_PTR)
-				length = 2 * arraylength;
-			else
-				length = slist->StructLen(s1) * arraylength;
-		}
-		*/
-		if (flags & DF_STRUCT)
-		{
-			int s1 = slist->GetStruct(structname);
-			if (s1 < 0)
-				Error("Undeclared struct '%s'", structname);
-			if (!(flags & DF_PTR) && !strcmp(structname, name->Hash()->K()))
-				Error("Structure '%s' cannot contain itself", structname);
-
-			if (flags & DF_PTR)
-				length = 2 * arraylength;
-			else
-				length = slist->StructLen(s1) * arraylength;
-		}
-		else
-		{
-			if (flags & (DF_WORD | DF_FXD | DF_PTR))
-				length = 2 * arraylength;
-			else
-				length = arraylength; //byte array
-		}
+		length = EvaluateFirstDataSize(child, name, &k, &dname, &structname, &flags);
 
 		slist->AddMemberVar(s, dname->Hash()->K(), flags, length, init, structname);
 		total_length += length;
@@ -702,6 +630,98 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 	slist->SetLen(s, total_length);
 }
 
+int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags)
+{
+	tree_c* subchild, * init;
+	int arraylength = 1;
+	//const char* structname = NULL;
+	int dtype;
+	int length;
+	bool struct_decl = struct_ && structname;
+	const char* local_structname = NULL;
+
+	subchild = node->Get((*iterator));
+
+	switch (subchild->Hash()->V())
+	{
+	case CODE_STRUCT:
+		local_structname = node->Get(++(*iterator))->Hash()->K();
+		dtype = subchild->Hash()->V();
+		break;
+	case CODE_SIGNED:
+		(*flags) |= DF_SIGNED;
+		subchild = node->Get(++(*iterator));
+	default:
+		dtype = subchild->Hash()->V();
+		break;
+	}
+
+	switch (dtype)
+	{
+	case CODE_LABEL:		
+		if (struct_decl)
+			Error("Structures cannot contain labels"); 
+		(*flags) |= DF_LABEL;
+		break;
+	case CODE_BYTE:			(*flags) |= DF_BYTE; break;
+	case CODE_WORD:			(*flags) |= DF_WORD; break;
+	case CODE_FIXED:		(*flags) |= DF_FXD; break;
+	case CODE_STRUCT:		(*flags) |= DF_STRUCT; break;
+	default: break;
+	}
+
+	*data_name = node->Get(++(*iterator)); //the name or a data decl
+
+	if ((*data_name)->Hash()->V() == CODE_STAR)
+	{//ptr
+		(*flags) |= DF_PTR;
+		(*data_name) = node->Get(++(*iterator));
+	}
+
+	if ((*data_name)->Hash()->V() == NT_SINGLE_DATA_DECL)
+	{//figure out any initial value for simple decls
+		init = (*data_name)->Get(2);
+		(*data_name) = (*data_name)->Get(0);
+	}
+	else
+	{//definitely not a simple decl
+		tree_c* lbrace = node->Get((*iterator) + 1); //don't advance since this might still be a simple decl
+
+		if (lbrace->Hash()->V() == CODE_LBRACE)
+		{//array
+			(*iterator)++;
+			arraylength = Constant_Expression(node->Get(++(*iterator)));
+			init = node->Get((*iterator) + 4); //get the initializer list if there is one
+			(*flags) |= DF_ARRAY;
+		}
+	}
+
+	//calculate the length of the data
+	if ((*flags) & DF_STRUCT)
+	{
+		int s1 = slist->GetStruct(local_structname);
+		if (s1 < 0)
+			Error("Undeclared struct '%s'", local_structname);
+		if (struct_decl && (!((*flags) & DF_PTR)) && (!strcmp(local_structname, struct_->Hash()->K())))
+			Error("Structure '%s' cannot contain itself", local_structname);
+
+		if ((*flags) & DF_PTR)
+			length = 2 * arraylength;
+		else
+			length = slist->StructLen(s1) * arraylength;
+	}
+	else
+	{
+		if ((*flags) & (DF_WORD | DF_FXD | DF_PTR))
+			length = 2 * arraylength;
+		else
+			length = arraylength; //byte array
+	}
+
+	if(struct_decl)
+		*structname = local_structname;
+	return length;
+}
 
 void analyzer_c::BuildIGraphs(cfg_c* block)
 {
@@ -711,7 +731,7 @@ void analyzer_c::BuildIGraphs(cfg_c* block)
 #define DECL_NA(v)	v == CODE_NUM_DEC || v == CODE_NUM_HEX || v == CODE_NUM_BIN || \
 					v == NT_SHIFT_EXPR || v == NT_ADDITIVE_EXPR || v == NT_MULTIPLICATIVE_EXPR || v == NT_ARITHMETIC_POSTFIX_EXPR || v == NT_ARITHMETIC_PRIMARY_EXPR
 
-data_t* analyzer_c::DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
+data_t* analyzer_c::GetDataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 {
 	data_t* data;
 	const char* name = d->Hash()->K();
@@ -761,7 +781,7 @@ data_t* analyzer_c::DataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 	*/
 }
 
-void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, unsigned _flags)
+void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, int size, unsigned _flags)
 {
 	data_t* data;
 
@@ -776,6 +796,7 @@ void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, unsigned _flags)
 	data = &symtbl[symtbl_top++];
 	data->var = _var;
 	data->block = (void*)_block;
+	data->size = size;
 	data->flags = _flags;
 	_block->AddData(data);
 	//_block->SetDataStart(_var->K(), 0);

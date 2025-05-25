@@ -33,7 +33,7 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 
 	CG_RegBlock(body);
 	//CG_ForBlock(body);
-
+#if OLD_REG_CODE
 	if(reg == REG_B)
 		ASM_Djnz(label);
 	else
@@ -41,6 +41,7 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 		ASM_Djnz(label);
 
 	}
+#endif
 }
 
 

@@ -40,7 +40,7 @@ char* generator_c::RegToS(regi_t reg)
 
 	strcnt = strcnt % max_strs;
 
-
+#if OLD_REG_CODE
 	switch (reg)
 	{
 	case REG_A: name = "a"; break;
@@ -88,17 +88,25 @@ char* generator_c::RegToS(regi_t reg)
 		Error("Bad reg");
 
 	return str[strcnt++];
+#endif
+	return NULL;
 }
 
 regi_t generator_c::RegAlloc(tdatai_t index)
 {
+#if OLD_REG_CODE
 	regi_t color = (*igraph)[index]->color;
 	return color ;
+#endif
+	return 0;
 }
 
 regi_t generator_c::HiByte(regi_t r)
 {
+#if OLD_REG_CODE
 	return r - REG_IXL;
+#endif
+	return 0;
 }
 
 regi_t generator_c::LoByte(regi_t r)
@@ -108,6 +116,7 @@ regi_t generator_c::LoByte(regi_t r)
 
 void generator_c::RegFree(regi_t r)
 {
+#if OLD_REG_CODE
 	if (r <= REG_IXL)
 	{//direct index
 		regs[r].held = -1;
@@ -121,10 +130,12 @@ void generator_c::RegFree(regi_t r)
 		regs[r - REG_BC + 1].held = -1;
 		regs[r - REG_BC + 2].held = -1;
 	}
+#endif
 }
 
 void generator_c::MarkReg(regi_t reg, tdatai_t data)
 {
+#if OLD_REG_CODE
 	if (reg <= REG_IXL)
 	{//direct index
 		regs[reg].held = data;
@@ -138,10 +149,12 @@ void generator_c::MarkReg(regi_t reg, tdatai_t data)
 		regs[reg - REG_BC + 1].held = data;
 		regs[reg - REG_BC + 2].held = data;
 	}
+#endif
 }
 
 bool generator_c::IsMarked(regi_t reg, tdatai_t data)
 {
+#if OLD_REG_CODE
 	if (reg <= REG_IXL)
 	{//direct index
 		if (regs[reg].held == data)
@@ -158,7 +171,7 @@ bool generator_c::IsMarked(regi_t reg, tdatai_t data)
 		regs[reg - REG_BC + 2].held = data;
 		*/
 	}
-
+#endif
 	return false;
 }
 
@@ -342,13 +355,19 @@ int generator_c::GetForLabel(char* buf)
 
 bool generator_c::IsSReg(regi_t r)
 {
+#if OLD_REG_CODE
 	bool eightbit = r >= REG_R0 && r <= REG_R255;
 	bool sixteenbit = r >= REG_WR0 && r <= REG_WR127;
 
 	return eightbit || sixteenbit;
+#endif
+	return false;
 }
 
 bool generator_c::IsWord(regi_t r)
 {
+	return false;
+#if OLD_REG_CODE
 	return r >= REG_BC;
+#endif
 }
