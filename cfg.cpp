@@ -455,7 +455,7 @@ void cfg_c::Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata)
 			tdata_t* t1 = &tdata[i];
 
 			//printf("%s:%s\t%i - ", g_ctabstr, t1->var->K(), node->color);
-			printf("%s:%s\t%s - ", g_ctabstr, t1->var->K(), node->ToStr());
+			printf("%s:%s\t%s - ", g_ctabstr, t1->var->K(), node->ToStr(t1->size));
 
 			for (int j = 0; j < node->LinkCnt(); j++)
 			{

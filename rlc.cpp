@@ -105,7 +105,7 @@ int main()
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
 	printf("Compilation finished in %.4f second(s)\n", time_seconds);
 
-	//delete[] tdata;
+	delete[] tdata;
 
 	return 0;
 }

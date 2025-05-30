@@ -55,7 +55,7 @@ int cfg_c::TrimVars(cfg_c* parent, int count)
 
 			//check if its needed for any children younger than this
 
-			//Warning("Unused variable %s\n", DataName(i));
+			//Warning("Unused variable %s\n", DataName(symbol));
 			start.erase(start.begin() + i);
 			end.erase(end.begin() + i);
 			data.erase(data.begin() + i);
@@ -261,22 +261,16 @@ int	cfg_c::Iteratend(unsigned flags)
 
 void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 {
-	bool reg_available[SI_REG_COUNT];
-	static bool stack_available[SI_STACK_COUNT];
-	static bool local_available[SI_LOCAL_COUNT]; //static to be nice to the compiler
-	REG reg_count = REG::A;
-	int stack_count = SI_STACK_MIN;
+	const int max_stack = SI_LAST_GENERAL + SI_STACK_COUNT;
+	bool available[max_stack];
 	int local_count = SI_LOCAL_MIN;
 
+	memset(available, true, sizeof(bool) * max_stack);
 
-	memset(reg_available, true, sizeof(bool) * SI_REG_COUNT);
-	memset(stack_available, true, sizeof(bool) * SI_STACK_COUNT);
-	memset(local_available, true, sizeof(bool) * SI_LOCAL_COUNT);
-
-	for (int i = 0; i < symbol_count; i++)
+	for (int symbol = 0; symbol < symbol_count; symbol++)
 	{
-		inode_c* n = (*graph)[i];
-		tdata_t* x = &(tdata)[i];
+		inode_c* n = (*graph)[symbol];
+		tdata_t* x = &(tdata)[symbol];
 		int link_cnt = n->LinkCnt();
 
 		if (x->flags & DF_LABEL)
@@ -297,61 +291,75 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 		for (int j = 0; j < link_cnt; j++)
 		{
 			inode_c* l = (*graph)[n->Link(j)];
-			//if (l->color != -1)
-				//	available[l->color] = false;
+			tdata_t* t = &(tdata)[j];
+
 			if (l->si.reg_flag)
-				reg_available[l->si.reg] = false;
+			{
+				for(int i = 0; i < t->size; i++) //mark successive bytes as marked, too
+					available[l->si.reg + i] = false;
+			}
 			else if (l->si.stack_flag)
-				stack_available[l->si.stack] = false;
+			{
+				for (int i = 0; i < t->size; i++)
+					available[l->si.stack + i] = false;
+			}
 		}
 
 		//Find first available reg/stack index
+		int index;
+		if (x->flags & DF_OTHER_MASK) //structs, arrays, etc. cannot be held in regs
+			index = SI_LAST_GENERAL + 1;
+		else
+			index = static_cast<int>(REG::B);
 
-
-		/*
-		//find first available color - assign it
-		int iteratend = Iteratend(x->flags); //everything except for bytes are inc'd by 2. FIXME - byte array
-		for (int k = FirstValidColor(x->flags); k < REGS_TOTAL; k += iteratend)
+		for (; index < max_stack; index++)
 		{
-			//check for interference with aliased registers
-			if (x->flags & DF_BYTE)
+			if (available[index])
 			{
-				int basereg = k;
+				if (x->flags & DF_OTHER_MASK)
+				{//TESTME: structs/arrays don't have their lifecycles determined yet
+					for (int offset = 1; offset < x->size; offset++)
+					{
+						if (!available[index + offset])
+							goto invalidstoragelocation; //try the next stack block
+					}
+					goto foundstoragelocation;
+				}
+				else if (x->flags & (DF_WORD | DF_PTR))
+				{
+					if ((index <= SI_LAST_GENERAL) && !(index % 2)) //can't have a word in 'e' or 'c' - 
+						continue; //('c', 'e' and 'l' are all even)
 
-				if (!(k % 2))
-					basereg--;
-
-				if (basereg > -1 && !available[basereg + REG_IXL])
-					continue; //check if tehe 16-bit reg is used
+					if (((index + 1) < max_stack) && available[index + 1])
+						goto foundstoragelocation;
+					index++;
+				}
+				else
+				{//Byte - no need to check bytes beside this one
+					goto foundstoragelocation;
+				}
 			}
-			else
-			{
-				//if (k == REG_HL)
-				//	continue; //'hl' is reserved
-
-				if (!available[k - REG_IXL] || !available[k - REG_IXL + 1])
-					continue; //check if the hi or low nibble is already used
-			}
-
-			if (available[k])
-			{
-				n->color = k;
-				break; //got one
-			}
+		invalidstoragelocation:;
 		}
-		*/
+
+		Error("More than 127 bytes of stack space used!");
+
+	foundstoragelocation:
+
+		if (index > SI_LAST_GENERAL)
+		{//stack
+			n->si.stack_flag = 1;
+			n->si.stack = index;
+		}
+		else
+		{//register
+			n->si.reg_flag = 1;
+			n->si.reg = index;
+		}
 
 		//clean up available vertices
-		for (int j = 0; j < link_cnt; j++)
-		{
-			inode_c* l = (*graph)[n->Link(j)];
-			//if (l->color != -1)
-			//	available[l->color] = true;
-			if (l->si.reg_flag)
-				reg_available[l->si.reg] = true;
-			else if (l->si.stack_flag)
-				stack_available[l->si.stack] = true;
-		}
+		//Technically only need to set the indices that have been reset
+		memset(available, true, sizeof(available));
 	}
 }
 

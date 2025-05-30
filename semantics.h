@@ -51,16 +51,17 @@
 enum class REG : unsigned char //really only 5 bits
 {
 	A = 0, B, C, D, E, H, L,
-	AF, BC, DE, HL, 
+	//AF, BC, DE, HL, 
 	IXH, IXL, IYH, IYL, 
-	IX, IY,
+	//IX, IY,
 	SP, I, R,
 	_SIZE
 };
-#define SI_REG_COUNT (static_cast<size_t>(REG::_SIZE))
+#define SI_REG_COUNT	(static_cast<size_t>(REG::_SIZE))
+#define SI_LAST_GENERAL	(static_cast<int>(REG::L)) //the last general purpose register
 #define SI_STACK_MIN	((signed char)(-128))
 #define SI_STACK_MAX	((signed char)(+127))
-#define SI_STACK_COUNT	((size_t)(128))
+#define SI_STACK_COUNT	SI_STACK_MAX //1-127
 #define SI_LOCAL_MIN	((unsigned short)(0))
 #define SI_LOCAL_MAX	((unsigned short)(65535))
 #define SI_LOCAL_COUNT	((size_t)(65536))
@@ -69,6 +70,7 @@ typedef union storageinfo_u
 {
 	struct
 	{
+		//Note: reg&stack are indices into the same array
 		unsigned int	reg : 5; //0-21 
 		signed int		stack : 8; //store the full signed index- -128:127
 		unsigned int	local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
@@ -95,6 +97,8 @@ typedef union storageinfo_u
 #define DF_USED		0x200 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
 #define DF_FORCTRL	0x400 //control variable for a for loop - try to store this in 'b'
 #define DF_GLOBAL	0x800 //visible from absolutely everywhere in the program
+
+#define DF_OTHER_MASK (DF_LABEL | DF_FXD | DF_STRUCT | DF_ARRAY)
 
 typedef unsigned dataflags_t;
 
@@ -172,9 +176,52 @@ public:
 	inline int LinkCnt() { return num_links; }
 	inline int Link(int i) { return links[i]; }
 
-	const char* ToStr()
+	const char* ToStr(int size)
 	{
 		const size_t maxstrlen = 6;
+		static char str[maxstrlen];
+
+		if (si.reg_flag)
+		{
+			switch (si.reg)
+			{
+			case static_cast<int>(REG::A): 
+				if (size > 1)	return "af   ";
+				else			return "a    ";
+			case static_cast<int>(REG::B):
+				if (size > 1)	return "bc   ";
+				else			return "b    ";
+			case static_cast<int>(REG::C):
+				if (size > 1)	return "badreg";
+				else			return "c    ";
+			case static_cast<int>(REG::D):
+				if (size > 1)	return "de   ";
+				else			return "d    ";
+			case static_cast<int>(REG::E):
+				if (size > 1)	return "badreg";
+				else			return "e    ";
+			case static_cast<int>(REG::H):
+				if (size > 1)	return "hl   ";
+				else			return "h    ";
+			case static_cast<int>(REG::L):
+				if (size > 1)	return "badreg";
+				else			return "l    ";
+			default:
+				return "badreg";
+			}
+		}
+		else if (si.stack_flag)
+		{
+			signed char actual = si.stack - SI_LAST_GENERAL;
+			size_t len;
+
+			snprintf(str, maxstrlen, "%i", actual);
+			len = strlen(str);
+
+			for (size_t i = len; i < maxstrlen - 1; i++)
+				str[i] = ' ';
+			return str;
+		}
 		/*
 		switch (color)
 		{
