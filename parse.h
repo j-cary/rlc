@@ -1,18 +1,11 @@
 #pragma once
 #include "common.h"
 
-
-enum RETURNCODES
-{
-	RC_NULL	= 0, RC_PASS, RC_FAIL, RC_WARNING
-};
-
 #define GF_ARGS	tree_c* parent
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
 #define GF_DEF(x)	parser_c::rcode_t parser_c::x(GF_ARGS)
 #define FS_ENTRY(func, string)	&parser_c::func,string
 #define DBG_STR_MAX	32
-
 
 class parser_c
 {
@@ -41,7 +34,10 @@ private:
 	//
 	//ASM_Data types
 	//
+	GF_DECL(STORAGE_SPECIFIER);
+	GF_DECL(DATA_MODIFIER);
 	GF_DECL(DATA_TYPE);
+	GF_DECL(STRUCT_DECL);
 
 	//
 	//Statements
@@ -121,7 +117,7 @@ private:
 	char tabstr[DEPTH_MAX * 2] = {};
 	int tabs = 0;
 
-	fstrans_t fs[50] =
+	const fstrans_t fs[53] =
 	{
 		//main prog
 		FS_ENTRY(TRANSLATION_UNIT, "Translation unit"),
@@ -133,7 +129,10 @@ private:
 		FS_ENTRY(TYPE_DEF, "Type definition"),
 
 		//data
+		FS_ENTRY(STORAGE_SPECIFIER, "Storage specifier"),
+		FS_ENTRY(DATA_MODIFIER, "Data modifier"),
 		FS_ENTRY(DATA_TYPE, "Data"),
+		FS_ENTRY(STRUCT_DECL, "Struct decl"),
 
 		//statements
 		FS_ENTRY(COMPOUND_STATEMENT, "Compound statement"),
@@ -207,7 +206,8 @@ public:
 	}
 };
 
-#define PEEKCP(x)	(list->Peek()->V() == x)
+//#define PEEKCP(x)	(list->Peek()->V() == x)
+#define PEEKCP(x)	(list->Peek() ? list->Peek()->V() == x : false)
 #define GETCP(x)	(list->Get()->V() == x)
 //#define CL(x, y)	(Call(&parser_c::x, y, NULL))
 //#define CL(x,y,z)	(Call(&parser_c::x, y, z))

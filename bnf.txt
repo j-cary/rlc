@@ -33,9 +33,9 @@ Reserved chars:
 <function_def> ::= 'subr' <identifier> '(' <parameter_list>* ')' ';'
 <function_decl> ::= 'subr' <identifier> '(' <parameter_list>* ')' <compound_statement>
 
-<data_decl> ::= 'signed'? <data_type> '*'? <single_data_decl> { ',' <single_data_decl> }* ';' |
-				'signed'? <data_type> '*'? <identifier> '[' <const_expression> ']' { '{' <initializer_list> '}' }? ';' |
-				'struct' <identifier> '*'? <identifier>  { '[' <const_expression> ']' }? ';' |
+<data_decl> ::= <data_modifier>? <data_type> '*'? <single_data_decl> { ',' <single_data_decl> }* ';' |
+				<data_modifier>? <data_type> '*'? <identifier> '[' <const_expression> ']' { '{' <initializer_list> '}' }? ';' |
+				<struct_decl> |
 				'label' <identifier> ';'
 
 <single_data_decl> ::= <identifier> { '=' <arithmetic_expression> }?
@@ -43,10 +43,13 @@ Reserved chars:
 <type_def> ::= 'struct' '{' <data_decl>+ '}' <identifier> ';'
 
 //
-//	DATA TYPES
+//	DATA 
 //
 
+<struct_decl> ::= <storage_specifier>? 'struct' <identifier> '*'? <identifier>  { '[' <const_expression> ']' }? ';'
 <data_type> ::= 'byte' | 'word' | 'dword' 
+<data_modifier> ::= <storage_specifier> | 'signed' | <storage_specifier> 'signed' | 'signed' <storage_specifier>
+<storage_specifier> ::= 'static' | 'auto' | 'stack'
 //struct arrays are initialized from within the struct def itself, not upon an object decl
 
 //

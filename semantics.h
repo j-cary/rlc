@@ -48,17 +48,20 @@
 
 #define OLD_REG_CODE 0
 
-enum class REG : unsigned char //really only 5 bits
+namespace REG
 {
-	A = 0, B, C, D, E, H, L,
-	//AF, BC, DE, HL, 
-	IXH, IXL, IYH, IYL, 
-	//IX, IY,
-	SP, I, R,
-	_SIZE
-};
-#define SI_REG_COUNT	(static_cast<size_t>(REG::_SIZE))
-#define SI_LAST_GENERAL	(static_cast<int>(REG::L)) //the last general purpose register
+	enum REG : unsigned char //really only 5 bits
+	{
+		A = 0, B, C, D, E, H, L,
+		//AF, BC, DE, HL, 
+		IXH, IXL, IYH, IYL, 
+		//IX, IY,
+		SP, I, R,
+		_SIZE
+	};
+}
+#define SI_REG_COUNT	((size_t)REG::_SIZE)
+#define SI_LAST_GENERAL	(REG::L) //the last general purpose register
 #define SI_STACK_MIN	((signed char)(-128))
 #define SI_STACK_MAX	((signed char)(+127))
 #define SI_STACK_COUNT	SI_STACK_MAX //1-127
@@ -185,26 +188,26 @@ public:
 		{
 			switch (si.reg)
 			{
-			case static_cast<int>(REG::A): 
+			case REG::A: 
 				if (size > 1)	return "af   ";
 				else			return "a    ";
-			case static_cast<int>(REG::B):
+			case REG::B:
 				if (size > 1)	return "bc   ";
 				else			return "b    ";
-			case static_cast<int>(REG::C):
-				if (size > 1)	return "badreg";
+			case REG::C:
+				if (size > 1)	return "badreg"; //'cd'
 				else			return "c    ";
-			case static_cast<int>(REG::D):
+			case REG::D:
 				if (size > 1)	return "de   ";
 				else			return "d    ";
-			case static_cast<int>(REG::E):
-				if (size > 1)	return "badreg";
+			case REG::E:
+				if (size > 1)	return "badreg"; //'eh'
 				else			return "e    ";
-			case static_cast<int>(REG::H):
+			case REG::H:
 				if (size > 1)	return "hl   ";
 				else			return "h    ";
-			case static_cast<int>(REG::L):
-				if (size > 1)	return "badreg";
+			case REG::L:
+				if (size > 1)	return "badreg"; //'l?'
 				else			return "l    ";
 			default:
 				return "badreg";
@@ -215,7 +218,7 @@ public:
 			signed char actual = si.stack - SI_LAST_GENERAL;
 			size_t len;
 
-			snprintf(str, maxstrlen, "%i", actual);
+			snprintf(str, maxstrlen, "(%i)", actual);
 			len = strlen(str);
 
 			for (size_t i = len; i < maxstrlen - 1; i++)
@@ -421,8 +424,8 @@ private:
 	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, int exit_code);
 
 	//Parms:
+	CODES 
 	int EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags);
-	int EvaluateSuccessiveDataSize(tree_c* node);
 
 	void BuildIGraphs(cfg_c* block);
 

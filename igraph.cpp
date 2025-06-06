@@ -310,7 +310,7 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 		if (x->flags & DF_OTHER_MASK) //structs, arrays, etc. cannot be held in regs
 			index = SI_LAST_GENERAL + 1;
 		else
-			index = static_cast<int>(REG::B);
+			index = REG::B;
 
 		for (; index < max_stack; index++)
 		{

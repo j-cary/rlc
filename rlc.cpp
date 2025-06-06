@@ -18,7 +18,7 @@ HANDLE console;
 
 //TODO:
 //Parsing
-//	'stack' specifier parsing
+//	Reject storage specifiers in struct members in analysis
 //Register allocation
 //	don't allocate registers for data used 0-0 or 7-7
 //	^need to skip data decls and instructions with only un allocated-vars
@@ -97,7 +97,7 @@ int main()
 	printf("%s\n", program);
 	lex.Lex(program, &list, 0);
 	//actually do the preprocessing here
-	parse.Parse(&list, &tree, 0);
+	parse.Parse(&list, &tree, true);
 	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top, &tdata, &igraph, &sl);
 	//generator.Generate(&tree, &graph, tdata, &symtbl_top, &igraph);
 
@@ -105,7 +105,7 @@ int main()
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
 	printf("Compilation finished in %.4f second(s)\n", time_seconds);
 
-	delete[] tdata;
+	//delete[] tdata; //uncomment this when generateast gets uncommented
 
 	return 0;
 }

@@ -24,7 +24,7 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 	/*
 	*/
 	CFG_Start(root);//Pass2
-	BuildIGraphs(graph);
+	//BuildIGraphs(graph);
 	printf("==\tDEBUG: Control flow graph\t==\n");
 	graph->Disp(true, igraph, tdata);
 	
@@ -584,7 +584,7 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 	int s;
 	int total_length = 0;
 
-	//check for redefinition
+	//check for redefinition of the struct name
 	for (i = 0; name = node->Get(i); i++) {}
 	name = node->Get(i - 2);
 
@@ -640,8 +640,12 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 	bool struct_decl = struct_ && structname;
 	const char* local_structname = NULL;
 
-	subchild = node->Get((*iterator));
+	subchild = node->Get(*iterator);
 
+	//subchild can be: 'signed', 'static', dw, db, etc., <data_modifier> in struct decl
+	//subchild can be: 'signed', 'static', dw, wb, etc., <data_modifier> in data decl
+
+	/*
 	switch (subchild->Hash()->V())
 	{
 	case CODE_STRUCT:
@@ -651,6 +655,18 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 	case CODE_SIGNED:
 		(*flags) |= DF_SIGNED;
 		subchild = node->Get(++(*iterator));
+	default:
+		dtype = subchild->Hash()->V();
+		break;
+	}
+	*/
+
+	switch (subchild->Hash()->V())
+	{
+	case CODE_SIGNED:
+
+		break;
+		case 
 	default:
 		dtype = subchild->Hash()->V();
 		break;

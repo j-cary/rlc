@@ -47,6 +47,7 @@ kv_t reservedwords[] =
 
 	"struct",	CODE_STRUCT,
 	"signed",	CODE_SIGNED,
+	"static",	CODE_STATIC,	"stack",	CODE_STACK,	"auto", CODE_AUTO,
 
 	//control flow
 	"repeat",	CODE_REPEAT,
