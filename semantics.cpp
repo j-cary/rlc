@@ -24,7 +24,7 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 	/*
 	*/
 	CFG_Start(root);//Pass2
-	//BuildIGraphs(graph);
+	BuildIGraphs(graph);
 	printf("==\tDEBUG: Control flow graph\t==\n");
 	graph->Disp(true, igraph, tdata);
 	
@@ -38,7 +38,6 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 			for (member_t* m = s->first_member; m; m = m->next)
 			{
 				printf("  %s\t%3i %3i", m->name, m->offset, m->length);
-
 				if (m->flags & DF_SIGNED) printf(" signed");
 
 				if		(m->flags & DF_BYTE) printf(" byte");
@@ -100,6 +99,7 @@ void analyzer_c::CFG_Start(tree_c* node)
 		break;
 	case NT_UNIT: break;
 	case NT_DATA_DECL:
+	case NT_STRUCT_DECL:
 		CFG_DataDeclaration(node, graph);
 		return;
 		break;
@@ -350,7 +350,9 @@ void analyzer_c::CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start,
 
 		switch (code)
 		{
-		case NT_DATA_DECL: CFG_DataDeclaration(child, link); break;
+		case NT_DATA_DECL: 
+		case NT_STRUCT_DECL:
+			CFG_DataDeclaration(child, link); break;
 		case NT_INSTRUCTION: CFG_Instruction(child, link); break;
 
 		case NT_OPEN_STMT: link = CFG_OpenStatement(child, link, ancestor); break;
@@ -630,6 +632,62 @@ void analyzer_c::CFG_TypeDef(tree_c* node, cfg_c* block)
 	slist->SetLen(s, total_length);
 }
 
+CODES analyzer_c::EvaluateDataModifiers(tree_c* node, bool struct_def, int* iterator_, const char** struct_name, dataflags_t* flags_)
+{
+	int iterator = *iterator_;
+	dataflags_t flags = *flags_;
+	tree_c* subchild = node->Get(iterator);
+	CODES data_type;
+	bool storage_specified = false;
+
+	switch (subchild->Hash()->V())
+	{
+	case CODE_SIGNED: flags |= DF_SIGNED; subchild = node->Get(++iterator); break;
+	case CODE_STATIC: flags |= DF_STATIC; subchild = node->Get(++iterator); storage_specified = true; break;
+	case CODE_AUTO: subchild = node->Get(++iterator); storage_specified = true; break;
+	case CODE_STACK: flags |= DF_STACK; subchild = node->Get(++iterator); storage_specified = true; break;
+	case CODE_STRUCT: *struct_name = node->Get(iterator + 1)->Hash()->K(); break;
+	case NT_DATA_MODIFIER:
+		if(struct_def)
+			Error("Storage specifiers cannot be used in structure definitions");
+		for (int i = 0; tree_c * mod = subchild->Get(i); i++)
+		{
+			switch (mod->Hash()->V())
+			{
+			case CODE_SIGNED: flags |= DF_SIGNED; break;
+			case CODE_STATIC: flags |= DF_STATIC; break;
+			case CODE_AUTO: break;
+			case CODE_STACK: flags |= DF_STACK; break;
+			default: Error("Unexpected data modifier %i", mod->Hash()->V()); break;
+			}
+		}
+		subchild = node->Get(++iterator);
+		break;
+	default: break;
+	}
+
+	if (storage_specified)
+	{//some kind of storage specifier. No <data_modifier> branch, though
+
+		if (struct_def)
+			Error("Storage specifiers cannot be used in structure definitions");
+		if (subchild->Hash()->V() == CODE_STRUCT)
+		{//non-struct decls do not need any special handling here
+			*struct_name = node->Get(iterator + 1)->Hash()->K();
+		}
+	}
+
+	data_type = (CODES)subchild->Hash()->V();
+
+	if (*struct_name)
+		iterator++;
+
+	*iterator_ = iterator;
+	*flags_ = flags;
+
+	return data_type;
+}
+
 int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags)
 {
 	tree_c* subchild, * init;
@@ -637,13 +695,10 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 	//const char* structname = NULL;
 	int dtype;
 	int length;
-	bool struct_decl = struct_ && structname;
+	bool struct_def = struct_ && structname;
 	const char* local_structname = NULL;
 
-	subchild = node->Get(*iterator);
-
-	//subchild can be: 'signed', 'static', dw, db, etc., <data_modifier> in struct decl
-	//subchild can be: 'signed', 'static', dw, wb, etc., <data_modifier> in data decl
+	//subchild = node->Get(*iterator);
 
 	/*
 	switch (subchild->Hash()->V())
@@ -660,22 +715,12 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 		break;
 	}
 	*/
-
-	switch (subchild->Hash()->V())
-	{
-	case CODE_SIGNED:
-
-		break;
-		case 
-	default:
-		dtype = subchild->Hash()->V();
-		break;
-	}
+	dtype = EvaluateDataModifiers(node, struct_def, iterator, &local_structname, flags);
 
 	switch (dtype)
 	{
 	case CODE_LABEL:		
-		if (struct_decl)
+		if (struct_def)
 			Error("Structures cannot contain labels"); 
 		(*flags) |= DF_LABEL;
 		break;
@@ -718,7 +763,7 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 		int s1 = slist->GetStruct(local_structname);
 		if (s1 < 0)
 			Error("Undeclared struct '%s'", local_structname);
-		if (struct_decl && (!((*flags) & DF_PTR)) && (!strcmp(local_structname, struct_->Hash()->K())))
+		if (struct_def && (!((*flags) & DF_PTR)) && (!strcmp(local_structname, struct_->Hash()->K())))
 			Error("Structure '%s' cannot contain itself", local_structname);
 
 		if ((*flags) & DF_PTR)
@@ -734,7 +779,7 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 			length = arraylength; //byte array
 	}
 
-	if(struct_decl)
+	if(struct_def)
 		*structname = local_structname;
 	return length;
 }

@@ -87,19 +87,20 @@ typedef union storageinfo_u
 #define SYMBOLS_MAX	32
 #define STRUCTURES_MAX	32
 
-#define DF_NONE		0x0
-#define DF_BYTE		0x1
-#define DF_WORD		0x2
-#define DF_LABEL	0x4
-#define DF_FXD		0x8
-#define DF_PTR		0x10
-#define DF_SIGNED	0x20
-#define DF_STRUCT	0x40
-#define DF_ARRAY	0x80
-#define DF_STATIC	0x100
-#define DF_USED		0x200 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
-#define DF_FORCTRL	0x400 //control variable for a for loop - try to store this in 'b'
-#define DF_GLOBAL	0x800 //visible from absolutely everywhere in the program
+#define DF_NONE		0x0000
+#define DF_BYTE		0x0001
+#define DF_WORD		0x0002
+#define DF_LABEL	0x0004
+#define DF_FXD		0x0008
+#define DF_PTR		0x0010
+#define DF_SIGNED	0x0020
+#define DF_STRUCT	0x0040
+#define DF_ARRAY	0x0080
+#define DF_STATIC	0x0100 //mutually exclusive with auto & stack
+#define DF_STACK	0x0200 //if neither stack or static are set, it's an auto
+#define DF_USED		0x0400 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
+#define DF_FORCTRL	0x0800 //control variable for a for loop - try to store this in 'b'
+#define DF_GLOBAL	0x1000 //visible from absolutely everywhere in the program
 
 #define DF_OTHER_MASK (DF_LABEL | DF_FXD | DF_STRUCT | DF_ARRAY)
 
@@ -424,7 +425,7 @@ private:
 	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, int exit_code);
 
 	//Parms:
-	CODES 
+	CODES EvaluateDataModifiers(tree_c* node, bool struct_def, int* iterator, const char** structname, dataflags_t* flags);
 	int EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags);
 
 	void BuildIGraphs(cfg_c* block);

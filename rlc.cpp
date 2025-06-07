@@ -17,6 +17,7 @@ CONSOLE_SCREEN_BUFFER_INFO	base_csbi;
 HANDLE console;
 
 //TODO:
+//Keep track of line #
 //Parsing
 //	Reject storage specifiers in struct members in analysis
 //Register allocation
