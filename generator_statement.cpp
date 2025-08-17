@@ -7,7 +7,7 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 	regi_t reg;
 	tdatai_t data;
 
-	PrintSourceLine(node);
+#if OLD_REG_CODE
 	child = node->Get(3);
 
 	//move this to analysis
@@ -33,7 +33,6 @@ void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 
 	CG_RegBlock(body);
 	//CG_ForBlock(body);
-#if OLD_REG_CODE
 	if(reg == REG_B)
 		ASM_Djnz(label);
 	else

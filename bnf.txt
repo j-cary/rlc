@@ -21,6 +21,7 @@ Reserved chars:
 = + - * / ^
 
 //TODO: special rule in for clause to allow for more than constant expressions
+//NOTE: ALL data declarations must be done at the start of a block; functions, ifs, elses, loops
 
 
 //
@@ -87,7 +88,7 @@ Reserved chars:
 
 //expressions
 //basically, instructions will do you the courtesy of dereferencing, referencing, etc. but no more.
-//arrays can be used with simple memory or constant expression indexing
+//arrays can be used with constant expression indexing
 //no adds or sub expressions
 //memory should allow: ., .., [], *, &
 
@@ -197,6 +198,7 @@ ldm, inm, outm: 'ldm' <logical_unary_expression> , <logical_unary_expression> , 
 //
 
 //ex. ld var1.var2[var3], var4[1].var5[2 * 4];
+//FIXME: parentheses
 
 <mem_or_const_expression> ::= <memory_expression> | <constant_expression> //implementation: test mem first, then const
 <memory_expression> ::= <memory_primary_expression> { { { '.' | '..' } <memory_primary_expression> } | '[' <const_expression> ']' }*

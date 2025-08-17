@@ -145,6 +145,7 @@ class node_c
 {
 private:
 public:
+	size_t line_no;
 	node_c* next;
 	union 
 	{
@@ -192,8 +193,9 @@ public:
 
 	void InsertHead(const kv_t _kv);
 	void RemoveHead();
+	void Insert(node_c* prev, kv_t _kv, size_t _line_no);
 	void Insert(node_c* prev, kv_t _kv);
-	void Insert(node_c* prev, const kv_c* _kv);
+	void Insert(node_c* prev, const char* key, CODES value, size_t _line_no);
 	void Remove(node_c* prev);
 
 	void Disp();

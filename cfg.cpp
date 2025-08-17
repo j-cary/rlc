@@ -117,7 +117,7 @@ bool cfg_c::SetDataStart(const char* name, int _start)
 			return true;
 		}
 	}
-	Warning("%s is not a recorded variable\n", name);
+	Warning("%s is not a recorded variable", name);
 	return false;
 }
 
@@ -131,7 +131,7 @@ bool cfg_c::SetDataEnd(const char* name, int _end)
 			return true;
 		}
 	}
-	Warning("%s is not a recorded variable\n", name);
+	Warning("%s is not a recorded variable", name);
 	return false;
 }
 
@@ -145,7 +145,7 @@ void cfg_c::SetDataEndBlock(const char* name, cfg_c* block)
 			return;
 		}
 	}
-	Warning("%s is not a recorded variable\n", name);
+	Warning("%s is not a recorded variable", name);
 }
 
 void cfg_c::IncDataUses(const char* name)
@@ -158,7 +158,7 @@ void cfg_c::IncDataUses(const char* name)
 			return;
 		}
 	}
-	Warning("%s is not a recorded variable\n", name);
+	Warning("%s is not a recorded variable", name);
 }
 
 
@@ -455,7 +455,7 @@ void cfg_c::Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata)
 			tdata_t* t1 = &tdata[i];
 
 			//printf("%s:%s\t%i - ", g_ctabstr, t1->var->K(), node->color);
-			printf("%s:%s\t%s - ", g_ctabstr, t1->var->K(), node->ToStr(t1->size));
+			printf("%s:%s\t%s - ", g_ctabstr, t1->var->K(), t1->ToStr(t1->size));
 
 			for (int j = 0; j < node->LinkCnt(); j++)
 			{
@@ -479,7 +479,7 @@ void cfg_c::R_Disp( igraph_c* igraph, tdata_t* tdata)
 	std::vector<tree_c*>::iterator	s_it = statements.begin();
 
 	if (g_ctabs > (DEPTH_MAX * 2) - 2)
-		Error("Parser: Attempted to display too many recursive tree nodes!\n");
+		Error("Parser: Attempted to display too many recursive tree nodes!");
 
 	printf("%s[[%s]] %i", g_ctabstr, id, blocki);
 

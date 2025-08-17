@@ -1,46 +1,6 @@
 #pragma once
 #include "common.h"
 
-/*
-#define REG_BAD		(-1)
-#define REG_A		0
-#define REG_B		1
-#define REG_C		2
-#define REG_D		3
-#define REG_E		4
-#define REG_H		5
-#define REG_L		6
-#define REG_R0		7
-#define REG_R255	(REG_R0 + 255) //Maximum of 256 spill regs. Only allocate space for the maximum number of used regs
-#define REG_IYH		(REG_R255 + 1)//unused
-#define REG_IYL		(REG_R255 + 2)//unused
-#define REG_IXH		(REG_R255 + 3)
-#define REG_IXL		(REG_R255 + 4) 
-
-#define REG_BC		(REG_B + REG_IXL)
-#define REG_DE		(REG_D + REG_IXL)
-#define REG_HL		(REG_H + REG_IXL)
-#define REG_WR0		(REG_R0 + REG_IXL) //r0 and r1
-#define REG_WR127	(REG_R255 - 1 + REG_IXL) //r254 and r255
-#define REG_IY		(REG_IYH + REG_IXL)//unused
-#define REG_IX		(REG_IXH + REG_IXL)//only used for struct/array indexing
-
-#define REGS_TOTAL	(REG_IXL + 2 + ((REG_IX - REG_BC) / 2)) //400
-*/
-
-//0-6 : a-l
-//7-262 : r0-r255
-//263-266 : iyh-ixl
-//267 : bc
-//269 : de
-//271 : hl
-//273 : wr0
-//275 : wr1
-//...
-//527 : wr127
-//529 : iy
-//531 : ix
-
 //New register system description:
 //Hardware regs: a, b, c, d, e, h, l, af, bc, de, hl, ixh, ixl, iyh, iyl, ix, iy, sp, i, r - 20 total
 //Stack sregs: 8 bit signed offset from (ix). i.e., 128 bytes max offset.
@@ -59,13 +19,20 @@ namespace REG
 		SP, I, R,
 		_SIZE
 	};
+
+	//Reg to string. Default to 16-bit
+	const char* Str(REG reg);
+
+	//Reg to string. Specify size in bytes.
+	//Set bad_check if checks for validity are desired. Also pads the string
+	const char* Str(REG reg, int size);
 }
 #define SI_REG_COUNT	((size_t)REG::_SIZE)
 #define SI_LAST_GENERAL	(REG::L) //the last general purpose register
 #define SI_STACK_MIN	((signed char)(-128))
 #define SI_STACK_MAX	((signed char)(+127))
 #define SI_STACK_COUNT	SI_STACK_MAX //1-127
-#define SI_LOCAL_MIN	((unsigned short)(0))
+#define SI_LOCAL_MIN	((unsigned short)(1))
 #define SI_LOCAL_MAX	((unsigned short)(65535))
 #define SI_LOCAL_COUNT	((size_t)(65536))
 
@@ -174,107 +141,11 @@ private:
 	int		links[LINKS_MAX];
 public:
 	//regi_t		color; //removeme
-	storageinfo_t si;
+	//storageinfo_t si;
 
 	bool AddLink(int l); //false if out of space
 	inline int LinkCnt() { return num_links; }
 	inline int Link(int i) { return links[i]; }
-
-	const char* ToStr(int size)
-	{
-		const size_t maxstrlen = 6;
-		static char str[maxstrlen];
-
-		if (si.reg_flag)
-		{
-			switch (si.reg)
-			{
-			case REG::A: 
-				if (size > 1)	return "af   ";
-				else			return "a    ";
-			case REG::B:
-				if (size > 1)	return "bc   ";
-				else			return "b    ";
-			case REG::C:
-				if (size > 1)	return "badreg"; //'cd'
-				else			return "c    ";
-			case REG::D:
-				if (size > 1)	return "de   ";
-				else			return "d    ";
-			case REG::E:
-				if (size > 1)	return "badreg"; //'eh'
-				else			return "e    ";
-			case REG::H:
-				if (size > 1)	return "hl   ";
-				else			return "h    ";
-			case REG::L:
-				if (size > 1)	return "badreg"; //'l?'
-				else			return "l    ";
-			default:
-				return "badreg";
-			}
-		}
-		else if (si.stack_flag)
-		{
-			signed char actual = si.stack - SI_LAST_GENERAL;
-			size_t len;
-
-			snprintf(str, maxstrlen, "(%i)", actual);
-			len = strlen(str);
-
-			for (size_t i = len; i < maxstrlen - 1; i++)
-				str[i] = ' ';
-			return str;
-		}
-		/*
-		switch (color)
-		{
-		case REG_BAD:	return "BAD  ";
-		case REG_A:		return "a    ";
-		case REG_B:		return "b    ";
-		case REG_C:		return "c    ";
-		case REG_D:		return "d    ";
-		case REG_E:		return "e    ";
-		case REG_H:		return "h    ";
-		case REG_L:		return "l    ";
-		case REG_BC:	return "bc   ";
-		case REG_DE:	return "de   ";
-		case REG_HL:	return "hl   ";
-		case REG_IXH:	return "ixh  ";
-		case REG_IXL:	return "ixl  ";
-		case REG_IYH:	return "iyh  ";
-		case REG_IYL:	return "iyl  ";
-		}
-
-		if (color >= REG_R0 && color <= REG_R255)
-		{
-			static char r[maxstrlen];
-			size_t len;
-
-			snprintf(r, maxstrlen, "%c%i", 'r', color - REG_R0); //snprintf just in case
-			len = strlen(r);
-
-			for (size_t i = len; i < maxstrlen - 1; i++)
-				r[i] = ' ';
-			return r;
-		}
-
-		if (color >= REG_WR0 && color <= REG_WR127)
-		{
-			static char wr[maxstrlen];
-			size_t len;
-
-			snprintf(wr, 6, "%s%i", "wr", (color - REG_WR0) / 2);
-			len = strlen(wr);
-
-			for (size_t i = len; i < maxstrlen - 1; i++)
-				wr[i] = ' ';
-			return wr;
-		}
-		*/
-
-		return "REALLYBAD";
-	}
 
 	inode_c()
 	{
@@ -283,7 +154,7 @@ public:
 
 		num_links = 0;
 		//color = -1;
-		si.data = 0;
+		//si.data = 0;
 	}
 };
 
@@ -322,6 +193,38 @@ typedef struct tdata_s
 	int			startb, endb;
 	int			size;
 	dataflags_t	flags;
+	storageinfo_t si{};
+
+	const char* ToStr(int size)
+	{
+		const size_t maxstrlen = 6;
+		static char str[maxstrlen];
+
+		if (si.reg_flag)
+		{
+			return REG::Str((REG::REG)si.reg, size);
+		}
+		else if (si.stack_flag)
+		{
+			signed char actual = si.stack - SI_LAST_GENERAL;
+
+			snprintf(str, maxstrlen, "(%i)", actual);
+
+			for (size_t i = strlen(str); i < maxstrlen - 1; i++)
+				str[i] = ' ';
+			return str;
+		}
+		else if (si.local_flag)
+		{
+			snprintf(str, maxstrlen, "%i", si.local);
+
+			for (size_t i = strlen(str); i < maxstrlen - 1; i++)
+				str[i] = ' ';
+			return str;
+		}
+
+		return "REALLYBAD";
+	}
 } tdata_t;
 
 //Control flow graph
@@ -348,8 +251,11 @@ private:
 	void R_BuildTDataList(tdata_t* tdata, cfg_c** offsets);
 	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
 	void SortTDataList(tdata_t** tdata, int count);
+	void FixupStaticInterference(tdata_t** tdata);
 	//int	 FirstValidColor(unsigned flags);
 	//int	 Iteratend(unsigned flags);
+	int	StackIndex(tdata_t* var, bool available[], const int size);
+	int AutoIndex(tdata_t* var, bool stack_available[], const int stack_size, bool local_available[], const int local_size, bool* local);
 	unsigned short DataSize() { return 1U; } //FIXME:
 	void ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata);
 
@@ -361,7 +267,7 @@ private:
 	void R_Disp( igraph_c* igraph, tdata_t* tdata);
 public:
 	BLOCK_TYPE				block_type;
-	char					id[32];
+	char					id[KEY_MAX_LEN];
 
 	void Set(const char* _id, BLOCK_TYPE _Type);
 
@@ -404,7 +310,7 @@ private:
 	data_t*	symtbl;
 	unsigned symtbl_top;
 
-	igraph_c* igraph;
+	igraph_c igraph;
 	tdata_t* tdata;
 
 	structlist_c* slist;
@@ -436,7 +342,7 @@ private:
 	//void MakeFunctionEntry(const kv_c* var);
 
 public:
-	void GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, igraph_c* igraph, structlist_c* sl);
+	void GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, structlist_c* sl);
 };
 
 //generator_util

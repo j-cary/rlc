@@ -135,6 +135,7 @@
     <ClCompile Include="generator_util.cpp" />
     <ClCompile Include="cfg.cpp" />
     <ClCompile Include="igraph.cpp" />
+    <ClCompile Include="ld.cpp" />
     <ClCompile Include="lex.cpp" />
     <ClCompile Include="llist.cpp" />
     <ClCompile Include="parse.cpp" />

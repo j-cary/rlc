@@ -55,7 +55,7 @@ void parser_c::Parse(llist_c* _list, tree_c* _root, int _debug)
 	else
 	{
 		//printf("\n================\n\nInvalid translation unit\n\n================\n");
-		Error("Invalid translation unit\n");
+		Error("Invalid translation unit");
 	}
 
 }

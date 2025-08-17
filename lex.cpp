@@ -29,7 +29,9 @@ ckv_t reservedchars[] =
 	'-', CODE_MINUS,
 	'*', CODE_STAR,
 	'/', CODE_FSLASH,
-	'%', CODE_PERCENT,
+	//'%', CODE_PERCENT,
+
+	'\0', 0
 
 };
 
@@ -99,129 +101,261 @@ kv_t reservedwords[] =
 	"include",	CODE_PP_INCLUDE,
 	"insert",	CODE_PP_INSERT,
 	"define",	CODE_PP_DEFINE,
+	NULL,		CODE_NONE //null terminator
 };
 
-void scanner_c::Lex(const char* prog, llist_c* _list, bool _debug)
+size_t scanner_c::GetTextLump(char text[KEY_MAX_LEN], size_t pi)
 {
-	struct timeb start, end;
+	//char cur;
+	bool hasquote = 0;
+	const char* cur = prog + pi;
+	const char* const start = prog + pi;
+
+	//Skip any preceding whitespace
+	for (; *cur && isspace(*cur); cur++) 
+	{
+		if (*cur == '\n')
+			newlines.push_back(cur - prog);
+	}
+
+	//stop when:
+	// the program is exhausted OR
+	// we're looking at a space NOT found in a string
+	for (int ti = 0; (*cur) && (!isspace(*cur) || hasquote); cur++, ti++)
+	{
+		if (ti >= TEXT_MAX_LEN)
+			Error("Text constant too long. Is there an unclosed quote?");
+
+		if (*cur == '\n')
+		{
+			newlines.push_back(cur - prog);
+		}
+		else if (*cur == '"')
+		{//toggle between accepting spaces in a lexeme.
+			hasquote = !hasquote;
+		}
+		else if (*cur == '#')
+		{//skip everything in the comment
+
+			for (cur++; *cur != '#'; cur++)
+			{
+				if (!*cur)
+					Error("Unclosed comment");
+
+				if (*cur == '\n')
+					newlines.push_back(cur - prog);
+			}
+			break;
+		}
+
+		text[ti] = *cur;
+	}
+
+	return pi + (cur - start);
+}
+
+const char* scanner_c::CheckReservedWord(const char* text, size_t prog_index)
+{
+	for (kv_t* kv = reservedwords; *kv->k; kv++)
+	{
+		size_t len = strlen(kv->k);
+		if (strncmp(text, kv->k, len) == 0)
+		{//matched a reserved word
+			const char* end = text + len;
+
+			//make sure there ISN'T anymore text after it - ex. sus out 'structname'
+			if (end && (isalpha(*end) || *end == '_'))
+				break;
+
+			InsertLexeme(kv->k, strlen(kv->k), (CODES)kv->v, prog_index);
+			return text + len;
+		}
+	}
+
+	return text;
+}
+
+const char* scanner_c::CheckReservedChar(const char* text, size_t prog_index)
+{
+	for (ckv_t* kv = reservedchars; kv->k != '\0'; kv++)
+	{
+		if (*text == kv->k)
+		{//matched a reserved char
+
+			InsertLexeme(text, 1, (CODES)kv->v, prog_index);
+			return text + 1;
+		}
+	}
+
+	return text;
+}
+
+const char* scanner_c::CheckText(const char* text, size_t prog_index)
+{
+	const char* cur = text;
+
+	if (!isalpha(*cur) && (*cur != '_')) 
+		return text; //Identifiers must start with a-z or '_' 
+
+	for (cur++; *cur; cur++)
+	{
+		if (!isalpha(*cur) && !isdigit(*cur) && (*cur != '_'))
+			break; //Valid ident, more lexemes in this lump
+	}
+
+	InsertLexeme(text, cur - text, CODE_TEXT, prog_index);
+	return cur; //Valid ident, just encountered a space
+}
+
+const char* scanner_c::CheckBinNum(const char* text, size_t prog_index)
+{
+	const char* cur = text;
+
+	if (*cur != '%')
+		return text; //Start with a '%'
+
+	cur++;
+	if (*cur != '0' && *cur != '1')
+		return text; //Needs at least one number - FIXME: should just '%' be allowed? 
+
+	for (cur++; *cur; cur++)
+	{
+		if (*cur != '0' && *cur != '1')
+			break; //Valid bin#
+	}
+
+	InsertLexeme(text, cur - text, CODE_NUM_BIN, prog_index);
+	return cur; //Valid bin#, just encountered a space
+}
+
+const char* scanner_c::CheckHexNum(const char* text, size_t prog_index)
+{
+	const char* cur = text;
+
+	if (*cur != '$')
+		return text; //Start with a '$'
+
+	cur++;
+	if (!isxdigit(*cur))
+		return text; //Needs at least one number - FIXME: should just '$' be allowed? 
+
+	for (cur++; *cur; cur++)
+	{
+		if (!isxdigit(*cur))
+			break; //Valid hex#
+	}
+
+	InsertLexeme(text, cur - text, CODE_NUM_HEX, prog_index);
+	return cur; //Valid hex#, just encountered a space
+}
+
+const char* scanner_c::CheckDecNum(const char* text, size_t prog_index)
+{
+	const char* cur = text;
+
+	if (!isdigit(*cur))
+		return text;
+
+	for (cur++; *cur; cur++)
+	{
+		if (!isdigit(*cur))
+			break; //Valid dec#
+	}
+
+	InsertLexeme(text, cur - text, CODE_NUM_DEC, prog_index);
+	return cur;
+}
+
+const char* scanner_c::CheckFxdNum(const char* text, size_t prog_index)
+{
+	const char* cur = text;
+
+	if (!isdigit(*cur))
+		return text; //Must start with a digit
+
+	for (cur++; *cur != '.'; cur++)
+	{
+		if (!*cur)
+			return text; // Never found a decimal point
+
+		if (!isdigit(*cur))
+			return text; //Non-digit found before the decimal point
+	}
+
+	cur++;
+	if (!isdigit(*cur))
+		return text; //Can't have '1.'
+
+	for (cur++; *cur; cur++)
+	{
+		if (!isdigit(*cur))
+			break; //Valid fxd#
+	}
+
+	InsertLexeme(text, cur - text, CODE_NUM_FXD, prog_index);
+	return cur; //Valid, just encountered a space
+}
+
+const char* scanner_c::CheckStr(const char* text, size_t prog_index)
+{
+	const char* cur = text;
+	kv_t kv;
+
+	if (*cur != '"')
+		return text;
+
+	for (cur++; *cur != '"'; cur++)
+		if (!*cur)
+			Error("Unclosed string");
+
+	cur++;
+	InsertLexeme(text, cur - text, CODE_STRING, prog_index);
+	return cur;
+}
+
+void scanner_c::Lex(const char* prog_, llist_c* _list, bool _debug)
+{
+	struct timeb start_time, end_time;
 	float time_seconds;
 	char text[TEXT_MAX_LEN] = {};
 
 	list = _list;
 	debug = _debug;
+	prog = prog_;
 
-	ftime(&start);
+	ftime(&start_time);
 	printf("\nScanning...\n");
 
-	for (int pi = 0; prog[pi]; pi++)
+	for (size_t pi = 0; prog[pi]; pi++)
 	{
-		int ti;
-		bool hasquote = 0;
+		pi = GetTextLump(text, pi);
 
-		for (; prog[pi] && isspace(prog[pi]); pi++) {}
-		for (ti = 0; prog[pi] && (!isspace(prog[pi]) || hasquote); pi++, ti++)
-		{
-			if (ti >= TEXT_MAX_LEN)
-				Error("Text constant too long. Is there an unclosed quote?");
-
-			if (prog[pi] == '"')
-			{//this is here so strings don't skip over whitespace
-				if (hasquote)	
-					hasquote = 0;
-				else
-					hasquote = 1;
-			}
-			else if (prog[pi] == '#')
-			{//skip everything in the comment
-				
-				for (pi++; prog[pi] != '#'; pi++)
-				{
-					if (!prog[pi])
-						Error("Unclosed comment");
-
-				}
-				break;
-			}
-
-
-			text[ti] = prog[pi];
-		}
-
-		if (!*text) //null string
-			continue;
+		if (prog[pi] == '\n')
+			newlines.push_back(pi);
 
 		//text is now devoid of whitespace
-		char lexeme[KEY_MAX_LEN] = {};
-		int li = 0;
-
-		for (int ti = 0; text[ti]; ti++)
+		//cyclically check and advance the text against all possible lexemes
+		//Todo: hex/bin fixed nums?
+		for (const char* cur = text, *start = text; *cur; start = cur)
 		{
-			kv_t ins;
+			bool made_progress = false;
 
-			//string
-			if (text[ti] == '"')
+			for (int i = 0; i < check_count; i++)
 			{
-				if (*lexeme)
-					AddLexeme(lexeme);
-				li = 0;
-
-				lexeme[li++] = '"';
-
-				for (ti++; text[ti] != '"'; ti++)
-				{
-					if (!text[ti])
-						Error("Unclosed double quote!"); //should be superfluous
-
-					lexeme[li++] = text[ti];
-				}
-
-				lexeme[li++] = '"'; //catch the closing quote
-				ti++; //don't run into this quote again
-
-				if (*lexeme)
-					AddLexeme(lexeme);
-				li = 0;
+				size_t idx = (pi + (cur - text)) - 1;
+				if (start != (cur = (this->*checks[i])(cur, idx)))
+					made_progress = true;
 			}
 
-			//check for reserved chars
-			for (int ri = 0; ri < sizeof(reservedchars) / sizeof(ckv_t); ri++)
-			{
-				if (text[ti] == reservedchars[ri].k)
-				{
-					if (li && reservedchars[ri].k == '.' && isdigit(lexeme[li - 1]) && isdigit(text[ti + 1]))
-					{//if lexeme has been started, the char is a period, and numbers surround the period - assume a fixed number
-						lexeme[li++] = text[ti];
-						for (ti++; text[ti]; ti++)
-						{
-							lexeme[li++] = text[ti];
-						}
-						goto copy;
-					}
-					else if (*lexeme)
-					{
-						AddLexeme(lexeme);
-						li = 0;
-					}
-
-					AddReservedChar(text[ti], reservedchars[ri].v);
-					goto skipcopy;
-				}
-
-			}
-
-			lexeme[li++] = text[ti];
-		skipcopy:;
-
+			if (!made_progress)
+				Error("Bad lexical block '%s'", cur);
 		}
-	copy:
-		if (*lexeme)
-			AddLexeme(lexeme);
 
 		memset(text, 0, TEXT_MAX_LEN);
 	}
 
-	ftime(&end);
-	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
+	ftime(&end_time);
+	time_seconds = (1000 * (end_time.time - start_time.time) + (end_time.millitm - start_time.millitm)) / 1000.0f;
 	printf("Scanning completed in %.4f second(s)\n", time_seconds);
 
 
@@ -229,6 +363,47 @@ void scanner_c::Lex(const char* prog, llist_c* _list, bool _debug)
 	if(debug)
 		list->Disp();
 }
+
+
+
+void scanner_c::InsertLexeme(const char* text, size_t len, CODES code, size_t character_index)
+{
+	size_t line_no = CalculateLineNo(character_index);
+	char key[KEY_MAX_LEN]; 
+
+	strncpy_s(key, text, len); //'text' points to a text lump, we need to give the list only this specific lexeme.
+	list->Insert(NULL, key, code, line_no);
+}
+
+size_t scanner_c::CalculateLineNo(size_t character_index)
+{
+	size_t size = newlines.size();
+
+	//atm, char_idx is the index of the LAST element of the lexeme.
+	//there SHOULD be sufficient info in newlines to pinpoint the line on which a lexeme lives, as well as its col no.
+	//strings / comments can be multi-line. Keep track of start AND stop line?
+	//How about defs? '\'?
+
+	for (size_t i = 0; i < size; i++)
+	{
+		//This is hit if the lexeme directly precedes a newline
+		//ex. ';'\n
+		if (character_index < newlines[i])
+			return i; 
+	}
+
+	//all other cases
+	//ex. ';'\t\n
+	//ex. 'db' 'b1' '=' '1' ';' (space) \n
+	return size; 
+}
+
+size_t scanner_c::CalculateColNo(const char* text, size_t line_no)
+{
+	return 0;
+}
+
+
 
 void scanner_c::AddReservedChar(char c, int code)
 {

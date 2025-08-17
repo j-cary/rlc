@@ -1,6 +1,6 @@
 #include "semantics.h"
 
-void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, igraph_c* _igraph, structlist_c* sl)
+void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, structlist_c* sl)
 {
 	struct timeb start, end;
 	float time_seconds;
@@ -13,7 +13,6 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 	symtbl = symbols;
 	symtbl_top = *symbols_top;
 	tdata = *_tdata;
-	igraph = _igraph;
 	slist = sl;
 	graph->Set("ROOT", BLOCK_ROOT);
 
@@ -26,7 +25,7 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 	CFG_Start(root);//Pass2
 	BuildIGraphs(graph);
 	printf("==\tDEBUG: Control flow graph\t==\n");
-	graph->Disp(true, igraph, tdata);
+	graph->Disp(true, &igraph, tdata);
 	
 	printf("==\tDEBUG: User structure dump\t==\n");
 	const struct_t* s;
@@ -373,6 +372,9 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 
 	length = EvaluateFirstDataSize(node, NULL, &k, &varname, NULL, &flags);
 
+	if (block == graph)
+		flags |= DF_GLOBAL;
+
 	/*
 	if (code == CODE_SIGNED)
 	{
@@ -413,6 +415,15 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	*/
 
 	MakeDataEntry(varname->Hash(), block, length, flags);
+
+	if (block == graph)
+	{
+		if (flags & (DF_STACK))
+			Warning("'Stack' storage specifier used on global variable");
+		flags |= DF_STATIC;
+		flags &= ~DF_STACK; //clear the stack flag
+	}
+
 	if (flags & (DF_ARRAY | DF_STRUCT))
 	{//arrays and structs can only have one decl per statement
 		block->AddStmt(node);
@@ -424,8 +435,7 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 		if (child->Hash()->V() == NT_SINGLE_DATA_DECL)
 			child = child->Get(0); //initialized - get the actual text
 
-		if (block == graph)
-			flags |= DF_GLOBAL;
+		
 
 		MakeDataEntry(child->Hash(), block, length, flags);
 	}
@@ -786,7 +796,7 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 
 void analyzer_c::BuildIGraphs(cfg_c* block)
 {
-	block->BuildIGraph(symtbl_top, igraph, &tdata);
+	block->BuildIGraph(symtbl_top, &igraph, &tdata);
 }
 
 #define DECL_NA(v)	v == CODE_NUM_DEC || v == CODE_NUM_HEX || v == CODE_NUM_BIN || \

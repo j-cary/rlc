@@ -25,7 +25,7 @@ void llist_c::RemoveHead()
 	delete remove;
 }
 
-void llist_c::Insert(node_c* prev, kv_t _kv)
+void llist_c::Insert(node_c* prev, kv_t _kv, size_t _line_no)
 {
 	node_c* ins;
 	ins = new node_c;
@@ -42,7 +42,7 @@ void llist_c::Insert(node_c* prev, kv_t _kv)
 	if (prev)
 	{
 		ins->next = prev->next;
-		prev->next = ins;	
+		prev->next = ins;
 	}
 	else //place it at the end
 	{
@@ -54,23 +54,24 @@ void llist_c::Insert(node_c* prev, kv_t _kv)
 		ins->next = NULL;
 	}
 
+	ins->line_no = _line_no;
 	ins->kv = _kv;
 	len++;
 }
 
-void llist_c::Insert(node_c* prev, const kv_c* _kv)
+void llist_c::Insert(node_c* prev, kv_t _kv)
 {
-	kv_t kv = {};
+	Insert(prev, _kv, 999999u);
+}
 
-	if (!_kv)
-		return;
+void llist_c::Insert(node_c* prev, const char* key, CODES value, size_t _line_no)
+{
+	kv_t kv;
 
-	kv.v = _kv->V();
+	strcpy_s(kv.k, key);
+	kv.v = value;
 
-	for (int i = 0; _kv->K()[i] && i < KEY_MAX_LEN - 1; i++)
-		kv.k[i] = _kv->K()[i];
-
-	Insert(prev, kv);
+	Insert(prev, kv, _line_no + 1); //Add one for a user-friendly line no.
 }
 
 void llist_c::Remove(node_c* prev)
@@ -126,7 +127,7 @@ void llist_c::Disp()
 
 	for (; curs; curs = curs->next)
 	{
-		printf("%c%s\t%c%i\t%c\n", 0xB2, curs->kv.K(), 0xB1, curs->kv.V(), 0xB0);
+		printf("%c%s\t%c%i\t%c%zu\n", 0xB2, curs->kv.K(), 0xB1, curs->kv.V(), 0xB0, curs->line_no);
 	}
 	printf("\n");
 }

@@ -5,7 +5,7 @@ tree_c* tree_c::_InsL(tree_c* t)
 	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (!t)
-		Error("Ran out of memory\n");
+		Error("Ran out of memory");
 
 	children.insert(it, t);
 	leaf = false;
@@ -16,7 +16,7 @@ tree_c* tree_c::_InsL(tree_c* t)
 tree_c* tree_c::_InsR(tree_c* t)
 {
 	if (!t)
-		Error("Ran out of memory\n");
+		Error("Ran out of memory");
 
 	children.push_back(t);
 	leaf = false;
@@ -74,7 +74,7 @@ void tree_c::Ins(kv_t _kv, int idx)
 	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (!t)
-		Error("Ran out of memory\n");
+		Error("Ran out of memory");
 
 	if (!sz || (idx > sz))
 		return;
@@ -91,7 +91,7 @@ tree_c* tree_c::Ins(const char* str, int code, int idx)
 	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (!t)
-		Error("Ran out of memory\n");
+		Error("Ran out of memory");
 
 	t->kv.Set(str, code);
 
@@ -227,7 +227,7 @@ void tree_c::R_Disp()
 	std::vector<tree_c*>::iterator it = children.begin();
 
 	if (g_tabs > (DEPTH_MAX * 2) - 2)
-		Error("Parser: Attempted to display too many recursive tree nodes!\n");
+		Error("Parser: Attempted to display too many recursive tree nodes!");
 
 	printf("%s%s\n", g_tabstr, kv.K());
 

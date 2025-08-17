@@ -22,6 +22,9 @@
     <Filter Include="Source Files\structs">
       <UniqueIdentifier>{6fed7354-fe80-47e5-8b9f-c1d9b4b7f3df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\generator\Instruction">
+      <UniqueIdentifier>{e2e5cca8-5daa-4e61-93cc-36891c6e48da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rlc.cpp">
@@ -83,6 +86,9 @@
     </ClCompile>
     <ClCompile Include="structs.cpp">
       <Filter>Source Files\structs</Filter>
+    </ClCompile>
+    <ClCompile Include="ld.cpp">
+      <Filter>Source Files\generator\Instruction</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

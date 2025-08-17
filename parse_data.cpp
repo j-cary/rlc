@@ -327,7 +327,7 @@ GF_DEF(DATA_DECL)
 			}
 		}
 		else
-			Error("Expected an identifier after data type\n");
+			Error("Expected an identifier after data type");
 
 		if (!GETCP(CODE_SEMICOLON))
 			Error("Expected a ';' after data decl");
@@ -366,7 +366,7 @@ GF_DEF(STRUCT_DECL)
 			}
 
 			if (!CL(IDENTIFIER, self)) //<identifier>
-				Error("Expected identifier in struct instance declaration\n");
+				Error("Expected identifier in struct instance declaration");
 
 			if (GETCP(CODE_LBRACE))
 			{//'['
@@ -374,10 +374,10 @@ GF_DEF(STRUCT_DECL)
 				self->InsR(&kv);
 
 				if (!CL(CONSTANT_EXPRESSION, self)) //<const_expression>
-					Error("Expected an expression in struct array\n");
+					Error("Expected an expression in struct array");
 
 				if (!GETCP(CODE_RBRACE)) //']'
-					Error("Unclosed brace in structure array declaration\n");
+					Error("Unclosed brace in structure array declaration");
 
 				list->Pop(&kv);
 				self->InsR(&kv);

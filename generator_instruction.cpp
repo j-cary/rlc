@@ -2,87 +2,54 @@
 
 void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 {
-#if OLD_REG_CODE
-	const int max_ops = 8;
-
-	int		i = 1;
+	constexpr int ops_max = 8; //tmp
+	tree_c* operand_list = node->Get(1);
 	int		op_cnt = 0;
-	tree_c* op_child = node->Get(1);
-	tree_c* child;
-	int		op_ofs[max_ops + 1];
-	tdatai_t		tdata[max_ops + 1];
-	regi_t			reg[max_ops + 1];
-	int blocki = 0;
+	tdata_t*op_data[ops_max + 1];
+	tree_c* op_list[ops_max + 1];
 
-	//count the operands
-	op_ofs[op_cnt] = 0;
-	tdata[op_cnt] = DataOfs(block, op_child->Get(0));
-	reg[op_cnt++] = RegAlloc(tdata[op_cnt]);
 
-	//FIXME: what about 1 or 0 ops? 
-
-	while (child = op_child->Get(i))
+	//Count the operands; get their indices and links to their data
+	//TESTME
+	for (int i  = 0; tree_c* op = operand_list->Get(i); i++)
 	{
-		int code = child->Hash()->V();
-		i++;
+		int code = op->Hash()->V();
 
 		if (code == CODE_COMMA)
-		{
-			if (op_cnt > max_ops)
-				Error("%s has too many ops", Str(node->Get(0)));
+			continue;
 
-			child = op_child->Get(i);
-			if (Code(child) == CODE_TEXT)
-			{
-				tdata[op_cnt] = DataOfs(block, child);
-				reg[op_cnt] = RegAlloc(tdata[op_cnt]);
-			}
-			else
-			{
-				reg[op_cnt] = REG_BAD;
-				tdata[op_cnt] = -1;
-			}
-			op_ofs[op_cnt] = i;
-
-			op_cnt++;
-		}
-		else if (code == NT_MEMORY_EXPR)
+		if (code == NT_MEMORY_EXPR)
 			Error("Mem exprs not supported\n");
+
+		if (op_cnt > ops_max)
+			Error("TMP: %s has too many ops", Str(node->Get(0)));
+
+		if (Code(op) == CODE_TEXT)
+			op_data[op_cnt] = Data(block, op);
+		else
+			op_data[op_cnt] = NULL;
+
+		op_list[op_cnt++] = op;
 	}
 
-	//determine which data are used per instruction
-	//pass (in-order) list of colors corresponding to each data
 
 	switch (node->Get(0)->Hash()->V())
 	{
-	case CODE_ADD:
-	{
-		PrintSourceLine(node);
-		//CG_Add(op_child, block, op_cnt, op_ofs, color);
-		CG_Add(op_child, op_cnt, op_ofs, tdata, reg);
-		break;
-	}
 	case CODE_LD:
-		PrintSourceLine(node);
-		CG_Load(op_child, op_cnt, op_ofs, tdata, reg);
+		CG_Load(op_data, op_list, op_cnt);
 		break;
-
-	case CODE_CALL:
-		PrintSourceLine(node);
-		CG_Call(op_child, op_cnt, op_ofs, tdata, reg);
-		break;
-
-
+	case CODE_ADD: break;
+	case CODE_RET: break;
 	default:
-		Error("Unsupported instruction\n"); 
+		Error("Unsupported instruction %s", node->Get(0)->Hash()->K());
 	}
-#endif
+
 }
 
+#if OLD_REG_CODE
 //TODO: mark the a reg - loading into multiple sregs in succession
 void generator_c::CG_Load(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg)
 {
-#if OLD_REG_CODE
 	bool	sreg = false;
 	bool	word = false;
 	bool	byte = false;
@@ -276,8 +243,8 @@ void generator_c::CG_Load(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, re
 		}
 	}
 #endif
-#endif
 }
+#endif
 
 
 void generator_c::CG_Add(tree_c* node, int op_cnt, int* ofs, tdatai_t* data, regi_t* reg)

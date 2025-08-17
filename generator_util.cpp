@@ -88,6 +88,11 @@ char* generator_c::RegToS(regi_t reg)
 		Error("Bad reg");
 
 	return str[strcnt++];
+
+#else
+
+
+
 #endif
 	return NULL;
 }
@@ -173,6 +178,12 @@ bool generator_c::IsMarked(regi_t reg, tdatai_t data)
 	}
 #endif
 	return false;
+}
+
+//Returns NULL if the var is unused
+tdata_t* generator_c::Data(cfg_c* block, tree_c* n)
+{
+	return &tdata[DataOfs(block, n)];
 }
 
 tdatai_t generator_c::DataOfs(cfg_c* block, tree_c* node)
@@ -327,8 +338,12 @@ int Constant_Expression(tree_c* head)
 		Error("Postfix operators are not allowed in constant expressions");
 		break;
 	case CODE_NUM_BIN:
+		ret = strtol(head->Hash()->K() + 1, NULL, 2);
+		break;
 	case CODE_NUM_HEX:
-		Error("Binary and hex numbers aren't supported in const. exprs. yet");
+		ret = strtol(head->Hash()->K() + 1, NULL, 16);
+
+		//Error("Binary and hex numbers aren't supported in const. exprs. yet");
 		break;
 	case CODE_TEXT:
 		Error("Text value found in const. expr");
@@ -351,23 +366,4 @@ int generator_c::GetForLabel(char* buf)
 	sprintf_s(buf, len, base, count);
 
 	return count++;
-}
-
-bool generator_c::IsSReg(regi_t r)
-{
-#if OLD_REG_CODE
-	bool eightbit = r >= REG_R0 && r <= REG_R255;
-	bool sixteenbit = r >= REG_WR0 && r <= REG_WR127;
-
-	return eightbit || sixteenbit;
-#endif
-	return false;
-}
-
-bool generator_c::IsWord(regi_t r)
-{
-	return false;
-#if OLD_REG_CODE
-	return r >= REG_BC;
-#endif
 }

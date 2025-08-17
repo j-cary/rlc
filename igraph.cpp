@@ -9,7 +9,7 @@
 bool inode_c::AddLink(int l)
 {
 	if (num_links >= (LINKS_MAX))
-		return false; //too bad!
+		Error("Too many variable interferences!"); //return false; //too bad!
 
 	links[num_links] = l;
 	num_links++;
@@ -39,6 +39,27 @@ void igraph_c::Disp()
 //
 //REGISTER ALLOCATION
 //
+
+//ABSTRACT:
+// Allocate space for stack, auto, and static vars.
+// Output: 
+//	Tdata: sorted array of data
+//	Igraph: structure parallel to tdata. Contains interference information between tdata indicies. FIXME: move si over to tdata
+// Note: ALL variables are allocated at once. 
+// SYSTEM:
+//	Count the # of cfg links there are. Including ROOT!
+//	Generate an in-order list of blocks e.x. [ENTRY] 1 [IF] 2 [ELSE] 3 [REG] 4
+//	Use the list to determine variable lifetime
+//	Sort Tdata. First globals/static, then loop ctrl, then by usage
+//		Note: Static vars MUST go first! More on this later.
+//	Determine interference between vars. Each var has an antry in the igraph listing all its interfer-ers
+//		Note: Static vars have NO explicit interfer-ers. All vars are implicitly understood to interfere with them.
+//	Color in the graph - modified Dijkstra's algorithm:
+//	Notes about static var allocation: 
+//		Static vars are allocated first and their space in the local array is NEVER de-allocated
+//		Static vars should be allocated first so that autos have no chance of overriding their space
+
+
 
 int cfg_c::TrimVars(cfg_c* parent, int count)
 {
@@ -89,7 +110,7 @@ int cfg_c::TrimVars(cfg_c* parent, int count)
 //	Pre-order traversal with a static int to keep track of block position in code 
 //		
 //COLORING:
-//	make available[] static. 
+//	make stack_available[] static. 
 //	recursively allocate colors - this will bias earlier vars. Could be remediated by optimization
 //no more flag array
 //fix up graph functions like color and stuff since blocks no longer keep copies of global vars
@@ -170,6 +191,7 @@ bool cfg_c::R_SwapTDataIndices(tdatai_t old, tdatai_t _new)
 	return false;
 }
 
+//Priority list: static vars, loop control vars, usage count
 void cfg_c::SortTDataList(tdata_t** tdata, int count)
 {
 	//for loop control vars always come first to hopefully grab b. Everything else is sorted by frequency
@@ -179,7 +201,7 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 	{
 		tdata_t x = (*tdata)[i];
 		int j = i;
-
+		/*
 		if (x.flags & DF_FORCTRL)
 		{
 			for (; j > 0; j--)
@@ -187,6 +209,30 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 				tdata_t* y, * z;
 
 				if (((*tdata)[j - 1].flags & DF_FORCTRL))
+					break;
+
+				//non-control var. Shift it to the right
+				y = &(*tdata)[j];
+				z = &(*tdata)[j - 1];
+				*y = *z;
+
+				if (j == i)
+					R_SwapTDataIndices(j - 1, -1); //this can't just be set to j since the source is already j
+				else
+					R_SwapTDataIndices(j - 1, j);
+			}
+			(*tdata)[j] = x; //this will be to the right of all previous control vars. Order shouldn't really matter between these
+			R_SwapTDataIndices(i, j);
+			R_SwapTDataIndices(-1, i);
+		}
+		*/
+		if (x.flags & DF_STATIC)
+		{
+			for (; j > 0; j--)
+			{
+				tdata_t* y, * z;
+
+				if (((*tdata)[j - 1].flags & DF_STATIC))
 					break;
 
 				//non-control var. Shift it to the right
@@ -225,141 +271,216 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 	}
 }
 
-#if OLD_REG_CODE
-int	cfg_c::FirstValidColor(unsigned flags)
+int	cfg_c::StackIndex(tdata_t* var, bool available[], const int size)
 {
-	int first = REG_B;
+	int index;
 
-	//important: registers are incremented from their initial color value
-
-	if (flags & DF_GLOBAL)
-	{//don't use hregs for globals
-		if (flags & DF_BYTE)
-			first = REG_L;
-		else
-			first = REG_HL;
-	}
+	if (var->flags & DF_OTHER_MASK) //structs, arrays, etc. cannot be held in regs
+		index = SI_LAST_GENERAL + 1;
 	else
+		index = REG::B;
+
+	for (; index < size; index++)
 	{
-		if (flags & DF_BYTE)
-			first = REG_B;
-		else
-			first = REG_BC; //save BC
+		if (available[index])
+		{
+			if (var->flags & DF_OTHER_MASK)
+			{//TESTME: structs/arrays don't have their lifecycles determined yet
+				for (int offset = 1; offset < var->size; offset++)
+				{
+					if (!available[index + offset])
+						goto invalidstoragelocation; //try the next stack block
+				}
+				return index;
+			}
+			else if (var->flags & (DF_WORD | DF_PTR))
+			{
+				if ((index <= SI_LAST_GENERAL) && !(index % 2)) //can't have a word in 'e' or 'c' - 
+					continue;									//('c', 'e' and 'l' are all even)
+
+				if (((index + 1) < size) && available[index + 1])
+					return index;
+				index++;
+			}
+			else
+			{//Byte - no need to check bytes beside this one
+				return index;
+			}
+		}
+	invalidstoragelocation:;
 	}
 
-	//first = 0;
-	return first;
+	Error("More than 127 bytes of stack space used!");
+	return 0;
 }
 
-int	cfg_c::Iteratend(unsigned flags)
+//Autos can be stored in registers or in '.db's. They can overlap in memory. Statics cannot
+int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size, bool local_available[], const int local_size, bool* local)
 {
-	int iteratend;
-	iteratend = 1 + !(flags & DF_BYTE);
-	return iteratend;
+	*local = true;
+
+	if (!(var->flags & DF_STATIC) && (var->flags & (DF_BYTE | DF_WORD | DF_PTR)))
+	{//auto byte/word/ptr
+
+		if (var->flags & DF_BYTE)
+		{
+			for (int index = SI_LOCAL_MIN; index <= SI_LAST_GENERAL; index++)
+				if (stack_available[index])
+				{
+					*local = false;
+					return index; //Found a register 
+				}
+		}
+		else
+		{
+			for (int index = SI_LOCAL_MIN; index <= SI_LAST_GENERAL; index += 2)
+				if (stack_available[index] && stack_available[index + 1])
+				{
+					*local = false;
+					return index; //Found a register 
+				}
+		}
+	}
+
+	for (int index = 0; index < local_size; index++)
+	{
+		if (local_available[index])
+		{
+			if (var->flags & DF_OTHER_MASK)
+			{//TESTME: structs/arrays don't have their lifecycles determined yet
+				for (int offset = 1; offset < var->size; offset++)
+				{
+					if (!local_available[index + offset])
+						goto invalidstoragelocation; //try the next stack block
+				}
+				return index;
+			}
+			else if (var->flags & (DF_WORD | DF_PTR))
+			{
+				if (((index + 1) < local_size) && local_available[index + 1])
+					return index;
+				index++;
+			}
+			else
+			{//Byte - no need to check bytes beside this one
+				return index;
+			}
+		}
+	invalidstoragelocation:;
+	}
+
+	Error("More than 65535 bytes of data space used!");
+	return 0;
 }
-#endif
 
 void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 {
-	const int max_stack = SI_LAST_GENERAL + SI_STACK_COUNT;
-	bool available[max_stack];
+	constexpr int max_stack = SI_LAST_GENERAL + SI_STACK_COUNT;
+	bool stack_available[max_stack]; //Reg vars, both stack & auto, go in here
+	static bool local_available[SI_LOCAL_COUNT];
 	int local_count = SI_LOCAL_MIN;
 
-	memset(available, true, sizeof(bool) * max_stack);
+	memset(stack_available, true, sizeof(stack_available));
+	memset(local_available, true, sizeof(local_available));
 
 	for (int symbol = 0; symbol < symbol_count; symbol++)
 	{
 		inode_c* n = (*graph)[symbol];
 		tdata_t* x = &(tdata)[symbol];
 		int link_cnt = n->LinkCnt();
+		int index;
 
 		if (x->flags & DF_LABEL)
 		{//pseudo data type
-			n->si.data = 0; //n->color = -1;
+			x->si.data = 0;//n->si.data = 0;
 			continue;
-		}
-		else if (x->flags & DF_STATIC)
-		{//static - always live so this function is N/A
-			//FIXME: cut these out of the below function as well
-			n->si.local_flag = 1;
-			n->si.local = local_count;
-			local_count += x->size; 
-			continue;
-		}
+		} 
 
 		//flag colors used by adjacent vertices as unavailable
+		//Note: static vars only have to worry about other static vars; they will never enter this loop
 		for (int j = 0; j < link_cnt; j++)
 		{
 			inode_c* l = (*graph)[n->Link(j)];
-			tdata_t* t = &(tdata)[j];
+			tdata_t* t = &(tdata)[n->Link(j)];
 
-			if (l->si.reg_flag)
+			if (t->si.reg_flag)
 			{
 				for(int i = 0; i < t->size; i++) //mark successive bytes as marked, too
-					available[l->si.reg + i] = false;
+					stack_available[t->si.reg + i] = false;
 			}
-			else if (l->si.stack_flag)
+			else if (t->si.stack_flag)
 			{
 				for (int i = 0; i < t->size; i++)
-					available[l->si.stack + i] = false;
+					stack_available[t->si.stack + i] = false;
 			}
-		}
-
-		//Find first available reg/stack index
-		int index;
-		if (x->flags & DF_OTHER_MASK) //structs, arrays, etc. cannot be held in regs
-			index = SI_LAST_GENERAL + 1;
-		else
-			index = REG::B;
-
-		for (; index < max_stack; index++)
-		{
-			if (available[index])
+			else if (t->si.local_flag)
 			{
-				if (x->flags & DF_OTHER_MASK)
-				{//TESTME: structs/arrays don't have their lifecycles determined yet
-					for (int offset = 1; offset < x->size; offset++)
-					{
-						if (!available[index + offset])
-							goto invalidstoragelocation; //try the next stack block
-					}
-					goto foundstoragelocation;
-				}
-				else if (x->flags & (DF_WORD | DF_PTR))
-				{
-					if ((index <= SI_LAST_GENERAL) && !(index % 2)) //can't have a word in 'e' or 'c' - 
-						continue; //('c', 'e' and 'l' are all even)
-
-					if (((index + 1) < max_stack) && available[index + 1])
-						goto foundstoragelocation;
-					index++;
-				}
-				else
-				{//Byte - no need to check bytes beside this one
-					goto foundstoragelocation;
-				}
+				for (int i = 0; i < t->size; i++)
+					local_available[t->si.local + i] = false;
 			}
-		invalidstoragelocation:;
 		}
 
-		Error("More than 127 bytes of stack space used!");
+		if (x->flags & DF_STACK)
+		{
+			index = StackIndex(x, stack_available, max_stack);
 
-	foundstoragelocation:
-
-		if (index > SI_LAST_GENERAL)
-		{//stack
-			n->si.stack_flag = 1;
-			n->si.stack = index;
+			if (index > SI_LAST_GENERAL)
+			{//stack
+				x->si.stack_flag = 1;
+				x->si.stack = index;
+			}
+			else
+			{//register
+				x->si.reg_flag = 1;
+				x->si.reg = index;
+			}
 		}
 		else
-		{//register
-			n->si.reg_flag = 1;
-			n->si.reg = index;
+		{
+			bool local;
+			index = AutoIndex(x, stack_available, max_stack, local_available, SI_LOCAL_COUNT, &local);
+
+			if (local)
+			{//saved in a '.db'
+				x->si.local_flag = 1;
+				x->si.local = index;
+
+				if (x->flags & DF_STATIC) //permanently make space for these. These indices are NEVER cleared in the cleanup step.
+					for (int offset = 0; offset < x->size; offset++)
+						local_available[index + offset] = false;
+			}
+			else
+			{//saved in a reg
+				x->si.reg_flag = 1;
+				x->si.reg = index;
+			}
 		}
 
-		//clean up available vertices
-		//Technically only need to set the indices that have been reset
-		memset(available, true, sizeof(available));
+		
+		//clean up vertices
+		for (int j = 0; j < link_cnt; j++)
+		{
+			inode_c* l = (*graph)[n->Link(j)];
+			tdata_t* t = &(tdata)[n->Link(j)];
+
+			if (t->si.reg_flag)
+			{
+				for (int i = 0; i < t->size; i++) //mark successive bytes as marked, too
+					stack_available[t->si.reg + i] = true;
+			}
+			else if (t->si.stack_flag)
+			{
+				for (int i = 0; i < t->size; i++)
+					stack_available[t->si.stack + i] = true;
+			}
+			else if (t->si.local_flag)
+			{
+				if(!(t->flags & DF_STATIC))
+					for (int i = 0; i < t->size; i++) //Only clear out auto's. Static vars, once allocated, do not get cleared 
+						local_available[t->si.local + i] = true;
+			}
+		}
+
 	}
 }
 
@@ -369,9 +490,6 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 {
 	int		count = (int)data.size();
 	cfg_c** offsets;
-#if OLD_REG_CODE
-	bool* available;
-#endif
 	int		link_cnt;
 
 	R_TotalLinks(); //set total_links
@@ -398,6 +516,9 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 		if (t1->flags & DF_LABEL)
 			continue;
 
+		if (t1->flags & DF_STATIC)
+			continue; //Static vars implicitly interfere with all other vars
+
 		for (int j = 0; j < symbol_cnt; j++)
 		{
 			tdata_t* t2 = &(*tdata)[j];
@@ -411,6 +532,9 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 
 			if (t2->flags & DF_LABEL)
 				continue;
+
+			if (t2->flags & DF_STATIC)
+				continue; //Static vars implicitly interfere with all other vars
 
 			//TESTME!!!
 			if (sb2 < eb1 && eb2 > sb1)
@@ -432,74 +556,8 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 			}
 		}
 	}
-#if OLD_REG_CODE
-	//color in the graph
-	available = new bool[REGS_TOTAL];
-	memset(available, true, REGS_TOTAL);
 
-	for (int i = 0; i < symbol_cnt; i++)
-	{
-		inode_c* n = (*igraph)[i];
-		tdata_t* x = &(*tdata)[i];
-		link_cnt = n->LinkCnt();
-
-		if (x->flags & DF_LABEL)
-		{//pseudo data type
-			n->color = -1;
-			continue;
-		}
-
-		//flag colors used by adjacent vertices as unavailable
-		for (int j = 0; j < link_cnt; j++)
-		{
-			inode_c* l = (*igraph)[n->Link(j)];
-			if (l->color != -1)
-				available[l->color] = false;
-		}
-
-
-		//find first available color - assign it
-		int iteratend = Iteratend(x->flags); //everything except for bytes are inc'd by 2. FIXME - byte array
-		for (int k = FirstValidColor(x->flags); k < REGS_TOTAL; k += iteratend)
-		{
-			//check for interference with aliased registers
-			if (x->flags & DF_BYTE)
-			{
-				int basereg = k;
-
-				if (!(k % 2))
-					basereg--;
-
-				if (basereg > -1 && !available[basereg + REG_IXL])
-					continue; //check if tehe 16-bit reg is used
-			}
-			else
-			{
-				//if (k == REG_HL)
-				//	continue; //'hl' is reserved
-
-				if (!available[k - REG_IXL] || !available[k - REG_IXL + 1])
-					continue; //check if the hi or low nibble is already used
-			}
-
-			if (available[k])
-			{
-				n->color = k;
-				break; //got one
-			}
-		}
-
-		//clean up available vertices
-		for (int j = 0; j < link_cnt; j++)
-		{
-			inode_c* l = (*igraph)[n->Link(j)];
-			if (l->color != -1)
-				available[l->color] = true;
-		}
-	}
-
-	delete[] available;
-#endif
 	ColorGraph(symbol_cnt, igraph, *tdata);
 
+	delete[] offsets;
 }
