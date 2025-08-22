@@ -4,7 +4,7 @@
 //UTILITY FUNCTIONS
 //
 
-void generator_c::PrintSourceLine(tree_c* node)
+void asm_c::PrintSourceLine(tree_c* node)
 {
 	tree_c* child;
 
@@ -15,13 +15,13 @@ void generator_c::PrintSourceLine(tree_c* node)
 	fprintf(f, "\n");
 }
 
-void generator_c::R_PrintSourceLine(tree_c* node)
+void asm_c::R_PrintSourceLine(tree_c* node)
 {
 	tree_c* child;
 
 	if (!node->Get(0))
 	{//leaf
-		fprintf(f, "%s ", Str(node));
+		fprintf(f, "%s ", node->Hash()->K());
 	}
 
 
@@ -230,7 +230,7 @@ const char* generator_c::Str(tree_c* node)
 
 
 
-int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type)
+static int Constant_Expression_Helper(const tree_c* head, int num_kids, int offset, int type)
 {
 	int	r1, r2, ret = 0;
 	int	op_code;
@@ -308,7 +308,7 @@ int Constant_Expression_Helper(tree_c* head, int num_kids, int offset, int type)
 	return ret;
 }
 
-int Constant_Expression(tree_c* head)
+int Constant_Expression(const tree_c* head)
 {
 	int		kids;
 	int		ret = 0;

@@ -135,7 +135,7 @@ tree_c* tree_c::GetR()
 	return children.back();
 }
 
-tree_c* tree_c::Get(int idx)
+tree_c* tree_c::Get(int idx) const
 {
 	int sz = (int)children.size();
 

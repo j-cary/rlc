@@ -1,15 +1,10 @@
 #include "generator.h"
 
-const char* asmfilename = "C:/ti83/rl/test.z80";
-const unsigned short outflags = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-
 void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top)
 {
 	cfg_c* block;
 
 	printf("Generating code...\n");
-
-	InitFile(asmfilename);
 
 	//symtbl = symbols;
 	tdata = _tdata;
@@ -27,15 +22,9 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsign
 
 	//allocate global vars
 	CG_Global();
+	assembler.Print();
 
 	*symbol_top = symtbl_top;
-
-	SetOutFlags(outflags);
-	printf("\n");
-	PrintFile();
-	ResetOutFlags();
-	printf("\n");
-	fclose(f);
 }
 
 //
@@ -51,7 +40,7 @@ void generator_c::CG_Global()
 		if (Code(stmt) != NT_DATA_DECL && Code(stmt) != NT_STRUCT_DECL)
 			Error("Unhandled global block '%s'", Str(stmt));
 
-		PrintSourceLine(stmt);
+		assembler.PrintSourceLine(stmt);
 
 		if (Code(stmt) == NT_DATA_DECL)
 			CG_DataDeclaration(stmt, graph);
@@ -59,54 +48,53 @@ void generator_c::CG_Global()
 			CG_StructDeclaration(stmt, graph);
 	}
 
-	//dump the dataqueue - no need to zero this
-	fprintf(f, "%s", dataqueue);
+	assembler.UnQueueData();
 }
 
 void generator_c::CG_Stack()
 {
-	if (!stack_allocated)
+	int alloced = assembler.StackAlloc();
+	if (alloced == 0)
 		return;
 
 	//Allocate space on the stack
-	ASM_Push(REG::IXH);
-	ASM_CLoad(REG::IXH, 0, 2);
-	ASM_RAdd(REG::IXH, REG::SP, 2);
+	assembler.Push(REG::IXH);
+	assembler.CLoad(REG::IXH, 0, 2);
+	assembler.RAdd(REG::IXH, REG::SP, 2);
 
-	if (stack_allocated > 4)
+	if (alloced > 4)
 	{
 		//NOTE: can't just do an 8-bit load; the stack grows downwards so hl needs sign extension regardless
 		//27 \ 4
-		ASM_CLoad(REG::H, -stack_allocated, 2); //10 cycles \ 3 bytes
-		ASM_RAdd(REG::H, REG::SP, 2); // 11 \ 1
-		ASM_RLoad(REG::SP, REG::H, 2); // 6 \ 1
+		assembler.CLoad(REG::H, -alloced, 2); //10 cycles \ 3 bytes
+		assembler.RAdd(REG::H, REG::SP, 2); // 11 \ 1
+		assembler.RLoad(REG::SP, REG::H, 2); // 6 \ 1
 	}
 	else
 	{
 		//24 \ 4 for 4
-		for (int i = 0; i < stack_allocated; i++)
-			ASM_Dec(REG::SP, 2); //6 \ 1
+		for (int i = 0; i < alloced; i++)
+			assembler.Dec(REG::SP, 2); //6 \ 1
 	}
 
-	//Initialize the variables
-	fprintf(f, "%s", stack_queue);
+	assembler.StackFrame();
 }
 
 void generator_c::CG_UnStack()
 {
-	if (!stack_allocated)
+	if (assembler.StackAlloc() == 0)
 		return;
 
-	ASM_RLoad(REG::SP, REG::IXH, 2);
-	ASM_Pop(REG::IXH);
+	assembler.RLoad(REG::SP, REG::IXH, 2);
+	assembler.Pop(REG::IXH);
 }
 
 void generator_c::CG_FunctionBlock(cfg_c* block)
 {
-	ASM_Label(block->id);
+	assembler.Label(block->id);
+	assembler.ResetStack();
 	subr_name = block->id;
 	data_decls_allowed = true;
-	stack_allocated = 0;
 
 	for (int i = 0; cfg_c* b = block->GetLink(i); i++)
 	{
@@ -125,11 +113,7 @@ void generator_c::CG_FunctionBlock(cfg_c* block)
 	}
 
 
-	if (*dataqueue)
-	{
-		fprintf(f, "%s", dataqueue);
-		memset(dataqueue, 0, DATALUMP_SIZE);
-	}
+	assembler.UnQueueData();
 	subr_name = NULL;
 }
 
@@ -140,15 +124,16 @@ void generator_c::CG_RegBlock(cfg_c* block)
 
 	for (int i = 0; stmt = block->GetStmt(i); i++)
 	{
-		PrintSourceLine(stmt);
 		switch (Code(stmt))
 		{
 		case NT_DATA_DECL: 
+			assembler.PrintSourceLine(stmt);
 			if (!data_decls_allowed)
 				Error("Data declarations are only allowed at the start of blocks");
 			CG_DataDeclaration(stmt, block); 
 			break;
 		case NT_STRUCT_DECL: 
+			assembler.PrintSourceLine(stmt);
 			if (!data_decls_allowed)
 				Error("Data declarations are only allowed at the start of blocks");
 			CG_StructDeclaration(stmt, block); 
@@ -157,10 +142,12 @@ void generator_c::CG_RegBlock(cfg_c* block)
 			if (data_decls_allowed)
 				CG_Stack(); //first instruction; setup the stack before execution proper starts
 
+			assembler.PrintSourceLine(stmt);
 			CG_Instruction(stmt, block);	
 			data_decls_allowed = false;
 			break;
 		case NT_FOR_CLAUSE: 
+			assembler.PrintSourceLine(stmt);
 			data_decls_allowed = true;
 			CG_ForLoop(stmt, block, block->GetLink(childblock)); 
 			data_decls_allowed = false;
@@ -177,7 +164,7 @@ void generator_c::CG_ExitBlock(cfg_c* block)
 {
 	if (!block->GetStmt(0))
 	{//Final exit statement
-		ASM_Ret("");
+		assembler.Ret("");
 		return;
 	}
 }
@@ -229,14 +216,13 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 		if (t->si.local_flag)
 		{//requires program space
 			if (t->size == 1) //FIXME: structs and arrays
-				ASM_Data(".db", child, res);
+				assembler.Data(".db", child, res);
 			else
-				ASM_Data(".dw", child, res);
+				assembler.Data(".dw", child, res);
 		}
 		else if (t->si.stack_flag)
 		{
-			ASM_StackInit(res, stack_allocated, t->size);
-			stack_allocated += t->size;
+			assembler.StackInit(res, t->size);
 		}
 
 		//Anything allocated on the stack or in registers are initialized later, if required

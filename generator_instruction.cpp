@@ -5,12 +5,11 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 	constexpr int ops_max = 8; //tmp
 	tree_c* operand_list = node->Get(1);
 	int		op_cnt = 0;
-	tdata_t*op_data[ops_max + 1];
-	tree_c* op_list[ops_max + 1];
+	const tdata_t*op_data[ops_max + 1];
+	const tree_c* op_list[ops_max + 1];
 
 
 	//Count the operands; get their indices and links to their data
-	//TESTME
 	for (int i  = 0; tree_c* op = operand_list->Get(i); i++)
 	{
 		int code = op->Hash()->V();

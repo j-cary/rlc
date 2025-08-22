@@ -206,7 +206,7 @@ typedef struct tdata_s
 		}
 		else if (si.stack_flag)
 		{
-			signed char actual = si.stack - SI_LAST_GENERAL;
+			signed char actual = si.stack;
 
 			snprintf(str, maxstrlen, "(%i)", actual);
 
@@ -252,12 +252,13 @@ private:
 	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
 	void SortTDataList(tdata_t** tdata, int count);
 	void FixupStaticInterference(tdata_t** tdata);
-	//int	 FirstValidColor(unsigned flags);
-	//int	 Iteratend(unsigned flags);
+
 	int	StackIndex(tdata_t* var, bool available[], const int size);
 	int AutoIndex(tdata_t* var, bool stack_available[], const int stack_size, bool local_available[], const int local_size, bool* local);
-	unsigned short DataSize() { return 1U; } //FIXME:
 	void ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata);
+
+	/* Autos and stacks use offsets in colorgraph; remove them here*/
+	void FixupStackIndices(int symbol_cnt, tdata_t* tdata);
 
 	int R_CheckGlobalRedef();
 	int R_CheckRedef();
@@ -346,4 +347,4 @@ public:
 };
 
 //generator_util
-int Constant_Expression(tree_c* head);
+int Constant_Expression(const tree_c* head);

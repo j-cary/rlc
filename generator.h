@@ -4,8 +4,6 @@
 
 #define DATALUMP_SIZE		1024
 
-
-
 typedef struct 
 {
 	tdatai_t held; //hold the index of the data that this is holding per block
@@ -19,22 +17,106 @@ typedef struct
 #define INSTR_GEN_FUNC_ARGS	const tdata_t* data[], const tree_c* nodes[], int cnt
 #define INSTR_GEN_FUNC(fn)	void fn					(INSTR_GEN_FUNC_ARGS)
 typedef						void(*instr_gen_func_t)	(INSTR_GEN_FUNC_ARGS);
-typedef instr_gen_func_t instr_gen_table_t[4][4];
+typedef instr_gen_func_t instr_gen_table_t[5][4];
 
+class generator_c;
+
+/* Creates the assembler file */
+class asm_c
+{
+private:
+	FILE* f = NULL;
+	const generator_c* gen;
+
+	char	dataqueue[DATALUMP_SIZE];
+	char	stack_queue[DATALUMP_SIZE];
+	int		stack_bytes_alloced = 0;
+
+	void R_PrintSourceLine(tree_c*);
+public:
+	void StackFrame();
+	void UnStackFrame();
+	inline int StackAlloc() const { return stack_bytes_alloced; }
+	inline void ResetStack() { stack_bytes_alloced = 0; }
+
+	void UnQueueData();
+
+	void PrintSourceLine(tree_c* line);
+
+
+	void Ret(const char* parm);
+	void Label(const char* name);
+	void Data(const char* type, tree_c* var, const char* init);
+	void Data(const char* type, tree_c* var, int init);
+
+	void DLoad(regi_t reg, tdatai_t data); //Load Data from this block into a reg
+	void ALoad(regi_t reg, tdatai_t data); //load an addr
+	void Store(int ofs, REG::REG reg); //auto <- reg
+
+	void CAdd(regi_t dst_reg, int value);
+	void Djnz(const char* label);
+
+
+	//
+	//loads
+	//
+
+	void RLoad(REG::REG dst, REG::REG src, int width);
+	//Just for ix/iy loads/stores
+	void RLoad(REG::REG dst, REG::REG src, int width, int ofs);
+	void CLoad(REG::REG reg, int value, int width);
+
+	//
+	//adds
+	//
+	void RAdd(REG::REG dst_reg, REG::REG src_reg, int width);
+
+	//
+	//inc/dec
+	//
+
+	void Dec(REG::REG reg, int width);
+
+	//
+	//bitwise
+	//
+
+	//Xor A against an reg8 or (hl)
+	void Xor(REG::REG reg, bool is_hl=false);
+	//Xor A against an imm8
+	void Xor(int val);
+	//Xor A against an index reg
+	void Xor(REG::REG idx_reg, int ofs);
+
+	//
+	//stack
+	//
+
+	void StackInit(int value, int width);
+	void Push(REG::REG reg);
+	void Pop(REG::REG reg);
+
+	void Print();
+
+	asm_c(const char* filename, const generator_c* gen);
+	~asm_c()
+	{
+		if (f) fclose(f);
+	}
+};
+
+/* Dispatches the reduced parse tree to instruction modules */
 class generator_c
 {
+	asm_c assembler;
 	tree_c*		root;
 	cfg_c*		graph;
 	tdata_t*	tdata;
 
 	bool	data_decls_allowed;
-	int		stack_allocated; //FIXME:this is going to have to be a stack; push per block
-	char	stack_queue[DATALUMP_SIZE] = {};
 	const char* subr_name = NULL;
 
 	unsigned	symtbl_top; //rename - sizeof tdata
-	char		dataqueue[DATALUMP_SIZE] = {}; //per-function text lump containing data declarations
-	FILE*		f;
 
 	//
 	//code generation functions
@@ -77,9 +159,6 @@ class generator_c
 	data_t* SymbolEntry(tree_c* symb);
 	void UpdateSymbol(tree_c* symb, int set);
 
-	void PrintSourceLine(tree_c* node);
-	void R_PrintSourceLine(tree_c* node);
-
 
 	char* RegToS(regi_t reg); //No more than 32 strings can be requested from this function at once!
 	regi_t RegAlloc(tdatai_t index);
@@ -101,67 +180,9 @@ class generator_c
 
 	int GetForLabel(char* buf); //returns label id
 
-	//
-	//assembler file functions
-	//
-
-	void InitFile(const char* filename);
-	void PrintFile(); //only call this after generation
-	
-	void ASM_Ret(const char* parm);
-	void ASM_Label(const char* name);
-	void ASM_Data(const char* type, tree_c* var, const char* init);
-	void ASM_Data(const char* type, tree_c* var, int init);
-
-	void ASM_DLoad(regi_t reg, tdatai_t data); //Load Data from this block into a reg
-#if OLD_REG_CODE
-	void ASM_RLoad(regi_t dst_reg, regi_t src_reg); //Load from reg to reg
-	void ASM_CLoad(regi_t reg, int value); //Load a const
-#endif
-	void ASM_ALoad(regi_t reg, tdatai_t data); //load an addr
-	void ASM_Store(tdatai_t data, regi_t reg); //var <- reg
-
-#if OLD_REG_CODE
-	void ASM_RAdd(regi_t dst_reg, regi_t src_reg);
-#endif
-	void ASM_CAdd(regi_t dst_reg, int value);
-	void ASM_Djnz(const char* label);
-
-#if OLD_REG_CODE
-	void ASM_Push(regi_t reg);
-	void ASM_Pop(regi_t reg);
-#else
-
-	//
-	//loads
-	//
-
-	void ASM_RLoad(REG::REG dst, REG::REG src, int width);
-	//Just for ix/iy loads/stores
-	void ASM_RLoad(REG::REG dst, REG::REG src, int width, int ofs);
-	void ASM_CLoad(REG::REG reg, int value, int width);
-
-	//
-	//adds
-	//
-	void ASM_RAdd(REG::REG dst_reg, REG::REG src_reg, int width);
-
-	//
-	//inc/dec
-	//
-
-	void ASM_Dec(REG::REG reg, int width);
-
-	//
-	//stack
-	//
-
-	void ASM_StackInit(int value, int ofs, int width);
-	void ASM_Push(REG::REG reg);
-	void ASM_Pop(REG::REG reg);
-#endif
-
 public:
+	generator_c() : assembler("C:/ti83/rl/test.z80", this) { }
+
 	void Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top);
 
 

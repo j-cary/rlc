@@ -484,6 +484,14 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 	}
 }
 
+void cfg_c::FixupStackIndices(int symbol_cnt, tdata_t* tdata)
+{
+	for (int symbol = 0; symbol < symbol_cnt; symbol++)
+	{
+		if (tdata[symbol].si.stack_flag)
+			tdata[symbol].si.stack -= SI_LAST_GENERAL;
+	}
+}
 
 //todo: make this an analyzer function
 void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
@@ -558,6 +566,7 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 	}
 
 	ColorGraph(symbol_cnt, igraph, *tdata);
+	FixupStackIndices(symbol_cnt, *tdata);
 
 	delete[] offsets;
 }

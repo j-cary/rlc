@@ -127,8 +127,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="asm.cpp" />
     <ClCompile Include="generator.cpp" />
-    <ClCompile Include="generator_asm.cpp" />
     <ClCompile Include="generator_instruction.cpp" />
     <ClCompile Include="generator_statement.cpp" />
     <ClCompile Include="generator_stdlib.cpp" />

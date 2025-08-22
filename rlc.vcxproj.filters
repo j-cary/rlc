@@ -66,9 +66,6 @@
     <ClCompile Include="generator_util.cpp">
       <Filter>Source Files\generator</Filter>
     </ClCompile>
-    <ClCompile Include="generator_asm.cpp">
-      <Filter>Source Files\generator</Filter>
-    </ClCompile>
     <ClCompile Include="generator_stdlib.cpp">
       <Filter>Source Files\generator</Filter>
     </ClCompile>
@@ -89,6 +86,9 @@
     </ClCompile>
     <ClCompile Include="ld.cpp">
       <Filter>Source Files\generator\Instruction</Filter>
+    </ClCompile>
+    <ClCompile Include="asm.cpp">
+      <Filter>Source Files\generator</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

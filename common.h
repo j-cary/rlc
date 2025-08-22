@@ -286,13 +286,13 @@ public:
 	//Getting children
 	tree_c* GetL();
 	tree_c* GetR();
-	tree_c* Get(int idx); //rename this
+	tree_c* Get(int idx) const; //rename this
 
 	int GetIndex(tree_c* child); //-1 if non-existant
 
 	void Set(const kv_c* _kv) { kv.Copy(_kv); }
 	void Set(const char* str, int code) { kv.Set(str, code); }
-	const kv_c* Hash()		{	return &kv;	}//rename this
+	const kv_c* Hash() const		{	return &kv;	}//rename this
 	 
 	bool IsLeaf() { return leaf; }
 
@@ -321,6 +321,26 @@ void Warning(const char* msg, ...);
 void Error(const char* msg, ...);
 void SetOutFlags(unsigned short flags); //same as WORD
 void ResetOutFlags();
+
+/* Assert used for a user mistake in his program */
+#define ASSERT(cond, ...) \
+	do { \
+		if(!(cond))\
+			Error(__VA_ARGS__);\
+	} while(0)
+
+/* Assert used for situations which should never arise, i.e. bugs */
+#define INTERNAL_ASSERT(cond, ...) \
+	do { \
+		if(!(cond))\
+			Error("INTERNAL ERROR|" __FUNCTION__ "|" __VA_ARGS__); \
+	} while(0)
+
+#define ASSERT_WARN(cond, ...) \
+	do {\
+		if(!(cond)) \
+			Warning(__VA_ARGS__);\
+	} while(0)
 
 //same as in consoleapi2.h - don't want to include this in every file
 #ifndef FOREGROUND_BLUE
