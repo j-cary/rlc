@@ -160,6 +160,7 @@
     <ClInclude Include="parse.h" />
     <ClInclude Include="preprocessor.h" />
     <ClInclude Include="semantics.h" />
+    <ClInclude Include="structs.h" />
     <ClInclude Include="template.h" />
   </ItemGroup>
   <ItemGroup>

@@ -16,7 +16,7 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsign
 
 	for (int i = 0; block = graph->GetLink(i); i++)
 	{
-		if (block->block_type == BLOCK_FUNC)
+		if (block->block_type == BLOCK::FUNC)
 			CG_FunctionBlock(block);
 		else
 			Error("Bad block %s", block->id);
@@ -102,11 +102,11 @@ void generator_c::CG_FunctionBlock(cfg_c* block)
 	{
 		switch (b->block_type)
 		{
-		case BLOCK_ENTRY:
-		case BLOCK_REG:
+		case BLOCK::ENTRY:
+		case BLOCK::REG:
 			CG_RegBlock(b);
 			break;
-		case BLOCK_EXIT:
+		case BLOCK::EXIT:
 			CG_UnStack();
 			CG_ExitBlock(b);
 			break;

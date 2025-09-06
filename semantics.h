@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "structs.h"
 
 //New register system description:
 //Hardware regs: a, b, c, d, e, h, l, af, bc, de, hl, ixh, ixl, iyh, iyl, ix, iy, sp, i, r - 20 total
@@ -23,55 +24,20 @@ namespace REG
 	//Reg to string. Default to 16-bit
 	const char* Str(REG reg);
 
-	//Reg to string. Specify size in bytes.
-	//Set bad_check if checks for validity are desired. Also pads the string
 	const char* Str(REG reg, int size);
-}
-#define SI_REG_COUNT	((size_t)REG::_SIZE)
-#define SI_LAST_GENERAL	(REG::L) //the last general purpose register
-#define SI_STACK_MIN	((signed char)(-128))
-#define SI_STACK_MAX	((signed char)(+127))
-#define SI_STACK_COUNT	SI_STACK_MAX //1-127
-#define SI_LOCAL_MIN	((unsigned short)(1))
-#define SI_LOCAL_MAX	((unsigned short)(65535))
-#define SI_LOCAL_COUNT	((size_t)(65536))
 
-typedef union storageinfo_u
-{
-	struct
-	{
-		//Note: reg&stack are indices into the same array
-		unsigned int	reg : 5; //0-21 
-		signed int		stack : 8; //store the full signed index- -128:127
-		unsigned int	local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
-		unsigned int	reg_flag : 1;
-		unsigned int	stack_flag : 1;
-		unsigned int	local_flag : 1;
-	};
-	unsigned int data;
-} storageinfo_t;
+	// Defines for the bounds of storage areas
+	inline constexpr size_t REG_CNT() { return (size_t)REG::_SIZE; }
+	inline constexpr REG LAST_GENERAL_REG() { return REG::L; } //Last General purpose register
+	inline constexpr int STACK_MIN() { return -127; }
+	inline constexpr int STACK_MAX() { return 128; }
+	inline constexpr int STACK_CNT() { return STACK_MAX(); }
+	inline constexpr unsigned short AUTO_MIN() { return (unsigned short)1; }
+	inline constexpr unsigned short AUTO_MAX() { return (unsigned short)65535; }
+	inline constexpr unsigned short AUTO_CNT() { return AUTO_MAX(); }
+}
 
 #define SYMBOLS_MAX	32
-#define STRUCTURES_MAX	32
-
-#define DF_NONE		0x0000
-#define DF_BYTE		0x0001
-#define DF_WORD		0x0002
-#define DF_LABEL	0x0004
-#define DF_FXD		0x0008
-#define DF_PTR		0x0010
-#define DF_SIGNED	0x0020
-#define DF_STRUCT	0x0040
-#define DF_ARRAY	0x0080
-#define DF_STATIC	0x0100 //mutually exclusive with auto & stack
-#define DF_STACK	0x0200 //if neither stack or static are set, it's an auto
-#define DF_USED		0x0400 //set once the data is used as an input to an instruction. Before this is set, the data may have its start moved around
-#define DF_FORCTRL	0x0800 //control variable for a for loop - try to store this in 'b'
-#define DF_GLOBAL	0x1000 //visible from absolutely everywhere in the program
-
-#define DF_OTHER_MASK (DF_LABEL | DF_FXD | DF_STRUCT | DF_ARRAY)
-
-typedef unsigned dataflags_t;
 
 //for type checking
 typedef int regi_t; //index into generator_c's regs array [1 - a lot] 0 is unused
@@ -88,43 +54,6 @@ typedef struct data_s
 	tdatai_t	tdata; //link to respective tdata
 } data_t;
 
-typedef struct member_s
-{
-	const char* name;
-	const char* struct_name; //NULL unless this is a struct 
-	dataflags_t flags;
-	int			length;
-	int			offset; //redundant
-	tree_c*		val; //node so that arrays can be initialized
-	member_s*	next = NULL;
-} member_t;
-
-typedef struct struct_s
-{
-	const char* name;
-	int			length;
-	member_t*	first_member;
-} struct_t;
-
-class structlist_c
-{
-private:
-	struct_t	structs[STRUCTURES_MAX];
-	int			struct_cnt = 0;
-public:
-	int AddStruct(const char* name); //returns index of the new struct
-	void AddMemberVar(int struct_idx, const char* name, dataflags_t flags, int length, tree_c* init_val, const char* structname);
-
-	int GetStruct(const char* name) const; // < 0 if invalid
-	int StructLen(int struct_idx) const { return structs[struct_idx].length; }
-	void SetLen(int struct_idx, int len) { structs[struct_idx].length = len; }
-
-	const struct_t* StructInfo(int idx);
-
-	~structlist_c(); //delete all member vars
-};
-
-
 //purpose: simplify the parse tree 
 //	check for symbol predefinition
 //	generate CFG
@@ -140,12 +69,10 @@ private:
 	short	num_links;
 	int		links[LINKS_MAX];
 public:
-	//regi_t		color; //removeme
-	//storageinfo_t si;
 
 	bool AddLink(int l); //false if out of space
-	inline int LinkCnt() { return num_links; }
-	inline int Link(int i) { return links[i]; }
+	inline int LinkCnt() const { return num_links; }
+	inline int Link(int i) const { return links[i]; }
 
 	inode_c()
 	{
@@ -153,8 +80,6 @@ public:
 			links[i] = -1;
 
 		num_links = 0;
-		//color = -1;
-		//si.data = 0;
 	}
 };
 
@@ -179,10 +104,9 @@ public:
 
 };
 
-
-enum BLOCK_TYPE
+enum class BLOCK
 {
-	BLOCK_ROOT = -2, BLOCK_FUNC, BLOCK_REG = 0, BLOCK_ENTRY, BLOCK_EXIT, BLOCK_COND, BLOCK_ELSE, BLOCK_ELSEIF, BLOCK_FOR, BLOCK_WHILE, BLOCK_LOOPBACK
+	ROOT = -2, FUNC = -1, REG, ENTRY, EXIT, COND, ELSE, ELSEIF, FOR, WHILE, LOOPBACK
 };
 
 //temporary convenience struct for global register allocation
@@ -193,9 +117,23 @@ typedef struct tdata_s
 	int			startb, endb;
 	int			size;
 	dataflags_t	flags;
-	storageinfo_t si{};
 
-	const char* ToStr(int size)
+	union 
+	{
+		struct
+		{
+			//Note: reg&stack are indices into the same array
+			unsigned int	reg : 5; //0-21 
+			signed int		stack : 8; //store the full signed index- -128:127
+			unsigned int	local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
+			unsigned int	reg_flag : 1;
+			unsigned int	stack_flag : 1;
+			unsigned int	local_flag : 1;
+		};
+		unsigned int data;
+	} si{};
+
+	const char* ToStr(int size) const
 	{
 		const size_t maxstrlen = 6;
 		static char str[maxstrlen];
@@ -266,15 +204,15 @@ private:
 
 	void R_Disp( igraph_c* igraph, tdata_t* tdata);
 public:
-	BLOCK_TYPE				block_type;
-	char					id[KEY_MAX_LEN];
+	BLOCK	block_type;
+	char	id[KEY_MAX_LEN];
 
-	void Set(const char* _id, BLOCK_TYPE _Type);
+	void Set(const char* _id, BLOCK _Type);
 
 	void AddStmt(tree_c* s);
-	cfg_c* AddLink(const char* _id, BLOCK_TYPE _type);
-	cfg_c* AddLink(const char* _id, BLOCK_TYPE _type, cfg_c* sibling); //copy data from sibling instead of from the caller
-	cfg_c* AddLink(const char* _id, BLOCK_TYPE _type, data_t* init); //add the control variable from loops
+	cfg_c* AddLink(const char* _id, BLOCK _type);
+	cfg_c* AddLink(const char* _id, BLOCK _type, cfg_c* sibling); //copy data from sibling instead of from the caller
+	cfg_c* AddLink(const char* _id, BLOCK _type, data_t* init); //add the control variable from loops
 
 	tree_c* GetStmt(int ofs);
 	cfg_c* GetLink(int ofs);

@@ -15,7 +15,7 @@ void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsi
 	symtbl_top = *symbols_top;
 	tdata = *_tdata;
 	slist = sl;
-	graph->Set("ROOT", BLOCK_ROOT);
+	graph->Set("ROOT", BLOCK::ROOT);
 
 	SimplifyTree(root, NULL);//Pass 1
 	printf("==\tDEBUG: Reduced parse tree\t==\n");
@@ -92,7 +92,7 @@ void analyzer_c::CFG_Start(tree_c* node)
 	{
 	case CODE::NT_FUNC_DEF:
 		kv_1 = node->Get(1)->Hash(); //the function name
-		cur_func = graph->AddLink(kv_1->Str(), BLOCK_FUNC);
+		cur_func = graph->AddLink(kv_1->Str(), BLOCK::FUNC);
 		CFG_FuncDef(node);
 		cur_func = NULL;
 		return;
@@ -135,11 +135,11 @@ void analyzer_c::CFG_FuncDef(tree_c* node)
 	stmts = node->Get(i);
 
 	
-	block = cur_func->AddLink("ENTRY", BLOCK_ENTRY);
+	block = cur_func->AddLink("ENTRY", BLOCK::ENTRY);
 	
 	CFG_Node(stmts, block, cur_func, 1, CODE::RBRACKET);
 
-	cur_func->AddLink("EXIT", BLOCK_EXIT);
+	cur_func->AddLink("EXIT", BLOCK::EXIT);
 }
 
 cfg_c* analyzer_c::CFG_Statement(tree_c* node, cfg_c* parent, cfg_c* ancestor)
@@ -155,7 +155,7 @@ cfg_c* analyzer_c::CFG_Statement(tree_c* node, cfg_c* parent, cfg_c* ancestor)
 	parent->AddStmt(child);
 
 	//branch block
-	if_link = parent->AddLink("OPEN_COND", BLOCK_COND);
+	if_link = parent->AddLink("OPEN_COND", BLOCK::COND);
 
 	if (node->Get(1)->Hash()->Code() == CODE::NT_COMPOUND_STMT)
 	{
@@ -172,7 +172,7 @@ cfg_c* analyzer_c::CFG_Statement(tree_c* node, cfg_c* parent, cfg_c* ancestor)
 
 	CFG_Node(subnode, if_link, parent, i, exitcode);
 
-	else_link = ancestor->AddLink("ELSE", BLOCK_ELSE, parent);
+	else_link = ancestor->AddLink("ELSE", BLOCK::ELSE, parent);
 	else_link->AddStmt(node->Get(2)); //else
 
 	return NULL;
@@ -192,7 +192,7 @@ cfg_c* analyzer_c:: CFG_OpenStatement(tree_c* node, cfg_c* parent, cfg_c* ancest
 	parent->AddStmt(child);
 
 	//branch block
-	if_link = parent->AddLink("OPEN_COND", BLOCK_COND);
+	if_link = parent->AddLink("OPEN_COND", BLOCK::COND);
 
 	if (node->Get(1)->Hash()->Code() == CODE::NT_COMPOUND_STMT)
 	{
@@ -210,7 +210,7 @@ cfg_c* analyzer_c:: CFG_OpenStatement(tree_c* node, cfg_c* parent, cfg_c* ancest
 
 	if (child = node->Get(2))
 	{//'else'
-		else_link = ancestor->AddLink("ELSE", BLOCK_ELSE, parent);
+		else_link = ancestor->AddLink("ELSE", BLOCK::ELSE, parent);
 		else_link->AddStmt(child);
 
 		subnode = node->Get(3);
@@ -226,7 +226,7 @@ cfg_c* analyzer_c:: CFG_OpenStatement(tree_c* node, cfg_c* parent, cfg_c* ancest
 			else
 				i = 1; //single statement, skip the clause
 
-			else_link->Set("ELSE_IF", BLOCK_ELSEIF);
+			else_link->Set("ELSE_IF", BLOCK::ELSEIF);
 		}
 		else
 		{//does this ever even get reached?
@@ -234,13 +234,13 @@ cfg_c* analyzer_c:: CFG_OpenStatement(tree_c* node, cfg_c* parent, cfg_c* ancest
 				i = 1;
 		}
 
-		link = else_link->AddLink("OPEN_ELSE_COND", BLOCK_COND);
+		link = else_link->AddLink("OPEN_ELSE_COND", BLOCK::COND);
 
 		CFG_Node(subnode, link, parent, i, CODE::RBRACKET);
 	}
 
 
-	link = ancestor->AddLink("REG", BLOCK_REG, parent);
+	link = ancestor->AddLink("REG", BLOCK::REG, parent);
 	return link;
 }
 
@@ -267,7 +267,7 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 		if (!child)
 			Error("For loop control variable '%s' not initialized", node->Get(0)->Get(3)->Hash()->Str());
 
-		if_link = parent->AddLink("CLOSED_FOR", BLOCK_FOR);
+		if_link = parent->AddLink("CLOSED_FOR", BLOCK::FOR);
 
 		if (dt_code == CODE::BYTE)
 		{
@@ -285,9 +285,9 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 		MakeDataEntry(child->Hash(), if_link, length, flags);
 	}
 	else if (code == CODE::NT_WHILE_CLAUSE)
-		if_link = parent->AddLink("CLOSED_WHILE", BLOCK_WHILE);
+		if_link = parent->AddLink("CLOSED_WHILE", BLOCK::WHILE);
 	else
-		if_link = parent->AddLink("CLOSED_COND", BLOCK_COND);
+		if_link = parent->AddLink("CLOSED_COND", BLOCK::COND);
 
 	//branch/loop block
 	if (node->Get(1)->Hash()->Code() == CODE::NT_COMPOUND_STMT)
@@ -307,7 +307,7 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 
 	if (code != CODE::NT_FOR_CLAUSE && code != CODE::NT_WHILE_CLAUSE)
 	{//if - handle the else
-		else_link = ancestor->AddLink("ELSE", BLOCK_ELSE, parent);
+		else_link = ancestor->AddLink("ELSE", BLOCK::ELSE, parent);
 		else_link->AddStmt(node->Get(2)); //else
 
 		if (node->Get(3)->Hash()->Code() == CODE::NT_COMPOUND_STMT)
@@ -321,17 +321,17 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 			subnode = node;
 		}
 
-		link = else_link->AddLink("CLOSED_ELSE_COND", BLOCK_COND);
+		link = else_link->AddLink("CLOSED_ELSE_COND", BLOCK::COND);
 		CFG_Node(subnode, link, parent, i, CODE::RBRACKET);
 	}
 	else
 	{//some kind of loop
-		parent->AddLink("LOOPBACK", BLOCK_LOOPBACK);
+		parent->AddLink("LOOPBACK", BLOCK::LOOPBACK);
 		if_link->SetDataEnd(child->Hash()->Str(), if_link->StmtCnt()); //the control var is used for the whole block
 	}
 
 
-	link = ancestor->AddLink("REG", BLOCK_REG, parent);
+	link = ancestor->AddLink("REG", BLOCK::REG, parent);
 
 	return link;
 }

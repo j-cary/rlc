@@ -1,6 +1,6 @@
 #include "semantics.h"
 
-void cfg_c::Set(const char* _id, BLOCK_TYPE _type)
+void cfg_c::Set(const char* _id, BLOCK _type)
 {
 	strncpy_s(id, _id, 16); //change to strcpy once id is dynamic
 	block_type = _type;
@@ -11,7 +11,7 @@ void cfg_c::AddStmt(tree_c* s)
 	statements.push_back(s);
 }
 
-cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type)
+cfg_c* cfg_c::AddLink(const char* _id, BLOCK _type)
 {
 	cfg_c* l = new cfg_c;
 	l->Set(_id, _type);
@@ -30,7 +30,7 @@ cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type)
 	return l;
 }
 
-cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type, cfg_c* sibling)
+cfg_c* cfg_c::AddLink(const char* _id, BLOCK _type, cfg_c* sibling)
 {
 	cfg_c* l = new cfg_c;
 	l->Set(_id, _type);
@@ -49,7 +49,7 @@ cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type, cfg_c* sibling)
 	return l;
 }
 
-cfg_c* cfg_c::AddLink(const char* _id, BLOCK_TYPE _type, data_t* init)
+cfg_c* cfg_c::AddLink(const char* _id, BLOCK _type, data_t* init)
 {
 	cfg_c* l = new cfg_c;
 	l->Set(_id, _type);

@@ -274,9 +274,10 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 int	cfg_c::StackIndex(tdata_t* var, bool available[], const int size)
 {
 	int index;
+	int last_general = (int)REG::LAST_GENERAL_REG();
 
 	if (var->flags & DF_OTHER_MASK) //structs, arrays, etc. cannot be held in regs
-		index = SI_LAST_GENERAL + 1;
+		index = last_general + 1;
 	else
 		index = REG::B;
 
@@ -295,7 +296,7 @@ int	cfg_c::StackIndex(tdata_t* var, bool available[], const int size)
 			}
 			else if (var->flags & (DF_WORD | DF_PTR))
 			{
-				if ((index <= SI_LAST_GENERAL) && !(index % 2)) //can't have a word in 'e' or 'c' - 
+				if ((index <= last_general) && !(index % 2)) //can't have a word in 'e' or 'c' - 
 					continue;									//('c', 'e' and 'l' are all even)
 
 				if (((index + 1) < size) && available[index + 1])
@@ -324,7 +325,7 @@ int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size,
 
 		if (var->flags & DF_BYTE)
 		{
-			for (int index = SI_LOCAL_MIN; index <= SI_LAST_GENERAL; index++)
+			for (int index = REG::AUTO_MIN(); index <= REG::LAST_GENERAL_REG(); index++)
 				if (stack_available[index])
 				{
 					*local = false;
@@ -333,7 +334,7 @@ int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size,
 		}
 		else
 		{
-			for (int index = SI_LOCAL_MIN; index <= SI_LAST_GENERAL; index += 2)
+			for (int index = REG::AUTO_MIN(); index <= REG::LAST_GENERAL_REG(); index += 2)
 				if (stack_available[index] && stack_available[index + 1])
 				{
 					*local = false;
@@ -375,10 +376,10 @@ int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size,
 
 void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 {
-	constexpr int max_stack = SI_LAST_GENERAL + SI_STACK_COUNT;
+	constexpr int max_stack = REG::LAST_GENERAL_REG() + REG::STACK_MAX();
 	bool stack_available[max_stack]; //Reg vars, both stack & auto, go in here
-	static bool local_available[SI_LOCAL_COUNT];
-	int local_count = SI_LOCAL_MIN;
+	static bool local_available[REG::AUTO_CNT()];
+	int local_count = REG::AUTO_MIN();
 
 	memset(stack_available, true, sizeof(stack_available));
 	memset(local_available, true, sizeof(local_available));
@@ -424,7 +425,7 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 		{
 			index = StackIndex(x, stack_available, max_stack);
 
-			if (index > SI_LAST_GENERAL)
+			if (index > REG::LAST_GENERAL_REG())
 			{//stack
 				x->si.stack_flag = 1;
 				x->si.stack = index;
@@ -438,7 +439,7 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 		else
 		{
 			bool local;
-			index = AutoIndex(x, stack_available, max_stack, local_available, SI_LOCAL_COUNT, &local);
+			index = AutoIndex(x, stack_available, max_stack, local_available, REG::AUTO_CNT(), &local);
 
 			if (local)
 			{//saved in a '.db'
@@ -489,7 +490,7 @@ void cfg_c::FixupStackIndices(int symbol_cnt, tdata_t* tdata)
 	for (int symbol = 0; symbol < symbol_cnt; symbol++)
 	{
 		if (tdata[symbol].si.stack_flag)
-			tdata[symbol].si.stack -= SI_LAST_GENERAL;
+			tdata[symbol].si.stack -= REG::LAST_GENERAL_REG();
 	}
 }
 
