@@ -1,4 +1,5 @@
 #include "common.h"
+#include "llist.h"
 
 void llist_c::InsertHead(const kv_t _kv)
 {
@@ -64,7 +65,7 @@ void llist_c::Insert(node_c* prev, kv_t _kv)
 	Insert(prev, _kv, 999999u);
 }
 
-void llist_c::Insert(node_c* prev, const char* key, CODES value, size_t _line_no)
+void llist_c::Insert(node_c* prev, const char* key, CODE value, size_t _line_no)
 {
 	kv_t kv;
 
@@ -127,7 +128,7 @@ void llist_c::Disp()
 
 	for (; curs; curs = curs->next)
 	{
-		printf("%c%s\t%c%i\t%c%zu\n", 0xB2, curs->kv.K(), 0xB1, curs->kv.V(), 0xB0, curs->line_no);
+		printf("%c%s\t%c%i\t%c%zu\n", 0xB2, curs->kv.Str(), 0xB1, curs->kv.Code(), 0xB0, curs->line_no);
 	}
 	printf("\n");
 }
@@ -141,7 +142,7 @@ node_c* llist_c::Search(const char* key)
 
 	while (curs)
 	{
-		if (!strcmp(curs->kv.K(), key))
+		if (!strcmp(curs->kv.Str(), key))
 			return curs;
 		curs = curs->next;
 	}
@@ -239,10 +240,10 @@ void llist_c::Push(const kv_c* _kv)
 	if (!_kv)
 		return;
 
-	kv.v = _kv->V();
+	kv.v = _kv->Code();
 
-	for (int i = 0; _kv->K()[i] && i < KEY_MAX_LEN - 1; i++)
-		kv.k[i] = _kv->K()[i];
+	for (int i = 0; _kv->Str()[i] && i < KEY_MAX_LEN - 1; i++)
+		kv.k[i] = _kv->Str()[i];
 
 	InsertHead(kv);
 }
@@ -269,30 +270,30 @@ kv_c& kv_c::operator=(const kv_t& kv)
 	for (cnt = 0; kv.k[cnt]; cnt++) {}
 	cnt++;
 
-	if (!k)
+	if (!str)
 	{
-		k = new char[cnt];
-		memset(k, 0, cnt * sizeof(char));
+		str = new char[cnt];
+		memset(str, 0, cnt * sizeof(char));
 	}
 	else
 	{
-		for (thiscnt = 0; k[thiscnt]; thiscnt++) {}
+		for (thiscnt = 0; str[thiscnt]; thiscnt++) {}
 		thiscnt++;
 
 		if (thiscnt >= cnt)
 		{
-			memset(k, 0, thiscnt * sizeof(char));
+			memset(str, 0, thiscnt * sizeof(char));
 		}
 		else
 		{
-			delete[] k;
-			k = new char[cnt];
-			memset(k, 0, cnt * sizeof(char));
+			delete[] str;
+			str = new char[cnt];
+			memset(str, 0, cnt * sizeof(char));
 		}
 	}
 
-	strcpy_s(k, cnt, kv.k);
-	v = kv.v;
+	strcpy_s(str, cnt, kv.k);
+	code = kv.v;
 
 	return *this;
 }
@@ -302,15 +303,15 @@ kv_c& kv_c::Copy(const kv_c* src)
 	if (this == src || !src)
 		return *this; //fixme: return src?
 
-	if (!*(src->k)) //don't bother with null keyvalues
+	if (!*(src->str)) //don't bother with null keyvalues
 		return *this;
 
-	Set(src->k, src->v);
+	Set(src->str, src->code);
 
 	return *this;
 }
 
-void kv_c::Set(const char* _k, int _v)
+void kv_c::Set(const char* _k, CODE _v)
 {
 	int cnt;
 	int thiscnt;
@@ -318,28 +319,28 @@ void kv_c::Set(const char* _k, int _v)
 	for (cnt = 0; _k[cnt]; cnt++) {}
 	cnt++;
 
-	if (!k)
+	if (!str)
 	{
-		k = new char[cnt];
-		memset(k, 0, cnt * sizeof(char));
+		str = new char[cnt];
+		memset(str, 0, cnt * sizeof(char));
 	}
 	else
 	{
-		for (thiscnt = 0; k[thiscnt]; thiscnt++) {}
+		for (thiscnt = 0; str[thiscnt]; thiscnt++) {}
 		thiscnt++;
 
 		if (thiscnt >= cnt)
 		{
-			memset(k, 0, thiscnt * sizeof(char));
+			memset(str, 0, thiscnt * sizeof(char));
 		}
 		else
 		{
-			delete[] k;
-			k = new char[cnt];
-			memset(k, 0, cnt * sizeof(char));
+			delete[] str;
+			str = new char[cnt];
+			memset(str, 0, cnt * sizeof(char));
 		}
 	}
 
-	strcpy_s(k, cnt, _k);
-	v = _v;
+	strcpy_s(str, cnt, _k);
+	code = _v;
 }

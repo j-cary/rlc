@@ -2,12 +2,12 @@
 
 void generator_c::CG_ForLoop(tree_c* node, cfg_c* block, cfg_c* body)
 {
+#if OLD_REG_CODE
 	char label[32];
 	tree_c* child;
 	regi_t reg;
 	tdatai_t data;
 
-#if OLD_REG_CODE
 	child = node->Get(3);
 
 	//move this to analysis

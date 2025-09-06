@@ -1,107 +1,110 @@
 #include "lex.h"
 
-ckv_t reservedchars[] =
+struct {
+	char reserved;
+	CODE code;
+} reservedchars[] =
 {
-	'(', CODE_LPAREN,
-	')', CODE_RPAREN,
-	'{', CODE_LBRACKET,
-	'}', CODE_RBRACKET,
-	'[', CODE_LBRACE,
-	']', CODE_RBRACE,
+	'(', CODE::LPAREN,
+	')', CODE::RPAREN,
+	'{', CODE::LBRACKET,
+	'}', CODE::RBRACKET,
+	'[', CODE::LBRACE,
+	']', CODE::RBRACE,
 
-	'@', CODE_AT,
-	//'#', CODE_POUND,
-	'.', CODE_PERIOD,
-	',', CODE_COMMA,
-	//'"', CODE_QUOTE_DOUBLE,
-	//'\'', CODE_QUOTE_SINGLE,
-	';', CODE_SEMICOLON,
-	':', CODE_COLON,
-	'<', CODE_LARROW,
-	'>', CODE_RARROW,
-	'!', CODE_EXCLAMATION,
-	'&', CODE_AMPERSAND,
-	'|', CODE_BAR,
+	'@', CODE::AT,
+	//'#', CODE::POUND,
+	'.', CODE::PERIOD,
+	',', CODE::COMMA,
+	//'"', CODE::QUOTE_DOUBLE,
+	//'\'', CODE::QUOTE_SINGLE,
+	';', CODE::SEMICOLON,
+	':', CODE::COLON,
+	'<', CODE::LARROW,
+	'>', CODE::RARROW,
+	'!', CODE::EXCLAMATION,
+	'&', CODE::AMPERSAND,
+	'|', CODE::BAR,
 
 	//arithmetic
-	'=', CODE_EQUALS,
-	'+', CODE_PLUS,
-	'-', CODE_MINUS,
-	'*', CODE_STAR,
-	'/', CODE_FSLASH,
-	//'%', CODE_PERCENT,
+	'=', CODE::EQUALS,
+	'+', CODE::PLUS,
+	'-', CODE::MINUS,
+	'*', CODE::STAR,
+	'/', CODE::FSLASH,
+	//'%', CODE::PERCENT,
 
-	'\0', 0
+	'\0', CODE::NONE
 
 };
 
 kv_t reservedwords[] =
 {
-	"inline",	CODE_INLINE,
-	"subr",		CODE_SUBR,
-	"ans",		CODE_ANS,
+	"inline",	CODE::INLINE,
+	"subr",		CODE::SUBR,
+	"ans",		CODE::ANS,
 	
 	//data types
-	"db",		CODE_BYTE,		"byte",		CODE_BYTE,
-	"dw",		CODE_WORD,		"word",		CODE_WORD,
-	"fxd",		CODE_FIXED,		"fixed",	CODE_FIXED,
-	"lbl",		CODE_LABEL,		"label",	CODE_LABEL,
+	"db",		CODE::BYTE,		"byte",		CODE::BYTE,
+	"dw",		CODE::WORD,		"word",		CODE::WORD,
+	"fxd",		CODE::FIXED,		"fixed",	CODE::FIXED,
+	"lbl",		CODE::LABEL,		"label",	CODE::LABEL,
 
-	"struct",	CODE_STRUCT,
-	"signed",	CODE_SIGNED,
-	"static",	CODE_STATIC,	"stack",	CODE_STACK,	"auto", CODE_AUTO,
+	"struct",	CODE::STRUCT,
+	"signed",	CODE::SIGNED,
+	"static",	CODE::STATIC,	"stack",	CODE::STACK,	"auto", CODE::AUTO,
 
 	//control flow
-	"repeat",	CODE_REPEAT,
-	"until",	CODE_UNTIL,
-	"while",	CODE_WHILE,
-	"for",		CODE_FOR,
-	"if",		CODE_IF,
-	"else",		CODE_ELSE,
+	"repeat",	CODE::REPEAT,
+	"until",	CODE::UNTIL,
+	"while",	CODE::WHILE,
+	"for",		CODE::FOR,
+	"if",		CODE::IF,
+	"else",		CODE::ELSE,
 
 	//instructions
-	"ld",		CODE_LD,
-	"jp",		CODE_JP,
-	"call",		CODE_CALL,
-	"ret",		CODE_RET,
+	"ld",		CODE::LD,
+	"jp",		CODE::JP,
+	"call",		CODE::CALL,
+	"ret",		CODE::RET,
 
-	"add",		CODE_ADD,
-	"sub",		CODE_SUB,
-	"mul",		CODE_MUL,
-	"div",		CODE_DIV,
-	"mod",		CODE_MOD,
-	"inc",		CODE_INC,
-	"dec",		CODE_DEC,
-	"comp",		CODE_COMP,
-	"and",		CODE_AND,
-	"or",		CODE_OR,
-	"xor",		CODE_XOR,
-	"neg",		CODE_NEG,
+	"add",		CODE::ADD,
+	"sub",		CODE::SUB,
+	"mul",		CODE::MUL,
+	"div",		CODE::DIV,
+	"mod",		CODE::MOD,
+	"inc",		CODE::INC,
+	"dec",		CODE::DEC,
+	"comp",		CODE::COMP,
+	"and",		CODE::AND,
+	"or",		CODE::OR,
+	"xor",		CODE::XOR,
+	"neg",		CODE::NEG,
 
-	"rlc",		CODE_RLC,
-	"rrc",		CODE_RRC,
-	"rl",		CODE_RL,
-	"rr",		CODE_RR,
-	"sl",		CODE_SL,
-	"sr",		CODE_SR,
-	"res",		CODE_RES,
-	"set",		CODE_SET,
-	"flp",		CODE_FLP,
+	"rlc",		CODE::RLC,
+	"rrc",		CODE::RRC,
+	"rl",		CODE::RL,
+	"rr",		CODE::RR,
+	"sl",		CODE::SL,
+	"sr",		CODE::SR,
+	"res",		CODE::RES,
+	"set",		CODE::SET,
+	"flp",		CODE::FLP,
 
-	"in",		CODE_IN,
-	"out",		CODE_OUT,
-	"im",		CODE_IM,
+	"in",		CODE::INN,
+	"out",		CODE::OT,
+	"im",		CODE::IM,
 
-	"ldm",		CODE_LDM,
-	"cpm",		CODE_CPM,
-	"inm",		CODE_INM,
-	"outm",		CODE_OUTM,
+	"ldm",		CODE::LDM,
+	"cpm",		CODE::CPM,
+	"inm",		CODE::INM,
+	"outm",		CODE::OUTM,
 
 	//preprocessing
-	"include",	CODE_PP_INCLUDE,
-	"insert",	CODE_PP_INSERT,
-	"define",	CODE_PP_DEFINE,
-	NULL,		CODE_NONE //null terminator
+	"include",	CODE::PP_INCLUDE,
+	"insert",	CODE::PP_INSERT,
+	"define",	CODE::PP_DEFINE,
+	NULL,		0 //null terminator
 };
 
 size_t scanner_c::GetTextLump(char text[KEY_MAX_LEN], size_t pi)
@@ -167,7 +170,7 @@ const char* scanner_c::CheckReservedWord(const char* text, size_t prog_index)
 			if (end && (isalpha(*end) || *end == '_'))
 				break;
 
-			InsertLexeme(kv->k, strlen(kv->k), (CODES)kv->v, prog_index);
+			InsertLexeme(kv->k, strlen(kv->k), (CODE)kv->v, prog_index);
 			return text + len;
 		}
 	}
@@ -177,12 +180,12 @@ const char* scanner_c::CheckReservedWord(const char* text, size_t prog_index)
 
 const char* scanner_c::CheckReservedChar(const char* text, size_t prog_index)
 {
-	for (ckv_t* kv = reservedchars; kv->k != '\0'; kv++)
+	for (int i = 0; reservedchars[i].reserved != '\0'; ++i)
 	{
-		if (*text == kv->k)
+		if (*text == reservedchars[i].reserved)
 		{//matched a reserved char
 
-			InsertLexeme(text, 1, (CODES)kv->v, prog_index);
+			InsertLexeme(text, 1, reservedchars[i].code, prog_index);
 			return text + 1;
 		}
 	}
@@ -203,7 +206,7 @@ const char* scanner_c::CheckText(const char* text, size_t prog_index)
 			break; //Valid ident, more lexemes in this lump
 	}
 
-	InsertLexeme(text, cur - text, CODE_TEXT, prog_index);
+	InsertLexeme(text, cur - text, CODE::TEXT, prog_index);
 	return cur; //Valid ident, just encountered a space
 }
 
@@ -224,7 +227,7 @@ const char* scanner_c::CheckBinNum(const char* text, size_t prog_index)
 			break; //Valid bin#
 	}
 
-	InsertLexeme(text, cur - text, CODE_NUM_BIN, prog_index);
+	InsertLexeme(text, cur - text, CODE::NUM_BIN, prog_index);
 	return cur; //Valid bin#, just encountered a space
 }
 
@@ -245,7 +248,7 @@ const char* scanner_c::CheckHexNum(const char* text, size_t prog_index)
 			break; //Valid hex#
 	}
 
-	InsertLexeme(text, cur - text, CODE_NUM_HEX, prog_index);
+	InsertLexeme(text, cur - text, CODE::NUM_HEX, prog_index);
 	return cur; //Valid hex#, just encountered a space
 }
 
@@ -262,7 +265,7 @@ const char* scanner_c::CheckDecNum(const char* text, size_t prog_index)
 			break; //Valid dec#
 	}
 
-	InsertLexeme(text, cur - text, CODE_NUM_DEC, prog_index);
+	InsertLexeme(text, cur - text, CODE::NUM_DEC, prog_index);
 	return cur;
 }
 
@@ -292,7 +295,7 @@ const char* scanner_c::CheckFxdNum(const char* text, size_t prog_index)
 			break; //Valid fxd#
 	}
 
-	InsertLexeme(text, cur - text, CODE_NUM_FXD, prog_index);
+	InsertLexeme(text, cur - text, CODE::NUM_FXD, prog_index);
 	return cur; //Valid, just encountered a space
 }
 
@@ -309,7 +312,7 @@ const char* scanner_c::CheckStr(const char* text, size_t prog_index)
 			Error("Unclosed string");
 
 	cur++;
-	InsertLexeme(text, cur - text, CODE_STRING, prog_index);
+	InsertLexeme(text, cur - text, CODE::STRING, prog_index);
 	return cur;
 }
 
@@ -366,7 +369,7 @@ void scanner_c::Lex(const char* prog_, llist_c* _list, bool _debug)
 
 
 
-void scanner_c::InsertLexeme(const char* text, size_t len, CODES code, size_t character_index)
+void scanner_c::InsertLexeme(const char* text, size_t len, CODE code, size_t character_index)
 {
 	size_t line_no = CalculateLineNo(character_index);
 	char key[KEY_MAX_LEN]; 
@@ -405,7 +408,7 @@ size_t scanner_c::CalculateColNo(const char* text, size_t line_no)
 
 
 
-void scanner_c::AddReservedChar(char c, int code)
+void scanner_c::AddReservedChar(char c, CODE code)
 {
 	kv_t ins;
 	ins.k[0] = c;
@@ -418,7 +421,7 @@ void scanner_c::AddLexeme(char* lexeme)
 	kv_t ins;
 
 	strcpy_s(ins.k, lexeme);
-	ins.v = CODE_TEXT;
+	ins.v = CODE::TEXT;
 
 	for (int rwi = 0; rwi < sizeof(reservedwords) / sizeof(kv_t); rwi++)
 	{//check for reserved words
@@ -435,7 +438,7 @@ void scanner_c::AddLexeme(char* lexeme)
 				Error("Invalid hexadecimal number");
 		}
 
-		ins.v = CODE_NUM_HEX;
+		ins.v = CODE::NUM_HEX;
 	}
 	else if (lexeme[0] == '%')
 	{
@@ -445,7 +448,7 @@ void scanner_c::AddLexeme(char* lexeme)
 				Error("Invalid binary number");
 		}
 
-		ins.v = CODE_NUM_BIN;
+		ins.v = CODE::NUM_BIN;
 	}
 	else if (isdigit(lexeme[0]))
 	{
@@ -462,9 +465,9 @@ void scanner_c::AddLexeme(char* lexeme)
 				Error("Invalid decimal number");
 		}
 		if (point)
-			ins.v = CODE_NUM_FXD;
+			ins.v = CODE::NUM_FXD;
 		else
-			ins.v = CODE_NUM_DEC;
+			ins.v = CODE::NUM_DEC;
 	}
 	else if (isalpha(lexeme[0]))
 	{
@@ -475,7 +478,7 @@ void scanner_c::AddLexeme(char* lexeme)
 		}
 	}
 	else if (lexeme[0] == '"')
-		ins.v = CODE_STRING;
+		ins.v = CODE::STRING;
 	else
 		Error("Unrecognized starting character in lexeme %s", lexeme);
 

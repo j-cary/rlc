@@ -72,7 +72,7 @@ void asm_c::Data(const char* type, tree_c* var, int init)
 #pragma warning(suppress:4996) //sprintf_s only accepts an array as an arg, not a pointer
 	sprintf(&final_hex[digits_max - digits_used], "%sh", real_hex); //append the real number with 'h'
 
-	sprintf_s(lblname, "_%s:", var->Hash()->K());
+	sprintf_s(lblname, "_%s:", var->Hash()->Str());
 
 	//queue this up for writing after this function's ret statement
 	strcat_s(dataqueue, lblname);

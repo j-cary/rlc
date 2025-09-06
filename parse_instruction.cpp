@@ -2,52 +2,52 @@
 
 GF_DEF(INSTRUCTION)
 {
-	tree_c* self = parent->InsR("Instruction", NT_INSTRUCTION);
+	tree_c* self = parent->InsR("Instruction", CODE::NT_INSTRUCTION);
 	node_c* saved = list->Save();
 	kv_c kv;
 	gfunc_t func = NULL;
 
-	switch (list->Get()->V())
+	switch (list->Get()->Code())
 	{
-	case CODE_JP:
-	case CODE_INC:
-	case CODE_DEC:
-	case CODE_IM:
-	case CODE_NEG:	func = &parser_c::OPERANDS_ONE;			break;
+	case CODE::JP:
+	case CODE::INC:
+	case CODE::DEC:
+	case CODE::IM:
+	case CODE::NEG:	func = &parser_c::OPERANDS_ONE;			break;
 
-	case CODE_RES:
-	case CODE_SET:
-	case CODE_FLP:
-	case CODE_IN:
-	case CODE_OUT:	func = &parser_c::OPERANDS_TWO;			break;
+	case CODE::RES:
+	case CODE::SET:
+	case CODE::FLP:
+	case CODE::INN:
+	case CODE::OT:	func = &parser_c::OPERANDS_TWO;			break;
 
-	case CODE_LDM:
-	case CODE_OUTM:
-	case CODE_INM:	func = &parser_c::OPERANDS_THREE;		break;
+	case CODE::LDM:
+	case CODE::OUTM:
+	case CODE::INM:	func = &parser_c::OPERANDS_THREE;		break;
 
-	case CODE_RR:
-	case CODE_RL:	func = &parser_c::OPERANDS_ONE_TO_TWO;	break;
+	case CODE::RR:
+	case CODE::RL:	func = &parser_c::OPERANDS_ONE_TO_TWO;	break;
 
-	case CODE_SL:
-	case CODE_SR:	func = &parser_c::OPERANDS_ONE_TO_THREE;	break;
+	case CODE::SL:
+	case CODE::SR:	func = &parser_c::OPERANDS_ONE_TO_THREE;	break;
 
-	case CODE_LD:
-	case CODE_ADD:
-	case CODE_SUB:
-	case CODE_MUL:
-	case CODE_DIV:
-	case CODE_MOD:
-	case CODE_AND:
-	case CODE_OR:
-	case CODE_XOR:	func = &parser_c::OPERANDS_TWO_TO_INF;	break;
+	case CODE::LD:
+	case CODE::ADD:
+	case CODE::SUB:
+	case CODE::MUL:
+	case CODE::DIV:
+	case CODE::MOD:
+	case CODE::AND:
+	case CODE::OR:
+	case CODE::XOR:	func = &parser_c::OPERANDS_TWO_TO_INF;	break;
 
-	case CODE_COMP:	func = &parser_c::OPERANDS_COMP;			break;
+	case CODE::COMP:	func = &parser_c::OPERANDS_COMP;			break;
 
-	case CODE_CPM:	func = &parser_c::OPERANDS_CPM;			break;
+	case CODE::CPM:	func = &parser_c::OPERANDS_CPM;			break;
 
-	case CODE_RET:	func = &parser_c::OPERANDS_RET;			break;
+	case CODE::RET:	func = &parser_c::OPERANDS_RET;			break;
 
-	case CODE_CALL:	func = &parser_c::OPERANDS_CALL;			break;
+	case CODE::CALL:	func = &parser_c::OPERANDS_CALL;			break;
 
 	default:	parent->KillChild(self);	return false;	break;
 	}
@@ -58,7 +58,7 @@ GF_DEF(INSTRUCTION)
 
 	if(Call(func, self))
 	{// <operand(s)>
-		if (GETCP(CODE_SEMICOLON))
+		if (GETCP(CODE::SEMICOLON))
 		{// ';'
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -75,7 +75,7 @@ GF_DEF(INSTRUCTION)
 
 GF_DEF(OPERANDS_ONE)
 {// <memory_expression>
-	tree_c* self = parent->InsR("1 op", NT_OPERANDS_ONE);
+	tree_c* self = parent->InsR("1 op", CODE::NT_OPERANDS_ONE);
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
@@ -88,13 +88,13 @@ GF_DEF(OPERANDS_ONE)
 
 GF_DEF(OPERANDS_TWO)
 {//<memory_expression> ',' <mem_or_const_expression>
-	tree_c* self = parent->InsR("2 ops", NT_OPERANDS_TWO);
+	tree_c* self = parent->InsR("2 ops", CODE::NT_OPERANDS_TWO);
 	node_c* saved = list->Save();
 	kv_c kv;
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
-		if (GETCP(CODE_COMMA))
+		if (GETCP(CODE::COMMA))
 		{// ','
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -111,20 +111,20 @@ GF_DEF(OPERANDS_TWO)
 
 GF_DEF(OPERANDS_THREE)
 {//<memory_expression> ',' <memory_expression> ',' <mem_or_const_expression>
-	tree_c* self = parent->InsR("3 ops", NT_OPERANDS_THREE);
+	tree_c* self = parent->InsR("3 ops", CODE::NT_OPERANDS_THREE);
 	node_c* saved = list->Save();
 	kv_c kv;
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
-		if (GETCP(CODE_COMMA))
+		if (GETCP(CODE::COMMA))
 		{// ','
 			list->Pop(&kv);
 			self->InsR(&kv);
 
 			if (CL(MEMORY_EXPRESSION, self))
 			{// <memory_expression>
-				if (GETCP(CODE_COMMA))
+				if (GETCP(CODE::COMMA))
 				{// ','
 					list->Pop(&kv);
 					self->InsR(&kv);
@@ -143,13 +143,13 @@ GF_DEF(OPERANDS_THREE)
 
 GF_DEF(OPERANDS_ONE_TO_TWO)
 {//<memory_expression> { ',' <mem_or_const_expression> }?
-	tree_c* self = parent->InsR("1 or 2 ops", NT_OPERANDS_ONE_TO_TWO);
+	tree_c* self = parent->InsR("1 or 2 ops", CODE::NT_OPERANDS_ONE_TO_TWO);
 	node_c* saved = list->Save();
 	kv_c kv;
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
-		if (GETCP(CODE_COMMA))
+		if (GETCP(CODE::COMMA))
 		{// ','
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -169,20 +169,20 @@ GF_DEF(OPERANDS_ONE_TO_TWO)
 
 GF_DEF(OPERANDS_ONE_TO_THREE)
 {// <memory_expression>  { ',' <constant>  { ',' <mem_or_const_expression> }? }?
-	tree_c* self = parent->InsR("1 to 3 ops", NT_OPERANDS_ONE_TO_THREE);
+	tree_c* self = parent->InsR("1 to 3 ops", CODE::NT_OPERANDS_ONE_TO_THREE);
 	node_c* saved = list->Save();
 	kv_c kv;
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
-		if (GETCP(CODE_COMMA))
+		if (GETCP(CODE::COMMA))
 		{// ','
 			list->Pop(&kv);
 			self->InsR(&kv);
 
 			if (CL(CONSTANT, self)) //Semantically, 0 or 1.
 			{// <constant>
-				if (GETCP(CODE_COMMA))
+				if (GETCP(CODE::COMMA))
 				{// ','
 					list->Pop(&kv);
 					self->InsR(&kv);
@@ -206,7 +206,7 @@ GF_DEF(OPERANDS_ONE_TO_THREE)
 
 GF_DEF(OPERANDS_TWO_TO_INF)
 {//<memory_expression> { ',' <mem_or_const_expression> }+
-	tree_c* self = parent->InsR("2 to inf ops", NT_OPERANDS_TWO_TO_INF);
+	tree_c* self = parent->InsR("2 to inf ops", CODE::NT_OPERANDS_TWO_TO_INF);
 	tree_c* comma_child;
 	node_c* saved = list->Save();
 	node_c* comma_saved;
@@ -217,7 +217,7 @@ GF_DEF(OPERANDS_TWO_TO_INF)
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
-		if (GETCP(CODE_COMMA))
+		if (GETCP(CODE::COMMA))
 		{// ','
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -227,7 +227,7 @@ GF_DEF(OPERANDS_TWO_TO_INF)
 
 				while (1)
 				{
-					if (!GETCP(CODE_COMMA))
+					if (!GETCP(CODE::COMMA))
 						break;
 					comma_saved = list->Save();
 					list->Pop(&kv);
@@ -256,13 +256,13 @@ GF_DEF(OPERANDS_TWO_TO_INF)
 
 GF_DEF(OPERANDS_COMP)
 {//<memory_expression> ',' <arithmetic_expression>
-	tree_c* self = parent->InsR("2 ops", NT_OPERANDS_COMP);
+	tree_c* self = parent->InsR("2 ops", CODE::NT_OPERANDS_COMP);
 	node_c* saved = list->Save();
 	kv_c kv;
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{// <memory_expression>
-		if (GETCP(CODE_COMMA))
+		if (GETCP(CODE::COMMA))
 		{// ','
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -279,7 +279,7 @@ GF_DEF(OPERANDS_COMP)
 
 GF_DEF(OPERANDS_CPM)
 {//<memory_expression> ',' <memory_expression> ',' <memory_expression> ',' <mem_or_const_expression>
-	tree_c* self = parent->InsR("4 ops", NT_OPERANDS_FOUR);
+	tree_c* self = parent->InsR("4 ops", CODE::NT_OPERANDS_FOUR);
 	node_c* saved = list->Save();
 	bool success = true;
 	kv_c kv;
@@ -293,7 +293,7 @@ GF_DEF(OPERANDS_CPM)
 		}
 
 		//<memory_expression>
-		if (!GETCP(CODE_COMMA))
+		if (!GETCP(CODE::COMMA))
 		{
 			success = false;
 			break;
@@ -317,7 +317,7 @@ GF_DEF(OPERANDS_CPM)
 GF_DEF(OPERANDS_RET)
 {// { <logical_expression> }+
 
-	tree_c* self = parent->InsR("1 op", NT_OPERANDS_RET);
+	tree_c* self = parent->InsR("1 op", CODE::NT_OPERANDS_RET);
 
 	if (!CL(LOGICAL_EXPRESSION, self))
 		parent->KillChild(self);
@@ -327,7 +327,7 @@ GF_DEF(OPERANDS_RET)
 
 GF_DEF(OPERANDS_CALL)
 {//<memory_expression>  { ',' <mem_or_const_expression> }*
-	tree_c* self = parent->InsR("1 to inf ops", NT_OPERANDS_CALL);
+	tree_c* self = parent->InsR("1 to inf ops", CODE::NT_OPERANDS_CALL);
 	tree_c* comma_child;
 	node_c* saved = list->Save();
 	node_c* comma_saved;
@@ -339,7 +339,7 @@ GF_DEF(OPERANDS_CALL)
 
 		while (1)
 		{
-			if (!GETCP(CODE_COMMA))
+			if (!GETCP(CODE::COMMA))
 				break;
 			comma_saved = list->Save();
 			list->Pop(&kv); //','

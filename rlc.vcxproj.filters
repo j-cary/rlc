@@ -119,6 +119,12 @@
     <ClInclude Include="template.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="asm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="llist.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="bnf.txt">

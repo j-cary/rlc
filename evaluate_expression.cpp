@@ -7,18 +7,18 @@
 int eval_expr_c::ConstantHelper(const tree_c* head, int num_kids, int offset, const_op_e type) const
 {
 	int	r1, r2, ret = 0;
-	int	op_code;
+	CODE	op_code;
 
 	r1 = Constant(head->Get(offset));
-	op_code = head->Get(offset + 1)->Hash()->V();
+	op_code = head->Get(offset + 1)->Hash()->Code();
 	r2 = Constant(head->Get(offset + 2));
 
 	if (type == const_op_e::OP_SHIFT)
 	{
 		switch (op_code)
 		{
-		case T_LEFT_SHIFT: ret = r1 << r2; break;
-		case T_RIGHT_SHIFT: ret = r1 >> r2; break;
+		case CODE::T_LEFT_SHIFT: ret = r1 << r2; break;
+		case CODE::T_RIGHT_SHIFT: ret = r1 >> r2; break;
 		default: Error("Bad shift operator"); break;
 		}
 	}
@@ -26,8 +26,8 @@ int eval_expr_c::ConstantHelper(const tree_c* head, int num_kids, int offset, co
 	{
 		switch (op_code)
 		{
-		case CODE_PLUS: ret = r1 + r2; break;
-		case CODE_MINUS: ret = r1 - r2; break;
+		case CODE::PLUS: ret = r1 + r2; break;
+		case CODE::MINUS: ret = r1 - r2; break;
 		default: Error("Bad additive operator"); break;
 		}
 	}
@@ -35,9 +35,9 @@ int eval_expr_c::ConstantHelper(const tree_c* head, int num_kids, int offset, co
 	{
 		switch (op_code)
 		{
-		case CODE_STAR: ret = r1 * r2; break;
-		case CODE_FSLASH: ret = r1 / r2; break;
-		case CODE_PERCENT: ret = r1 % r2; break;
+		case CODE::STAR: ret = r1 * r2; break;
+		case CODE::FSLASH: ret = r1 / r2; break;
+		case CODE::PERCENT: ret = r1 % r2; break;
 		default: Error("Bad multiplicative operator"); break;
 		}
 	}
@@ -46,15 +46,15 @@ int eval_expr_c::ConstantHelper(const tree_c* head, int num_kids, int offset, co
 
 	for (int i = offset + 3; i < num_kids; i += 2)
 	{
-		op_code = head->Get(i)->Hash()->V();
+		op_code = head->Get(i)->Hash()->Code();
 		r1 = Constant(head->Get(i + 1));
 
 		if (type == const_op_e::OP_SHIFT)
 		{
 			switch (op_code)
 			{
-			case T_LEFT_SHIFT: ret <<= r1; break;
-			case T_RIGHT_SHIFT: ret >>= r1; break;
+			case CODE::T_LEFT_SHIFT: ret <<= r1; break;
+			case CODE::T_RIGHT_SHIFT: ret >>= r1; break;
 			default: Error("Bad shift operator"); break;
 			}
 		}
@@ -62,8 +62,8 @@ int eval_expr_c::ConstantHelper(const tree_c* head, int num_kids, int offset, co
 		{
 			switch (op_code)
 			{
-			case CODE_PLUS: ret += r1; break;
-			case CODE_MINUS: ret -= r1; break;
+			case CODE::PLUS: ret += r1; break;
+			case CODE::MINUS: ret -= r1; break;
 			default: Error("Bad additive operator"); break;
 			}
 		}
@@ -71,9 +71,9 @@ int eval_expr_c::ConstantHelper(const tree_c* head, int num_kids, int offset, co
 		{
 			switch (op_code)
 			{
-			case CODE_STAR: ret *= r1; break;
-			case CODE_FSLASH: ret /= r1; break;
-			case CODE_PERCENT: ret %= r1; break;
+			case CODE::STAR: ret *= r1; break;
+			case CODE::FSLASH: ret /= r1; break;
+			case CODE::PERCENT: ret %= r1; break;
 			default: Error("Bad multiplicative operator"); break;
 			}
 		}
@@ -86,33 +86,33 @@ int eval_expr_c::Constant(const tree_c* head) const
 {
 	int		kids;
 	int		ret = 0;
-	int		op_code;
+	CODE		op_code;
 
 	for (kids = 0; head->Get(kids); kids++);
 
-	switch (head->Hash()->V())
+	switch (head->Hash()->Code())
 	{
-	case CODE_NUM_DEC:				ret = atoi(head->Hash()->K()); break;
-	case CODE_NUM_BIN:				ret = strtol(&head->Hash()->K()[1], NULL, 2); break;
-	case CODE_NUM_HEX:				ret = strtol(&head->Hash()->K()[1], NULL, 16); break;
-	case NT_SHIFT_EXPR:				ret = ConstantHelper(head, kids, 0, const_op_e::OP_SHIFT); break;
-	case NT_ADDITIVE_EXPR:			ret = ConstantHelper(head, kids, 0, const_op_e::OP_ADD); break;
-	case NT_MULTIPLICATIVE_EXPR:	ret = ConstantHelper(head, kids, 0, const_op_e::OP_MULT); break;
-	case NT_ARITHMETIC_PRIMARY_EXPR:
+	case CODE::NUM_DEC:				ret = atoi(head->Hash()->Str()); break;
+	case CODE::NUM_BIN:				ret = strtol(&head->Hash()->Str()[1], NULL, 2); break;
+	case CODE::NUM_HEX:				ret = strtol(&head->Hash()->Str()[1], NULL, 16); break;
+	case CODE::NT_SHIFT_EXPR:				ret = ConstantHelper(head, kids, 0, const_op_e::OP_SHIFT); break;
+	case CODE::NT_ADDITIVE_EXPR:			ret = ConstantHelper(head, kids, 0, const_op_e::OP_ADD); break;
+	case CODE::NT_MULTIPLICATIVE_EXPR:	ret = ConstantHelper(head, kids, 0, const_op_e::OP_MULT); break;
+	case CODE::NT_ARITHMETIC_PRIMARY_EXPR:
 
 		ret = Constant(head->Get(1));//skip over the (, *, &, etc.
-		op_code = head->Get(0)->Hash()->V();
+		op_code = head->Get(0)->Hash()->Code();
 
-		if (op_code == CODE_MINUS)
+		if (op_code == CODE::MINUS)
 			ret = -ret;
-		else if (op_code == CODE_STAR || op_code == CODE_AMPERSAND)
+		else if (op_code == CODE::STAR || op_code == CODE::AMPERSAND)
 			Error("referencing/de-referencing is not allowed in a constant expression");
 
 		break;
 
-	case NT_ARITHMETIC_POSTFIX_EXPR:
+	case CODE::NT_ARITHMETIC_POSTFIX_EXPR:
 		Error("Postfix operators are not allowed in constant expressions");
-	case CODE_TEXT:
+	case CODE::TEXT:
 		Error("Text value found in const. expr");
 	default:
 		INTERNAL_ASSERT(0, "Bad const expression");
@@ -127,7 +127,7 @@ int eval_expr_c::Constant(const tree_c* head) const
 
 int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 {
-	int code;
+	CODE code;
 	int offset = 0;
 	int	kids;
 	const tree_c* expr = head;
@@ -149,28 +149,28 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 	//Count the operands
 	for (kids = 0; expr->Get(kids); kids++);
 
-	code = expr->Hash()->V();
+	code = expr->Hash()->Code();
 
-	if (NT_MEMORY_PRIMARY_EXPR == code)
+	if (CODE::NT_MEMORY_PRIMARY_EXPR == code)
 	{
-		const int unary_op = head->Get(0)->Hash()->V();
+		const CODE unary_op = head->Get(0)->Hash()->Code();
 		mem_op_e next_type;
 
 		switch (unary_op)
 		{
-		case CODE_STAR: next_type = mem_op_e::OP_DEREF; break;
-		case CODE_AMPERSAND: next_type = mem_op_e::OP_REF;
+		case CODE::STAR: next_type = mem_op_e::OP_DEREF; break;
+		case CODE::AMPERSAND: next_type = mem_op_e::OP_REF;
 		default: next_type = mem_op_e::OP_NONE;
 		}
 
 		// Parse any leading refs/derefs
 		return MemoryPrimary(head->Get(1), data, next_type);
 	}
-	else if (NT_MEMORY_EXPR == code)
+	else if (CODE::NT_MEMORY_EXPR == code)
 	{
 		*data = expr->Get(0);
 	}
-	else if (CODE_TEXT == code)
+	else if (CODE::TEXT == code)
 	{
 		*data = (tree_c*)expr; // TODO: re-evaluate const status of stuff program-wide
 	}
@@ -181,10 +181,10 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 
 	//Note: Struct member validity checking happens twice - in semantics and in CG. Oh well
 	//TODO: This'll become useful once it returns the actual struct entry
-	is_struct = block->IsStructInstance((*data)->Hash()->K(), func, root);
+	is_struct = block->IsStructInstance((*data)->Hash()->Str(), func, root);
 
 	cfg_c* local_block = NULL; //FIXME: remove casts here
-	data_t* data_entry = block->ScopedDataEntry((*data)->Hash()->K(), (cfg_c*)func, (cfg_c*)root, &local_block);
+	data_t* data_entry = block->ScopedDataEntry((*data)->Hash()->Str(), (cfg_c*)func, (cfg_c*)root, &local_block);
 
 	//Base data types should be allowed array offsetting (for untyped pointers stored in a dw)
 	//Structs should be allowed member offsets; base data types can do the above as well
@@ -203,9 +203,9 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 	{
 		const tree_c* const op = expr->Get(i);
 
-		switch (op->Hash()->V())
+		switch (op->Hash()->Code())
 		{
-		case CODE_PERIOD: //Member access
+		case CODE::PERIOD: //Member access
 
 			ASSERT(data_entry->flags & DF_STRUCT,
 				"Member access operator used on non-struct object");
@@ -219,7 +219,7 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 
 			break;
 
-		case T_DEREF_MEMBER: //Indirect member access
+		case CODE::T_DEREF_MEMBER: //Indirect member access
 			ASSERT(data_entry->flags & DF_STRUCT,
 				"Member access operator used on non-struct object");
 
@@ -232,7 +232,7 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 
 			break;
 
-		case CODE_LBRACE: //Array indexing
+		case CODE::LBRACE: //Array indexing
 			ASSERT(data_entry->flags & (DF_PTR | DF_ARRAY | DF_WORD),
 				"Braces used on non-indexable object");
 
@@ -259,15 +259,15 @@ int eval_expr_c::MemoryPrimary(const tree_c* head, tree_c** data, mem_op_e type)
 	case mem_op_e::OP_DEREF: --ref_level; break;
 	}
 
-	if (NT_MEMORY_EXPR == head->Hash()->V())
+	if (CODE::NT_MEMORY_EXPR == head->Hash()->Code())
 	{ // Found the first non ref token. This'll be the struct/array instance
 		return MemoryOffset(head, data);
 	}
 
-	switch (head->Get(0)->Hash()->V())
+	switch (head->Get(0)->Hash()->Code())
 	{
-	case CODE_STAR: next_type = mem_op_e::OP_DEREF; break;
-	case CODE_AMPERSAND: next_type = mem_op_e::OP_REF;
+	case CODE::STAR: next_type = mem_op_e::OP_DEREF; break;
+	case CODE::AMPERSAND: next_type = mem_op_e::OP_REF;
 	default: next_type = mem_op_e::OP_NONE;
 	}
 

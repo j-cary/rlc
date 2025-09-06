@@ -3,9 +3,9 @@
 GF_DEF(STORAGE_SPECIFIER)
 {//'static' | 'auto' | 'stack'
 	kv_c kv;
-	tree_c* self = parent->InsR("Storage specifier", NT_STORAGE_SPEC);
+	tree_c* self = parent->InsR("Storage specifier", CODE::NT_STORAGE_SPEC);
 
-	if (GETCP(CODE_STATIC) || GETCP(CODE_AUTO) || GETCP(CODE_STACK))
+	if (GETCP(CODE::STATIC) || GETCP(CODE::AUTO) || GETCP(CODE::STACK))
 	{
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -19,9 +19,9 @@ GF_DEF(STORAGE_SPECIFIER)
 GF_DEF(DATA_MODIFIER)
 {//<storage_specifier> | 'signed' | <storage_specifier> 'signed' | 'signed' <storage_specifier>
 	kv_c kv;
-	tree_c* self = parent->InsR("Data modifier", NT_DATA_MODIFIER);
+	tree_c* self = parent->InsR("Data modifier", CODE::NT_DATA_MODIFIER);
 
-	if (GETCP(CODE_SIGNED))
+	if (GETCP(CODE::SIGNED))
 	{//'signed'
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -33,7 +33,7 @@ GF_DEF(DATA_MODIFIER)
 	else if (CL(STORAGE_SPECIFIER, self))
 	{//<storage_specifier>
 
-		if (GETCP(CODE_SIGNED))
+		if (GETCP(CODE::SIGNED))
 		{//'signed'
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -52,10 +52,10 @@ GF_DEF(DATA_TYPE)
 	tree_c* self;
 	node_c* saved = list->Save();
 
-	if (GETCP(CODE_BYTE) || GETCP(CODE_WORD) || GETCP(CODE_FIXED))
+	if (GETCP(CODE::BYTE) || GETCP(CODE::WORD) || GETCP(CODE::FIXED))
 	{
 		list->Pop(&kv);
-		self = parent->InsR("Data", NT_DATA_TYPE);
+		self = parent->InsR("Data", CODE::NT_DATA_TYPE);
 		self->InsR(&kv);
 
 		return true;
@@ -73,11 +73,11 @@ GF_DEF(DATA_DECL)
 
 	node_c* saved = list->Save();
 	node_c* comma_saved;
-	tree_c* self = parent->InsR("Data declaration", NT_DATA_DECL);
+	tree_c* self = parent->InsR("Data declaration", CODE::NT_DATA_DECL);
 	kv_c kv;
 #if 0
 
-	if (GETCP(CODE_LABEL))
+	if (GETCP(CODES::LABEL))
 	{//'label'
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -85,7 +85,7 @@ GF_DEF(DATA_DECL)
 		if (!CL(IDENTIFIER, self))
 			Error("Expected an identifier after label declaration");
 
-		if (!GETCP(CODE_SEMICOLON))
+		if (!GETCP(CODES::SEMICOLON))
 			Error("Missing ';' after label declaration");
 
 		list->Pop(&kv);
@@ -93,14 +93,14 @@ GF_DEF(DATA_DECL)
 
 		return true;
 	}
-	else if (GETCP(CODE_STRUCT))
+	else if (GETCP(CODES::STRUCT))
 	{//'struct'
 		list->Pop(&kv);
 		self->InsR(&kv);
 
 		if (CL(IDENTIFIER, self))
 		{//<identifier>
-			if (GETCP(CODE_STAR))
+			if (GETCP(CODES::STAR))
 			{//'*'
 				list->Pop(&kv);
 				self->InsR(&kv);
@@ -109,7 +109,7 @@ GF_DEF(DATA_DECL)
 			if (!CL(IDENTIFIER, self)) //<identifier>
 				Error("Expected identifier in struct instance declaration\n");
 
-			if (GETCP(CODE_LBRACE))
+			if (GETCP(CODES::LBRACE))
 			{//'['
 				list->Pop(&kv);
 				self->InsR(&kv);
@@ -117,7 +117,7 @@ GF_DEF(DATA_DECL)
 				if (!CL(CONSTANT_EXPRESSION, self)) //<const_expression>
 					Error("Expected an expression in struct array\n");
 
-				if (!GETCP(CODE_RBRACE)) //']'
+				if (!GETCP(CODES::RBRACE)) //']'
 					Error("Unclosed brace in structure array declaration\n");
 
 				list->Pop(&kv);
@@ -131,7 +131,7 @@ GF_DEF(DATA_DECL)
 			return false;
 		}
 
-		if (!GETCP(CODE_SEMICOLON))
+		if (!GETCP(CODES::SEMICOLON))
 			Error("Missing ';' after data declaration");
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -140,7 +140,7 @@ GF_DEF(DATA_DECL)
 	}
 	else
 	{
-		if (GETCP(CODE_SIGNED))
+		if (GETCP(CODES::SIGNED))
 		{//'signed'
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -158,7 +158,7 @@ GF_DEF(DATA_DECL)
 			}
 		}
 
-		if (GETCP(CODE_STAR))
+		if (GETCP(CODES::STAR))
 		{//'*'?
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -168,7 +168,7 @@ GF_DEF(DATA_DECL)
 		{//<single_data_decl>
 			while (1)
 			{
-				if (!GETCP(CODE_COMMA))
+				if (!GETCP(CODES::COMMA))
 					break;
 
 				list->Pop(&kv);// ','
@@ -181,7 +181,7 @@ GF_DEF(DATA_DECL)
 		}
 		else if (CL(IDENTIFIER, self))
 		{//<identifier>
-			if (!GETCP(CODE_LBRACE))
+			if (!GETCP(CODES::LBRACE))
 				Error("Expected a '[' after identifier");
 			list->Pop(&kv);// '['
 			self->InsR(&kv);
@@ -189,17 +189,17 @@ GF_DEF(DATA_DECL)
 			if (!CL(CONSTANT_EXPRESSION, self)) //<constant_expression>
 				Error("Expected an expression after '['");
 
-			if (!GETCP(CODE_RBRACE))
+			if (!GETCP(CODES::RBRACE))
 				Error("Expected a ']' after expression");
 			list->Pop(&kv);// ']'
 			self->InsR(&kv);
 
-			if (GETCP(CODE_EQUALS))
+			if (GETCP(CODES::EQUALS))
 			{//'='
 				list->Pop(&kv);
 				self->InsR(&kv);
 
-				if (!GETCP(CODE_LBRACKET))
+				if (!GETCP(CODES::LBRACKET))
 					Error("Expected a '{' after '='");
 
 				list->Pop(&kv);//'{'
@@ -208,7 +208,7 @@ GF_DEF(DATA_DECL)
 				if (!CL(INITIALIZER_LIST, self))//<initializer_list>
 					Error("Expected an initializer in array declaration");
 
-				if (!GETCP(CODE_RBRACKET))
+				if (!GETCP(CODES::RBRACKET))
 					Error("Expeceted a '}' after initializer list");
 
 				list->Pop(&kv);//'}'
@@ -218,7 +218,7 @@ GF_DEF(DATA_DECL)
 		else
 			Error("Expected an identifier after data type\n");
 
-		if (!GETCP(CODE_SEMICOLON))
+		if (!GETCP(CODES::SEMICOLON))
 			Error("Expected a ';' after data decl");
 
 		list->Pop(&kv);
@@ -231,7 +231,7 @@ GF_DEF(DATA_DECL)
 	list->Restore(saved);
 
 #else
-	if (GETCP(CODE_LABEL))
+	if (GETCP(CODE::LABEL))
 	{//'label'
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -239,7 +239,7 @@ GF_DEF(DATA_DECL)
 		if (!CL(IDENTIFIER, self))
 			Error("Expected an identifier after label declaration");
 
-		if (!GETCP(CODE_SEMICOLON))
+		if (!GETCP(CODE::SEMICOLON))
 			Error("Missing ';' after label declaration");
 
 		list->Pop(&kv);
@@ -247,7 +247,7 @@ GF_DEF(DATA_DECL)
 
 		return true;
 	}
-	else if (GETCP(CODE_STRUCT) || PEEKCP(CODE_STRUCT))
+	else if (GETCP(CODE::STRUCT) || PEEKCP(CODE::STRUCT))
 	{
 		if (CL(STRUCT_DECL, self))
 			return true;
@@ -269,7 +269,7 @@ GF_DEF(DATA_DECL)
 			}
 		}
 
-		if (GETCP(CODE_STAR))
+		if (GETCP(CODE::STAR))
 		{//'*'?
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -279,7 +279,7 @@ GF_DEF(DATA_DECL)
 		{//<single_data_decl>
 			while (1)
 			{
-				if (!GETCP(CODE_COMMA))
+				if (!GETCP(CODE::COMMA))
 					break;
 
 				list->Pop(&kv);// ','
@@ -292,7 +292,7 @@ GF_DEF(DATA_DECL)
 		}
 		else if (CL(IDENTIFIER, self))
 		{//<identifier>
-			if (!GETCP(CODE_LBRACE))
+			if (!GETCP(CODE::LBRACE))
 				Error("Expected a '[' after identifier");
 			list->Pop(&kv);// '['
 			self->InsR(&kv);
@@ -300,17 +300,17 @@ GF_DEF(DATA_DECL)
 			if (!CL(CONSTANT_EXPRESSION, self)) //<constant_expression>
 				Error("Expected an expression after '['");
 
-			if (!GETCP(CODE_RBRACE))
+			if (!GETCP(CODE::RBRACE))
 				Error("Expected a ']' after expression");
 			list->Pop(&kv);// ']'
 			self->InsR(&kv);
 
-			if (GETCP(CODE_EQUALS))
+			if (GETCP(CODE::EQUALS))
 			{//'='
 				list->Pop(&kv);
 				self->InsR(&kv);
 
-				if (!GETCP(CODE_LBRACKET))
+				if (!GETCP(CODE::LBRACKET))
 					Error("Expected a '{' after '='");
 
 				list->Pop(&kv);//'{'
@@ -319,7 +319,7 @@ GF_DEF(DATA_DECL)
 				if (!CL(INITIALIZER_LIST, self))//<initializer_list>
 					Error("Expected an initializer in array declaration");
 
-				if (!GETCP(CODE_RBRACKET))
+				if (!GETCP(CODE::RBRACKET))
 					Error("Expeceted a '}' after initializer list");
 
 				list->Pop(&kv);//'}'
@@ -329,7 +329,7 @@ GF_DEF(DATA_DECL)
 		else
 			Error("Expected an identifier after data type");
 
-		if (!GETCP(CODE_SEMICOLON))
+		if (!GETCP(CODE::SEMICOLON))
 			Error("Expected a ';' after data decl");
 
 		list->Pop(&kv);
@@ -348,18 +348,18 @@ GF_DEF(STRUCT_DECL)
 {//<storage_specifier>? 'struct' <identifier> '*'? <identifier>  { '[' <const_expression> ']' }? ';' |
 	kv_c kv;
 	node_c* saved = list->Save();
-	tree_c* self = parent->InsR("Struct decl", NT_STRUCT_DECL);
+	tree_c* self = parent->InsR("Struct decl", CODE::NT_STRUCT_DECL);
 
 	CL(STORAGE_SPECIFIER, self); //<storage_specifier>?
 
-	if (GETCP(CODE_STRUCT))
+	if (GETCP(CODE::STRUCT))
 	{//'struct'
 		list->Pop(&kv);
 		self->InsR(&kv);
 
 		if (CL(IDENTIFIER, self))
 		{//<identifier>
-			if (GETCP(CODE_STAR))
+			if (GETCP(CODE::STAR))
 			{//'*'
 				list->Pop(&kv);
 				self->InsR(&kv);
@@ -368,7 +368,7 @@ GF_DEF(STRUCT_DECL)
 			if (!CL(IDENTIFIER, self)) //<identifier>
 				Error("Expected identifier in struct instance declaration");
 
-			if (GETCP(CODE_LBRACE))
+			if (GETCP(CODE::LBRACE))
 			{//'['
 				list->Pop(&kv);
 				self->InsR(&kv);
@@ -376,7 +376,7 @@ GF_DEF(STRUCT_DECL)
 				if (!CL(CONSTANT_EXPRESSION, self)) //<const_expression>
 					Error("Expected an expression in struct array");
 
-				if (!GETCP(CODE_RBRACE)) //']'
+				if (!GETCP(CODE::RBRACE)) //']'
 					Error("Unclosed brace in structure array declaration");
 
 				list->Pop(&kv);
@@ -390,7 +390,7 @@ GF_DEF(STRUCT_DECL)
 			return false;
 		}
 
-		if (!GETCP(CODE_SEMICOLON))
+		if (!GETCP(CODE::SEMICOLON))
 			Error("Missing ';' after data declaration");
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -407,14 +407,14 @@ GF_DEF(SINGLE_DATA_DECL)
 {//<identifier> { '=' <arithmetic_expression> }+
 	node_c* saved = list->Save();
 	node_c* saved_equals;
-	tree_c* self = parent->InsR("Single data decl", NT_SINGLE_DATA_DECL);
+	tree_c* self = parent->InsR("Single data decl", CODE::NT_SINGLE_DATA_DECL);
 	tree_c* equals_sign = NULL;
 	kv_c kv;
 
 	if (CL(IDENTIFIER, self))
 	{//<identifier>
 
-		if (GETCP(CODE_LBRACE))
+		if (GETCP(CODE::LBRACE))
 		{//'[' - look ahead so array decls don't return true here
 
 			list->Restore(saved);
@@ -422,7 +422,7 @@ GF_DEF(SINGLE_DATA_DECL)
 			return false;
 		}
 
-		if (GETCP(CODE_EQUALS))
+		if (GETCP(CODE::EQUALS))
 		{//'='
 			saved_equals = list->Save();
 			list->Pop(&kv);
@@ -448,14 +448,14 @@ GF_DEF(TYPE_DEF)
 {// 'flags' '{' <data_decl>+ '}' <identifier> ';'
 	kv_c kv;
 	node_c* saved = list->Save();
-	tree_c* self = parent->InsR("Type def", NT_TYPE_DEF);
+	tree_c* self = parent->InsR("Type def", CODE::NT_TYPE_DEF);
 
-	if (GETCP(CODE_STRUCT))
+	if (GETCP(CODE::STRUCT))
 	{// 'struct'
 		list->Pop(&kv);
 		self->InsR(&kv);
 
-		if (GETCP(CODE_LBRACKET))
+		if (GETCP(CODE::LBRACKET))
 		{// '{'
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -464,14 +464,14 @@ GF_DEF(TYPE_DEF)
 			{// <data_decl>
 				while (CL(DATA_DECL, self)) {} // <data_decl>*
 
-				if (GETCP(CODE_RBRACKET))
+				if (GETCP(CODE::RBRACKET))
 				{// '}'
 					list->Pop(&kv);
 					self->InsR(&kv);
 
 					if (CL(IDENTIFIER, self))
 					{// <identifier>
-						if (GETCP(CODE_SEMICOLON))
+						if (GETCP(CODE::SEMICOLON))
 						{// ';'
 							list->Pop(&kv);
 							self->InsR(&kv);

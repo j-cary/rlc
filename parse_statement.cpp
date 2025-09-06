@@ -10,12 +10,12 @@ GF_DEF(COMPOUND_STATEMENT)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	if (GETCP(CODE_LBRACKET))
+	if (GETCP(CODE::LBRACKET))
 	{// '{'
 		list->Pop(&kv);
 		if (parent)
 		{
-			self = parent->InsR("Compound statement", NT_COMPOUND_STMT);
+			self = parent->InsR("Compound statement", CODE::NT_COMPOUND_STMT);
 			self->InsR(&kv);
 		}
 
@@ -25,7 +25,7 @@ GF_DEF(COMPOUND_STATEMENT)
 				break;
 		}
 
-		if (GETCP(CODE_RBRACKET))
+		if (GETCP(CODE::RBRACKET))
 		{// '}'
 			list->Pop(&kv);
 			if (parent)
@@ -47,7 +47,7 @@ GF_DEF(STATEMENT)
 	tree_c* self = NULL;
 
 	if (parent)
-		self = parent->InsR("Statement", NT_STMT);
+		self = parent->InsR("Statement", CODE::NT_STMT);
 
 	if (CL(OPEN_STATEMENT,  self))
 	{// <open_statement>
@@ -76,7 +76,7 @@ GF_DEF(OPEN_STATEMENT)
 	kv_c kv;
 
 	if (parent)
-		self = parent->InsR("Open statement", NT_OPEN_STMT);
+		self = parent->InsR("Open statement", CODE::NT_OPEN_STMT);
 
 	if (CL(SELECTION_CLAUSE,  self))
 	{// <selection_clause>
@@ -85,7 +85,7 @@ GF_DEF(OPEN_STATEMENT)
 		{// <statement
 
 			//lookahead for the 'else' here. reject if so
-			if (GETCP(CODE_ELSE))
+			if (GETCP(CODE::ELSE))
 			{
 				//TESTME!!!
 				//this is necessary given 'if() ... else if() ...'
@@ -110,7 +110,7 @@ GF_DEF(OPEN_STATEMENT)
 		if (CL(CLOSED_STATEMENT,  self))
 		{// <closed_statement>
 
-			if (GETCP(CODE_ELSE))
+			if (GETCP(CODE::ELSE))
 			{// 'else'
 				list->Pop(&kv);
 				if (parent)
@@ -124,7 +124,7 @@ GF_DEF(OPEN_STATEMENT)
 		}
 	}
 #if 1
-	if (GETCP(CODE_WHILE))
+	if (GETCP(CODE::WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);
 
@@ -134,7 +134,7 @@ GF_DEF(OPEN_STATEMENT)
 		}
 	}
 
-	if (GETCP(CODE_FOR))
+	if (GETCP(CODE::FOR))
 	{// <for_clause>
 		CL(FOR_CLAUSE, self);
 
@@ -160,7 +160,7 @@ GF_DEF(CLOSED_STATEMENT)
 	tree_c* self = NULL;
 	kv_c kv;
 	if (parent)
-		self = parent->InsR("Closed statement", NT_CLOSED_STMT);
+		self = parent->InsR("Closed statement", CODE::NT_CLOSED_STMT);
 
 	if (CL(SIMPLE_STATEMENT,  self))
 	{// <simple_statement>
@@ -174,7 +174,7 @@ GF_DEF(CLOSED_STATEMENT)
 		if (CL(CLOSED_STATEMENT,  self))
 		{// <closed_statement>
 
-			if (GETCP(CODE_ELSE))
+			if (GETCP(CODE::ELSE))
 			{// 'else'
 				list->Pop(&kv);
 				if (parent)
@@ -189,7 +189,7 @@ GF_DEF(CLOSED_STATEMENT)
 		}
 	}
 #if 1
-	if (GETCP(CODE_WHILE))
+	if (GETCP(CODE::WHILE))
 	{// <while_clause>
 		CL(WHILE_CLAUSE, self);
 
@@ -199,7 +199,7 @@ GF_DEF(CLOSED_STATEMENT)
 		}
 	}
 
-	if (GETCP(CODE_FOR))
+	if (GETCP(CODE::FOR))
 	{// <for_clause>
 		CL(FOR_CLAUSE, self);
 
@@ -227,9 +227,9 @@ GF_DEF(SIMPLE_STATEMENT)
 	kv_c kv;
 
 	if(parent)
-		self = parent->InsR("Simple statement", NT_SIMPLE_STMT);
+		self = parent->InsR("Simple statement", CODE::NT_SIMPLE_STMT);
 
-	if (GETCP(CODE_REPEAT))
+	if (GETCP(CODE::REPEAT))
 	{// 'repeat'
 		list->Pop(&kv);
 		if (parent)
@@ -238,13 +238,13 @@ GF_DEF(SIMPLE_STATEMENT)
 		if (CL(STATEMENT,  self))
 		{// <statement>
 
-			if (GETCP(CODE_UNTIL))
+			if (GETCP(CODE::UNTIL))
 			{// 'until'
 				list->Pop(&kv);
 				if (parent)
 					self->InsR(&kv);
 
-				if (GETCP(CODE_LPAREN))
+				if (GETCP(CODE::LPAREN))
 				{// '('
 					list->Pop(&kv);
 					if (parent)
@@ -253,12 +253,12 @@ GF_DEF(SIMPLE_STATEMENT)
 					if (CL(LOGICAL_EXPRESSION, self))
 					{ // <expression>
 
-						if (GETCP(CODE_RPAREN))
+						if (GETCP(CODE::RPAREN))
 						{// ')'
 							list->Pop(&kv);
 							if (parent)
 								self->InsR(&kv);
-							if (GETCP(CODE_SEMICOLON))
+							if (GETCP(CODE::SEMICOLON))
 							{
 								list->Pop(&kv);
 								if (parent)
@@ -307,16 +307,16 @@ GF_DEF(SELECTION_CLAUSE)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	if (GETCP(CODE_IF))
+	if (GETCP(CODE::IF))
 	{// 'if'
 		list->Pop(&kv);
 		if (parent)
 		{
-			self = parent->InsR("Selection clause", NT_SELECTION_CLAUSE);
+			self = parent->InsR("Selection clause", CODE::NT_SELECTION_CLAUSE);
 			self->InsR(&kv);
 		}
 
-		if (GETCP(CODE_LPAREN))
+		if (GETCP(CODE::LPAREN))
 		{// '('
 			list->Pop(&kv);
 			if (parent)
@@ -324,7 +324,7 @@ GF_DEF(SELECTION_CLAUSE)
 
 			if (CL(LOGICAL_EXPRESSION,  self))
 			{//<expression>
-				if (GETCP(CODE_RPAREN))
+				if (GETCP(CODE::RPAREN))
 				{// ')'
 					list->Pop(&kv);
 					if (parent)
@@ -345,16 +345,16 @@ GF_DEF(SELECTION_CLAUSE)
 
 GF_DEF(FOR_CLAUSE)
 { //'for' '(' <data_type>  <single_data_decl> ')'
-	tree_c* self = parent->InsR("For clause", NT_FOR_CLAUSE);
+	tree_c* self = parent->InsR("For clause", CODE::NT_FOR_CLAUSE);
 	node_c* saved = list->Save();
 	kv_c kv;
 
-	if (GETCP(CODE_FOR))
+	if (GETCP(CODE::FOR))
 	{// 'for'
 		list->Pop(&kv);
 		self->InsR(&kv);
 
-		if (GETCP(CODE_LPAREN))
+		if (GETCP(CODE::LPAREN))
 		{// '('
 			list->Pop(&kv);
 			self->InsR(&kv);
@@ -363,7 +363,7 @@ GF_DEF(FOR_CLAUSE)
 			{// <data_type>
 				if (CL(SINGLE_DATA_DECL, self))
 				{// <single_data_decl>
-					if (GETCP(CODE_RPAREN))
+					if (GETCP(CODE::RPAREN))
 					{//')'
 						list->Pop(&kv);
 						self->InsR(&kv);
@@ -382,22 +382,22 @@ GF_DEF(FOR_CLAUSE)
 GF_DEF(WHILE_CLAUSE)
 {// 'while' '(' <logical_expression> ')'
 	node_c* saved = list->Save();
-	tree_c* self = parent->InsR("While clause", NT_WHILE_CLAUSE);
+	tree_c* self = parent->InsR("While clause", CODE::NT_WHILE_CLAUSE);
 	kv_c kv;
 
-	if (GETCP(CODE_WHILE))
+	if (GETCP(CODE::WHILE))
 	{// 'while'
 		list->Pop(&kv);
 		self->InsR(&kv);
 
-		if (GETCP(CODE_LPAREN))
+		if (GETCP(CODE::LPAREN))
 		{// '('
 			list->Pop(&kv);
 			self->InsR(&kv);
 
 			if (CL(LOGICAL_EXPRESSION, self))
 			{// <logical_expression>
-				if (GETCP(CODE_RPAREN))
+				if (GETCP(CODE::RPAREN))
 				{// ')'
 					list->Pop(&kv);
 					self->InsR(&kv);
@@ -414,13 +414,13 @@ GF_DEF(WHILE_CLAUSE)
 
 GF_DEF(LABEL_DEF)
 {//<identifier> ':'
-	tree_c* self = parent->InsR("Label definition", NT_LABEL_DEF);
+	tree_c* self = parent->InsR("Label definition", CODE::NT_LABEL_DEF);
 	node_c* saved = list->Save();
 	kv_c kv;
 
 	if (CL(IDENTIFIER, self))
 	{//<identifier>
-		if (GETCP(CODE_COLON))
+		if (GETCP(CODE::COLON))
 		{// ':'
 			list->Pop(&kv);
 			self->InsR(&kv);

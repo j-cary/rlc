@@ -39,12 +39,12 @@ void generator_c::CG_Global()
 
 	for (int i = 0; stmt = graph->GetStmt(i); i++)
 	{
-		if (Code(stmt) != NT_DATA_DECL && Code(stmt) != NT_STRUCT_DECL)
+		if (Code(stmt) != CODE::NT_DATA_DECL && Code(stmt) != CODE::NT_STRUCT_DECL)
 			Error("Unhandled global block '%s'", Str(stmt));
 
 		assembler.PrintSourceLine(stmt);
 
-		if (Code(stmt) == NT_DATA_DECL)
+		if (Code(stmt) == CODE::NT_DATA_DECL)
 			CG_DataDeclaration(stmt, graph);
 		else
 			CG_StructDeclaration(stmt, graph);
@@ -128,19 +128,19 @@ void generator_c::CG_RegBlock(cfg_c* block)
 	{
 		switch (Code(stmt))
 		{
-		case NT_DATA_DECL: 
+		case CODE::NT_DATA_DECL:
 			assembler.PrintSourceLine(stmt);
 			if (!data_decls_allowed)
 				Error("Data declarations are only allowed at the start of blocks");
 			CG_DataDeclaration(stmt, block); 
 			break;
-		case NT_STRUCT_DECL: 
+		case CODE::NT_STRUCT_DECL:
 			assembler.PrintSourceLine(stmt);
 			if (!data_decls_allowed)
 				Error("Data declarations are only allowed at the start of blocks");
 			CG_StructDeclaration(stmt, block); 
 			break;
-		case NT_INSTRUCTION: 
+		case CODE::NT_INSTRUCTION:
 			if (data_decls_allowed)
 				CG_Stack(); //first instruction; setup the stack before execution proper starts
 
@@ -148,7 +148,7 @@ void generator_c::CG_RegBlock(cfg_c* block)
 			CG_Instruction(stmt, block);	
 			data_decls_allowed = false;
 			break;
-		case NT_FOR_CLAUSE: 
+		case CODE::NT_FOR_CLAUSE:
 			assembler.PrintSourceLine(stmt);
 			data_decls_allowed = true;
 			CG_ForLoop(stmt, block, block->GetLink(childblock)); 
@@ -180,7 +180,7 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 {
 	tree_c* child;
 	int		i; 
-	int		code;
+	CODE	code;
 	int		res;
 	eval_expr_c eval_expr;
 
@@ -189,7 +189,7 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 	for (i = 1; ; i++)
 	{
 		child = node->Get(i);
-		if (child->Hash()->V() == CODE_TEXT || child->Hash()->V() == NT_SINGLE_DATA_DECL)
+		if (child->Hash()->Code() == CODE::TEXT || child->Hash()->Code() == CODE::NT_SINGLE_DATA_DECL)
 			break;
 	}
 
@@ -198,16 +198,16 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 		tdata_t* t;
 
 		child = node->Get(i);
-		code = child->Hash()->V();
+		code = child->Hash()->Code();
 		i++;
 		res = 0;
 
-		if (code == CODE_COMMA)
+		if (code == CODE::COMMA)
 			continue;
-		if (code == CODE_SEMICOLON)
+		if (code == CODE::SEMICOLON)
 			break;
 
-		if (code == NT_SINGLE_DATA_DECL)
+		if (code == CODE::NT_SINGLE_DATA_DECL)
 		{//constant expression
 			//res = Constant_Expression(child->Get(2));
 			res = eval_expr.Constant(child->Get(2));

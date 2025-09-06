@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "llist.h"
 
 #define GF_ARGS	tree_c* parent
 #define GF_DECL(x)	rcode_t x(GF_ARGS)
@@ -206,7 +207,7 @@ public:
 	}
 };
 
-//#define PEEKCP(x)	(list->Peek()->V() == x)
+//#define PEEKCP(x)	(list->Peek()->Code() == x)
 #define PEEKCP(x)	(list->Peek() ? list->Peek()->V() == x : false)
 #define GETCP(x)	(list->Get()->V() == x)
 //#define CL(x, y)	(Call(&parser_c::x, y, NULL))

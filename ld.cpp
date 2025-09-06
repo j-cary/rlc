@@ -49,7 +49,7 @@ static INSTR_GEN_FUNC(reg2reg)
 	const tdata_t* const src = info[cnt - 1].data;
 	const tdata_t* const dst = info[cnt - 2].data;
 
-	ASSERT_WARN(dst->size >= src->size, "Truncation required in load %s <- %s", dst->var->K(), src->var->K());
+	ASSERT_WARN(dst->size >= src->size, "Truncation required in load %s <- %s", dst->var->Str(), src->var->Str());
 
 	if (dst->size == 1 && src->size == 1)
 	{
@@ -191,7 +191,7 @@ static INSTR_GEN_FUNC(const2reg)
 		max = ((dst->flags | DF_SIGNED) ? INT16_MAX : UINT16_MAX);
 	}
 
-	ASSERT_WARN(const_val >= min && const_val <= max, "Truncation required from %i while loading to %s", const_val, dst->var->K());
+	ASSERT_WARN(const_val >= min && const_val <= max, "Truncation required from %i while loading to %s", const_val, dst->var->Str());
 
 	sm->CLoad((REG::REG)dst->si.reg, eval_expr.Constant(src), dst->size);
 }
@@ -257,7 +257,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 	else if (src->si.local_flag)
 		src_tbl = AUTO;
 
-	INTERNAL_ASSERT(src_tbl != BAD, "Failed to determine storage of %s", src->var->K());
+	INTERNAL_ASSERT(src_tbl != BAD, "Failed to determine storage of %s", src->var->Str());
 
 	//TMP: just do 2 ops for right now
 	for (int i = cnt - 2; i > cnt - 3 /*0*/; --i)
@@ -272,7 +272,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 		else if (dst->si.local_flag)
 			dst_tbl = AUTO;
 
-		INTERNAL_ASSERT(dst_tbl != BAD, "Failed to determine storage of %s", dst->var->K());
+		INTERNAL_ASSERT(dst_tbl != BAD, "Failed to determine storage of %s", dst->var->Str());
 
 		(*ld_table[src_tbl][dst_tbl]) (info, cnt);
 	}

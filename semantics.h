@@ -299,8 +299,6 @@ public:
 	~cfg_c();
 };
 
-#define BLOCKSTACK_MAX	128
-
 class analyzer_c
 {
 private:
@@ -328,10 +326,10 @@ private:
 	void CFG_Instruction(tree_c* node, cfg_c* block);
 	void CFG_TypeDef(tree_c* node, cfg_c* block);
 
-	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, int exit_code);
+	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, CODE exit_code);
 
 	//Parms:
-	CODES EvaluateDataModifiers(tree_c* node, bool struct_def, int* iterator, const char** structname, dataflags_t* flags);
+	CODE EvaluateDataModifiers(tree_c* node, bool struct_def, int* iterator, const char** structname, dataflags_t* flags);
 	int EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags);
 
 	void BuildIGraphs(cfg_c* block);
@@ -344,11 +342,3 @@ private:
 public:
 	void GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, structlist_c* sl);
 };
-
-#if 0
-//generator_util
-
-int Constant_Expression(const tree_c* head);
-/* Returns the constant offset from the object. Name is the var name of the struct */
-int Memory_Expression(const tree_c* head, const cfg_c* _block, const cfg_c* _func, const cfg_c* root, tree_c** data);
-#endif

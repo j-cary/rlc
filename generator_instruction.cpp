@@ -13,15 +13,15 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 	//Count the operands; get their indices and links to their data
 	for (int i  = 0; tree_c* op = operand_list->Get(i); i++)
 	{
-		int code = op->Hash()->V();
+		CODE code = op->Hash()->Code();
 
-		if (code == CODE_COMMA)
+		if (code == CODE::COMMA)
 			continue;
 
 		if (op_cnt > ops_max)
 			Error("TMP: %s has too many ops", Str(node->Get(0)));
 
-		if (code == NT_MEMORY_EXPR || code == NT_MEMORY_PRIMARY_EXPR || code == CODE_TEXT)
+		if (code == CODE::NT_MEMORY_EXPR || code == CODE::NT_MEMORY_PRIMARY_EXPR || code == CODE::TEXT)
 		{
 			tree_c* data; //The actual struct/array instance
 
@@ -39,16 +39,16 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 	}
 
 
-	switch (node->Get(0)->Hash()->V())
+	switch (node->Get(0)->Hash()->Code())
 	{
-	case CODE_LD:
+	case CODE::LD:
 		//CG_Load(op_data, op_list, op_cnt);
 		CG_Load(op_info, op_cnt);
 		break;
-	case CODE_ADD: break;
-	case CODE_RET: break;
+	case CODE::ADD: break;
+	case CODE::RET: break;
 	default:
-		Error("Unsupported instruction %s", node->Get(0)->Hash()->K());
+		Error("Unsupported instruction %s", node->Get(0)->Hash()->Str());
 	}
 
 }

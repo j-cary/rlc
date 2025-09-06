@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include "common.h"
+#include "llist.h"
 
 #define OLD_LEX_CODE 1
 
@@ -29,7 +30,7 @@ private:
 	};
 
 
-	void AddReservedChar(char c, int code);
+	void AddReservedChar(char c, CODE code);
 	void AddLexeme(char* lexeme);
 
 	//Generates a text lump surrounded by spaces and not containing spaces
@@ -50,7 +51,7 @@ private:
 	// '\'
 	// Macros/defines
 
-	void InsertLexeme(const char* text, size_t len, CODES code, size_t character_index);
+	void InsertLexeme(const char* text, size_t len, CODE code, size_t character_index);
 	size_t CalculateLineNo(size_t character_index);
 	size_t CalculateColNo(const char* text, size_t line_no);
 

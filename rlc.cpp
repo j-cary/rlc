@@ -25,7 +25,7 @@ const char title_msg[] =
 "*   //    //  //              //  //           *\n"
 "*  //    //  ////////  //////      //////      *\n"
 "************************************************\n"
-"Version 1.0 compiled " __DATE__ "\n"
+"Version 0.0 compiled " __DATE__ "\n"
 "\n";
 
 /*
@@ -161,7 +161,7 @@ void Warning(const char* msg, ...)
 
 	SetConsoleTextAttribute(cons, BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN);
 
-	printf("\nError|Line no. %i col no. %i| ", 1, 2);
+	printf("\nError|Line no. %i col no. %i|", 1, 2);
 	va_start(args, msg);
 	vprintf(msg, args);
 	va_end(args);

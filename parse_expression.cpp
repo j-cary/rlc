@@ -8,7 +8,7 @@ GF_DEF(LOGICAL_EXPRESSION)
 {//<or_expression>
 	tree_c* self = NULL;
 
-	self = parent->InsR("Logical expression", NT_LOGICAL_EXPR);
+	self = parent->InsR("Logical expression", CODE::NT_LOGICAL_EXPR);
 
 	if (CL(OR_EXPRESSION, self))
 		return true; //<or_expression>
@@ -27,28 +27,28 @@ GF_DEF(OR_EXPRESSION)
 	tree_c* logical_or = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	self = parent->InsR("Or expression", NT_OR_EXPR);
+	self = parent->InsR("Or expression", CODE::NT_OR_EXPR);
 
 	if (CL(AND_EXPRESSION, self))
 	{// <and_expression>
 		
 		while (1)
 		{
-			if (!GETCP(CODE_BAR))
+			if (!GETCP(CODE::BAR))
 				break;
 
 			bar_saved = list->Save();
 
 			list->Pop(NULL); //'|'
 
-			if (!GETCP(CODE_BAR))
+			if (!GETCP(CODE::BAR))
 			{
 				list->Restore(bar_saved); //restore list to before the first bar was taken off
 				break;
 			}
 
 			list->Pop(&kv); //'|'
-			logical_or = self->InsR("||", T_LOGICAL_OR); //combine the two
+			logical_or = self->InsR("||", CODE::T_LOGICAL_OR); //combine the two
 
 			if (!CL(AND_EXPRESSION, self)) //<and_expression>
 			{
@@ -75,28 +75,28 @@ GF_DEF(AND_EXPRESSION)
 	tree_c* logical_and = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	self = parent->InsR("And expression", NT_AND_EXPR);
+	self = parent->InsR("And expression", CODE::NT_AND_EXPR);
 
 	if (CL(EQUALITY_EXPRESSION, self))
 	{// <equality_expression>
 
 		while (1)
 		{
-			if (!GETCP(CODE_AMPERSAND))
+			if (!GETCP(CODE::AMPERSAND))
 				break;
 
 			ampersand_saved = list->Save();
 
 			list->Pop(NULL); //'&'
 
-			if (!GETCP(CODE_AMPERSAND))
+			if (!GETCP(CODE::AMPERSAND))
 			{
 				list->Restore(ampersand_saved); //restore list to before the first bar was taken off
 				break;
 			}
 
 			list->Pop(&kv); //'&'
-			logical_and = self->InsR("&&", T_LOGICAL_AND); //combine the two
+			logical_and = self->InsR("&&", CODE::T_LOGICAL_AND); //combine the two
 
 			if (!CL(EQUALITY_EXPRESSION, self)) //<equality_expression>
 			{
@@ -123,31 +123,31 @@ GF_DEF(EQUALITY_EXPRESSION)
 	tree_c* equals_sign = NULL; //unnecessary definitions to shut the compiler up
 	kv_c kv;
 
-	self = parent->InsR("Equality expression", NT_EQUALITY_EXPR);
+	self = parent->InsR("Equality expression", CODE::NT_EQUALITY_EXPR);
 
 	if (CL(RELATIONAL_EXPRESSION,  self))
 	{// <equality_expression>
 		
 		while (1)
 		{
-			if (!GETCP(CODE_EQUALS) && !GETCP(CODE_EXCLAMATION))
+			if (!GETCP(CODE::EQUALS) && !GETCP(CODE::EXCLAMATION))
 				break;
 
 			operator_saved = list->Save();
 
 			list->Pop(&kv); //'=' | '!'
 
-			if (!GETCP(CODE_EQUALS))
+			if (!GETCP(CODE::EQUALS))
 			{
 				list->Restore(operator_saved); //restore list to before the first bar was taken off
 				break;
 			}
 
 			list->Pop(NULL); //'='
-			if(kv.V() == CODE_EXCLAMATION)
-				equals_sign = self->InsR("!=", T_NON_EQUIVALENCE); 
+			if(kv.Code() == CODE::EXCLAMATION)
+				equals_sign = self->InsR("!=", CODE::T_NON_EQUIVALENCE);
 			else
-				equals_sign = self->InsR("==", T_EQUIVALENCE); 
+				equals_sign = self->InsR("==", CODE::T_EQUIVALENCE);
 			
 
 			if (!CL(RELATIONAL_EXPRESSION,  self)) // <relational_expression>
@@ -173,38 +173,38 @@ GF_DEF(RELATIONAL_EXPRESSION)
 	node_c* operator_saved;
 	tree_c* self = NULL;
 	tree_c* relational_sign = NULL; //unnecessary definitions to shut the compiler up
-	kv_c arrow, equal("", CODE_NONE);
+	kv_c arrow, equal("", CODE::NONE);
 
-	self = parent->InsR("Relational expression", NT_RELATIONAL_EXPR);
+	self = parent->InsR("Relational expression", CODE::NT_RELATIONAL_EXPR);
 
 	if (CL(LOGICAL_POSTFIX_EXPRESSION,  self))
 	{// <equality_expression>
 
 		while (1)
 		{
-			if (!GETCP(CODE_LARROW) && !GETCP(CODE_RARROW))
+			if (!GETCP(CODE::LARROW) && !GETCP(CODE::RARROW))
 				break;
 
 			operator_saved = list->Save();
 
 			list->Pop(&arrow); //'<' | '>'
 
-			if (GETCP(CODE_EQUALS))
+			if (GETCP(CODE::EQUALS))
 				list->Pop(&equal); //'='
 
-			if (equal.V() != CODE_NONE)
+			if (equal.Code() != CODE::NONE)
 			{
-				if (arrow.V() == CODE_LARROW)
-					relational_sign = self->InsR("<=", T_LESS_OR_EQUAL);
+				if (arrow.Code() == CODE::LARROW)
+					relational_sign = self->InsR("<=", CODE::T_LESS_OR_EQUAL);
 				else
-					relational_sign = self->InsR(">=", T_GREATER_OR_EQUAL);
+					relational_sign = self->InsR(">=", CODE::T_GREATER_OR_EQUAL);
 			}
 			else
 			{
-				if (arrow.V() == CODE_LARROW)
-					relational_sign = self->InsR("<", CODE_LARROW);
+				if (arrow.Code() == CODE::LARROW)
+					relational_sign = self->InsR("<", CODE::LARROW);
 				else
-					relational_sign = self->InsR(">", CODE_RARROW);
+					relational_sign = self->InsR(">", CODE::RARROW);
 			}
 
 			if (!CL(LOGICAL_POSTFIX_EXPRESSION,  self))//<logical_postfix_expression>
@@ -234,21 +234,21 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("LPostfix expression", NT_LOGICAL_POSTFIX_EXPR);
+	self = parent->InsR("LPostfix expression", CODE::NT_LOGICAL_POSTFIX_EXPR);
 
 	if (CL(LOGICAL_PRIMARY_EXPRESSION,  self))
 	{//<logical_primary_expression>
 		while (1)
 		{
-			if (GETCP(CODE_PERIOD))
+			if (GETCP(CODE::PERIOD))
 			{// '.'
 				saved_op = list->Save();
 				list->Pop(&kv);
 
-				if (GETCP(CODE_PERIOD))
+				if (GETCP(CODE::PERIOD))
 				{
 					list->Pop(NULL);// '.'
-					child = self->InsR("..", T_DEREF_MEMBER);
+					child = self->InsR("..", CODE::T_DEREF_MEMBER);
 				}
 				else
 					child = self->InsR(&kv);
@@ -260,7 +260,7 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 					break;
 				}
 			}
-			else if (GETCP(CODE_LBRACE))
+			else if (GETCP(CODE::LBRACE))
 			{// '['
 				saved_op = list->Save();
 				list->Pop(&kv);// '['
@@ -274,7 +274,7 @@ GF_DEF(LOGICAL_POSTFIX_EXPRESSION)
 				}
 				//<constant_expression>
 
-				if (!GETCP(CODE_RBRACE))
+				if (!GETCP(CODE::RBRACE))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);
@@ -304,7 +304,7 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("LPrimary expression", NT_LOGICAL_PRIMARY_EXPR);
+	self = parent->InsR("LPrimary expression", CODE::NT_LOGICAL_PRIMARY_EXPR);
 
 	if (CL(IDENTIFIER,  self))
 	{// <identifier>
@@ -314,13 +314,13 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 	{// <constant>
 		return true;
 	}
-	else if (GETCP(CODE_STRING))
+	else if (GETCP(CODE::STRING))
 	{// <string>
 		list->Pop(&kv);
 		self->InsR(&kv);
 		return true;
 	}
-	else if (GETCP(CODE_LPAREN))
+	else if (GETCP(CODE::LPAREN))
 	{// '('
 		list->Pop(&kv);
 
@@ -329,7 +329,7 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 		if (CL(LOGICAL_EXPRESSION,  self))
 		{// <logical_expression>
 
-			if (GETCP(CODE_RPAREN))
+			if (GETCP(CODE::RPAREN))
 			{// ')'
 				list->Pop(&kv);
 
@@ -343,7 +343,7 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 
 		return false;
 	}
-	else if (GETCP(CODE_AMPERSAND) || GETCP(CODE_STAR) || GETCP(CODE_EXCLAMATION))
+	else if (GETCP(CODE::AMPERSAND) || GETCP(CODE::STAR) || GETCP(CODE::EXCLAMATION))
 	{// '&' | '*' | '!'
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -367,7 +367,7 @@ GF_DEF(LOGICAL_PRIMARY_EXPRESSION)
 
 GF_DEF(ARITHMETIC_EXPRESSION)
 {// <shift_expression>
-	tree_c* self = parent->InsR("Arithmetic expression", NT_ARITHMETIC_EXPR);
+	tree_c* self = parent->InsR("Arithmetic expression", CODE::NT_ARITHMETIC_EXPR);
 
 	if (CL(SHIFT_EXPRESSION,  self))
 		return true; // <shift_expression>
@@ -378,7 +378,7 @@ GF_DEF(ARITHMETIC_EXPRESSION)
 
 GF_DEF(CONSTANT_EXPRESSION)
 {// <shift_expression>
-	tree_c* self = parent->InsR("Constant expression", NT_CONSTANT_EXPR);
+	tree_c* self = parent->InsR("Constant expression", CODE::NT_CONSTANT_EXPR);
 
 	if (CL(SHIFT_EXPRESSION,  self))
 		return true; // <shift_expression>
@@ -389,7 +389,7 @@ GF_DEF(CONSTANT_EXPRESSION)
 
 GF_DEF(SHIFT_EXPRESSION)
 {// <additive_expression> { { '<<' | '>>' } <additive_expression> }*
-	tree_c* self = parent->InsR("Shift expression", NT_SHIFT_EXPR);
+	tree_c* self = parent->InsR("Shift expression", CODE::NT_SHIFT_EXPR);
 	tree_c* shift_op = NULL;
 	node_c* operator_saved = NULL;
 	kv_c first, second;
@@ -399,26 +399,26 @@ GF_DEF(SHIFT_EXPRESSION)
 
 		while (1)
 		{
-			if (!GETCP(CODE_LARROW) && !GETCP(CODE_RARROW))
+			if (!GETCP(CODE::LARROW) && !GETCP(CODE::RARROW))
 				break;
 
 			operator_saved = list->Save();
 
 			list->Pop(&first); //'<' | '>'
 
-			if (!GETCP(CODE_LARROW) && !GETCP(CODE_RARROW))
+			if (!GETCP(CODE::LARROW) && !GETCP(CODE::RARROW))
 			{
 				list->Restore(operator_saved); //restore list to before the first bar was taken off
 				break;
 			}
 
 			list->Pop(&second); //'<' | '>'
-			if (second.V() == first.V())
+			if (second.Code() == first.Code())
 			{
-				if(first.V() == CODE_LARROW)
-					shift_op = self->InsR("<<", T_LEFT_SHIFT);
+				if(first.Code() == CODE::LARROW)
+					shift_op = self->InsR("<<", CODE::T_LEFT_SHIFT);
 				else
-					shift_op = self->InsR(">>", T_RIGHT_SHIFT);
+					shift_op = self->InsR(">>", CODE::T_RIGHT_SHIFT);
 
 			}
 			else
@@ -446,7 +446,7 @@ GF_DEF(SHIFT_EXPRESSION)
 
 GF_DEF(ADDITIVE_EXPRESSION)
 {// <multiplicative_expression> { { '+' | '-' } <multiplicative_expression> }*
-	tree_c* self = parent->InsR("Additive expression", NT_ADDITIVE_EXPR);
+	tree_c* self = parent->InsR("Additive expression", CODE::NT_ADDITIVE_EXPR);
 	kv_c kv;
 	node_c* operator_saved = NULL;
 	tree_c* additive_op = NULL;
@@ -457,7 +457,7 @@ GF_DEF(ADDITIVE_EXPRESSION)
 
 		while (1)
 		{
-			if (!GETCP(CODE_PLUS) && !GETCP(CODE_MINUS))
+			if (!GETCP(CODE::PLUS) && !GETCP(CODE::MINUS))
 				break;
 			operator_saved = list->Save();
 			list->Pop(&kv); // '+' | '-'
@@ -482,7 +482,7 @@ GF_DEF(ADDITIVE_EXPRESSION)
 
 GF_DEF(MULTIPLICATIVE_EXPRESSION)
 {// <arithmetic_postfix_expression> { { '*' | '/' | '%' } <arithmetic_postfix_expression> }*
-	tree_c* self = parent->InsR("Multiplicative expression", NT_MULTIPLICATIVE_EXPR);
+	tree_c* self = parent->InsR("Multiplicative expression", CODE::NT_MULTIPLICATIVE_EXPR);
 	kv_c kv;
 	node_c* operator_saved = NULL;
 	tree_c* multiplicative_op = NULL;
@@ -493,7 +493,7 @@ GF_DEF(MULTIPLICATIVE_EXPRESSION)
 
 		while (1)
 		{
-			if (!GETCP(CODE_STAR) && !GETCP(CODE_FSLASH) && !GETCP(CODE_PERCENT))
+			if (!GETCP(CODE::STAR) && !GETCP(CODE::FSLASH) && !GETCP(CODE::PERCENT))
 				break;
 			operator_saved = list->Save();
 			list->Pop(&kv); // '*' | '/' | '%'
@@ -525,21 +525,21 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("APostfix expression", NT_ARITHMETIC_POSTFIX_EXPR);
+	self = parent->InsR("APostfix expression", CODE::NT_ARITHMETIC_POSTFIX_EXPR);
 
 	if (CL(ARITHMETIC_PRIMARY_EXPRESSION,  self))
 	{//<logical_primary_expression>
 		while (1)
 		{
-			if (GETCP(CODE_PERIOD))
+			if (GETCP(CODE::PERIOD))
 			{// '.'
 				saved_op = list->Save();
 				list->Pop(&kv);
 
-				if (GETCP(CODE_PERIOD))
+				if (GETCP(CODE::PERIOD))
 				{
 					list->Pop(NULL);// '.'
-					child = self->InsR("..", T_DEREF_MEMBER);
+					child = self->InsR("..", CODE::T_DEREF_MEMBER);
 				}
 				else
 					child = self->InsR(&kv);
@@ -551,7 +551,7 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 					break;
 				}
 			}
-			else if (GETCP(CODE_LBRACE))
+			else if (GETCP(CODE::LBRACE))
 			{// '['
 				saved_op = list->Save();
 				list->Pop(&kv);// '['
@@ -565,7 +565,7 @@ GF_DEF(ARITHMETIC_POSTFIX_EXPRESSION)
 				}
 				//<constant_expression>
 
-				if (!GETCP(CODE_RBRACE))
+				if (!GETCP(CODE::RBRACE))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);
@@ -595,7 +595,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("APrimary expression", NT_ARITHMETIC_PRIMARY_EXPR);
+	self = parent->InsR("APrimary expression", CODE::NT_ARITHMETIC_PRIMARY_EXPR);
 
 	//<constant>
 
@@ -609,7 +609,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 	{// <identifier>
 		return true;
 	}
-	else if (GETCP(CODE_LPAREN))
+	else if (GETCP(CODE::LPAREN))
 	{// '('
 		list->Pop(&kv);
 
@@ -618,7 +618,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 		if (CL(ARITHMETIC_EXPRESSION,  self))
 		{// <arithmetic_expression>
 
-			if (GETCP(CODE_RPAREN))
+			if (GETCP(CODE::RPAREN))
 			{// ')'
 				list->Pop(&kv);
 
@@ -632,7 +632,7 @@ GF_DEF(ARITHMETIC_PRIMARY_EXPRESSION)
 
 		return false;
 	}//FIXME: check out this versus the additive expr
-	else if (GETCP(CODE_AMPERSAND) || GETCP(CODE_STAR) || GETCP(CODE_MINUS)) 
+	else if (GETCP(CODE::AMPERSAND) || GETCP(CODE::STAR) || GETCP(CODE::MINUS)) 
 	{// '&' | '*' | '-'
 		list->Pop(&kv);
 		self->InsR(&kv);
@@ -661,21 +661,21 @@ GF_DEF(MEMORY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("Memory expression", NT_MEMORY_EXPR);
+	self = parent->InsR("Memory expression", CODE::NT_MEMORY_EXPR);
 
 	if (CL(MEMORY_PRIMARY_EXPRESSION, self))
 	{//<logical_primary_expression>
 		while (1)
 		{
-			if (GETCP(CODE_PERIOD))
+			if (GETCP(CODE::PERIOD))
 			{// '.'
 				saved_op = list->Save();
 				list->Pop(&kv);
 
-				if (GETCP(CODE_PERIOD))
+				if (GETCP(CODE::PERIOD))
 				{
 					list->Pop(NULL);// '.'
-					child = self->InsR("..", T_DEREF_MEMBER);
+					child = self->InsR("..", CODE::T_DEREF_MEMBER);
 				}
 				else
 					child = self->InsR(&kv);
@@ -687,7 +687,7 @@ GF_DEF(MEMORY_EXPRESSION)
 					break;
 				}
 			}
-			else if (GETCP(CODE_LBRACE))
+			else if (GETCP(CODE::LBRACE))
 			{// '['
 				saved_op = list->Save();
 				list->Pop(&kv);// '['
@@ -702,7 +702,7 @@ GF_DEF(MEMORY_EXPRESSION)
 				}
 				//<constant_expression>
 
-				if (!GETCP(CODE_RBRACE))
+				if (!GETCP(CODE::RBRACE))
 				{
 					list->Restore(saved_op);
 					self->KillChild(child);
@@ -727,7 +727,7 @@ GF_DEF(MEMORY_EXPRESSION)
 
 GF_DEF(MEM_OR_CONST_EXPRESSION)
 {//<memory_expression> | <constant_expression>
-	tree_c* self = parent->InsR("Mem or const expression", NT_MEM_OR_CONST_EXPR);
+	tree_c* self = parent->InsR("Mem or const expression", CODE::NT_MEM_OR_CONST_EXPR);
 	node_c* saved = list->Save();
 
 	//note: identifiers are not checked for in syntax parsing of constant_expression.
@@ -735,7 +735,7 @@ GF_DEF(MEM_OR_CONST_EXPRESSION)
 
 	if (CL(MEMORY_EXPRESSION, self))
 	{
-		if(GETCP(CODE_SEMICOLON) || GETCP(CODE_COMMA))
+		if(GETCP(CODE::SEMICOLON) || GETCP(CODE::COMMA))
 			return true;
 
 		list->Restore(saved);
@@ -757,13 +757,13 @@ GF_DEF(MEMORY_PRIMARY_EXPRESSION)
 	tree_c* self = NULL;
 	kv_c kv;
 
-	self = parent->InsR("MPrimary expression", NT_MEMORY_PRIMARY_EXPR);
+	self = parent->InsR("MPrimary expression", CODE::NT_MEMORY_PRIMARY_EXPR);
 
 	if (CL(IDENTIFIER, self))
 	{// <identifier>
 		return true;
 	}
-	else if (GETCP(CODE_AMPERSAND) || GETCP(CODE_STAR))
+	else if (GETCP(CODE::AMPERSAND) || GETCP(CODE::STAR))
 	{// '&' | '*' 
 		list->Pop(&kv);
 		self->InsR(&kv);

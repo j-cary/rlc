@@ -1,13 +1,7 @@
 #pragma once
 #include "common.h"
 #include "semantics.h"
-
-#define DATALUMP_SIZE		1024
-
-typedef struct 
-{
-	tdatai_t held; //hold the index of the data that this is holding per block
-} register_t;
+#include "asm.h"
 
 // Operand information passed into the instruction modules
 typedef struct
@@ -17,103 +11,18 @@ typedef struct
 	int offset;
 } op_info_t;
 
-//ld a, (nn)/n/(bc)/(de)/(hl)/a/b/c/d/e/h/l
-//ld (nn)/(bc)/(de)/(hl)/a/b/c/d/e/h/l, a
-//ld x,		 n/			 (hl)/a/b/c/d/e/h/l
-//ld				(hl)/a/b/c/d/e/h/l, x
-
 #define INSTR_GEN_FUNC_ARGS	const op_info_t info[], int cnt 
+
+// Def of a instr_gen_func
 #define INSTR_GEN_FUNC(fn)	void fn					(INSTR_GEN_FUNC_ARGS)
+
+// Type of an INSTR_GEN_FUNC
 typedef						void(*instr_gen_func_t)	(INSTR_GEN_FUNC_ARGS);
+
+//Table of functions for dispatching based on operands
 typedef instr_gen_func_t instr_gen_table_t[5][4];
 
-class generator_c;
-
-/* Creates the assembler file */
-class asm_c
-{
-private:
-	FILE* f = NULL;
-	const generator_c* gen;
-
-	char	dataqueue[DATALUMP_SIZE];
-	char	stack_queue[DATALUMP_SIZE];
-	int		stack_bytes_alloced = 0;
-
-	void R_PrintSourceLine(tree_c*);
-public:
-	void StackFrame();
-	void UnStackFrame();
-	inline int StackAlloc() const { return stack_bytes_alloced; }
-	inline void ResetStack() { stack_bytes_alloced = 0; }
-
-	void UnQueueData();
-
-	void PrintSourceLine(tree_c* line);
-
-
-	void Ret(const char* parm);
-	void Label(const char* name);
-	void Data(const char* type, tree_c* var, const char* init);
-	void Data(const char* type, tree_c* var, int init);
-
-	void DLoad(regi_t reg, tdatai_t data); //Load Data from this block into a reg
-	void ALoad(regi_t reg, tdatai_t data); //load an addr
-	void Store(int ofs, REG::REG reg); //auto <- reg
-
-	void CAdd(regi_t dst_reg, int value);
-	void Djnz(const char* label);
-
-
-	//
-	//loads
-	//
-
-	void RLoad(REG::REG dst, REG::REG src, int width);
-	//Just for ix/iy loads/stores
-	void RLoad(REG::REG dst, REG::REG src, int width, int ofs);
-	void CLoad(REG::REG reg, int value, int width);
-
-	//
-	//adds
-	//
-	void RAdd(REG::REG dst_reg, REG::REG src_reg, int width);
-
-	//
-	//inc/dec
-	//
-
-	void Dec(REG::REG reg, int width);
-
-	//
-	//bitwise
-	//
-
-	//Xor A against an reg8 or (hl)
-	void Xor(REG::REG reg, bool is_hl=false);
-	//Xor A against an imm8
-	void Xor(int val);
-	//Xor A against an index reg
-	void Xor(REG::REG idx_reg, int ofs);
-
-	//
-	//stack
-	//
-
-	void StackInit(int value, int width);
-	void Push(REG::REG reg);
-	void Pop(REG::REG reg);
-
-	void Print();
-
-	asm_c(const char* filename, const generator_c* gen);
-	~asm_c()
-	{
-		if (f) fclose(f);
-	}
-};
-
-/* Dispatches the reduced parse tree to instruction modules */
+// Dispatches the reduced parse tree to instruction modules
 class generator_c
 {
 	asm_c assembler;
@@ -183,7 +92,7 @@ class generator_c
 	tdatai_t DataOfs(cfg_c* block, tree_c* n);
 	const char* DataName(tdatai_t data);
 
-	int Code(tree_c* node);
+	CODE Code(tree_c* node);
 	const char* Str(tree_c* node);
 
 	bool IsRegActive(REG::REG reg);
@@ -194,7 +103,6 @@ public:
 	generator_c() : assembler("C:/ti83/rl/test.z80", this) { }
 
 	void Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, const structlist_c* _sl);
-
 
 	//
 	//Standard library

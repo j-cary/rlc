@@ -21,7 +21,7 @@ void asm_c::R_PrintSourceLine(tree_c* node)
 
 	if (!node->Get(0))
 	{//leaf
-		fprintf(f, "%s ", node->Hash()->K());
+		fprintf(f, "%s ", node->Hash()->Str());
 	}
 
 
@@ -211,21 +211,21 @@ const char* generator_c::DataName(tdatai_t data)
 	if (data < 0 || data >= (tdatai_t)symtbl_top)
 		Error("Bad data index %i", data);
 
-	return tdata[data].var->K();
+	return tdata[data].var->Str();
 }
 
 
 
-int generator_c::Code(tree_c* node)
+CODE generator_c::Code(tree_c* node)
 {
-	return node->Hash()->V();
+	return node->Hash()->Code();
 }
 
 const char* generator_c::Str(tree_c* node)
 {
 	if (!node)
 		return "BADNODE";
-	return node->Hash()->K();
+	return node->Hash()->Str();
 }
 
 int generator_c::GetForLabel(char* buf)

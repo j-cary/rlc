@@ -35,7 +35,7 @@ void parser_c::Parse(llist_c* _list, tree_c* _root, int _debug)
 	debug = _debug;
 	root = _root;
 
-	root->Set("Translation unit", NT_UNIT);
+	root->Set("Translation unit", CODE::NT_UNIT);
 	result = CL(TRANSLATION_UNIT, root);
 
 	ftime(&end);
@@ -69,7 +69,7 @@ GF_DEF(TRANSLATION_UNIT)
 {// <external_decl>*
 	while (CL(EXTERNAL_DECL, parent)) {}
 
-	if (GETCP(CODE_NONE))
+	if (GETCP(CODE::NONE))
 		return 1;//nothing left
 
 	return 0;
@@ -77,9 +77,9 @@ GF_DEF(TRANSLATION_UNIT)
 
 GF_DEF(EXTERNAL_DECL)
 {//<function_decl> | <function_def> | <data_decl> | <type_def>
-	tree_c* self = parent->InsR("External decl", NT_EXTERNAL_DECL);
+	tree_c* self = parent->InsR("External decl", CODE::NT_EXTERNAL_DECL);
 
-	if (GETCP(CODE_SUBR))
+	if (GETCP(CODE::SUBR))
 	{
 		if (!CL(FUNC, self))
 			return false;
@@ -91,7 +91,7 @@ GF_DEF(EXTERNAL_DECL)
 		return true;
 	}
 	
-	if (GETCP(CODE_STRUCT))
+	if (GETCP(CODE::STRUCT))
 	{
 		if (!CL(TYPE_DEF, self))
 			return false;
@@ -111,17 +111,17 @@ GF_DEF(FUNC)
 	kv_c kv;
 	node_c* saved = list->Save();
 
-	if (GETCP(CODE_SUBR))
+	if (GETCP(CODE::SUBR))
 	{
 		list->Pop(&kv);
-		self = parent->InsR("Func decl", NT_FUNC_DECL); //could still be a def, though
+		self = parent->InsR("Func decl", CODE::NT_FUNC_DECL); //could still be a def, though
 		self->InsR(&kv); // 'subr'
 		
 
 		if (CL(IDENTIFIER, self))
 		{// <identifier>
 
-			if (GETCP(CODE_LPAREN))
+			if (GETCP(CODE::LPAREN))
 			{
 				list->Pop(&kv);
 				self->InsR(&kv); // '('
@@ -129,12 +129,12 @@ GF_DEF(FUNC)
 				//there can be no parameters, too
 				CL(PARAMETER_LIST, self); // <parameter_list>
 
-				if (GETCP(CODE_RPAREN))
+				if (GETCP(CODE::RPAREN))
 				{
 					list->Pop(&kv);
 					self->InsR(&kv); // ')'
 
-					if (GETCP(CODE_SEMICOLON))
+					if (GETCP(CODE::SEMICOLON))
 					{
 						list->Pop(&kv);
 						self->InsR(&kv); // ';'
@@ -143,7 +143,7 @@ GF_DEF(FUNC)
 					}
 					else if (CL(COMPOUND_STATEMENT, self))
 					{//function def
-						self->Set("Func def", NT_FUNC_DEF);
+						self->Set("Func def", CODE::NT_FUNC_DEF);
 						return true;
 					}
 				}
@@ -173,14 +173,14 @@ GF_DEF(INITIALIZER_LIST)
 	tree_c* comma_op;
 	kv_c kv;
 
-	self = parent->InsR("Initializer list", NT_INITIALIZER_LIST);
+	self = parent->InsR("Initializer list", CODE::NT_INITIALIZER_LIST);
 
 	if (CL(CONSTANT_EXPRESSION, self))
 	{// <constant_expression>
 
 		while (1)
 		{
-			if (!GETCP(CODE_COMMA))
+			if (!GETCP(CODE::COMMA))
 				break;
 
 			comma_saved = list->Save();
@@ -207,7 +207,7 @@ GF_DEF(INITIALIZER_LIST)
 GF_DEF(PARAMETER)
 { // <data_type> <identifier>
 	node_c* saved = list->Save();
-	tree_c* self = parent->InsR("Parameter", NT_PARAMETER);
+	tree_c* self = parent->InsR("Parameter", CODE::NT_PARAMETER);
 
 	if (CL(DATA_TYPE, self))
 	{// <data_type>
@@ -232,14 +232,14 @@ GF_DEF(PARAMETER_LIST)
 	tree_c* comma_op;
 	kv_c kv;
 
-	self = parent->InsR("Parameter list", NT_PARAMETER_LIST);
+	self = parent->InsR("Parameter list", CODE::NT_PARAMETER_LIST);
 
 	if (CL(PARAMETER, self))
 	{// <parameter>
 
 		while (1)
 		{
-			if (!GETCP(CODE_COMMA))
+			if (!GETCP(CODE::COMMA))
 				break;
 			comma_saved = list->Save();
 			list->Pop(&kv);// ','
@@ -267,7 +267,7 @@ GF_DEF(PARAMETER_LIST)
 GF_DEF(IDENTIFIER)
 {
 	kv_c kv;
-	if (GETCP(CODE_TEXT))
+	if (GETCP(CODE::TEXT))
 	{
 		list->Pop(&kv);
 		parent->InsR(&kv);
@@ -279,7 +279,7 @@ GF_DEF(IDENTIFIER)
 GF_DEF(CONSTANT)
 {
 	kv_c kv;
-	if (GETCP(CODE_NUM_BIN) | GETCP(CODE_NUM_DEC) | GETCP(CODE_NUM_HEX) | GETCP(CODE_NUM_FXD))
+	if (GETCP(CODE::NUM_BIN) | GETCP(CODE::NUM_DEC) | GETCP(CODE::NUM_HEX) | GETCP(CODE::NUM_FXD))
 	{
 		list->Pop(&kv);
 		parent->InsR(&kv);

@@ -32,7 +32,7 @@ tree_c* tree_c::InsL(kv_c* _kv)
 	return _InsL(t);
 }
 
-tree_c* tree_c::InsL(const char* str, int code)
+tree_c* tree_c::InsL(const char* str, CODE code)
 {
 	tree_c* t = new tree_c;
 	t->kv.Set(str, code);
@@ -54,7 +54,7 @@ tree_c* tree_c::InsR(kv_c* _kv)
 	return _InsR(t);
 }
 
-tree_c* tree_c::InsR(const char* str, int code)
+tree_c* tree_c::InsR(const char* str, CODE code)
 {
 	tree_c* t = new tree_c;
 	t->kv.Set(str, code);
@@ -84,7 +84,7 @@ void tree_c::Ins(kv_t _kv, int idx)
 	children.insert(it, t);
 }
 
-tree_c* tree_c::Ins(const char* str, int code, int idx)
+tree_c* tree_c::Ins(const char* str, CODE code, int idx)
 {
 	tree_c* t = new tree_c;
 	int sz = (int)children.size();
@@ -229,7 +229,7 @@ void tree_c::R_Disp()
 	if (g_tabs > (DEPTH_MAX * 2) - 2)
 		Error("Parser: Attempted to display too many recursive tree nodes!");
 
-	printf("%s%s\n", g_tabstr, kv.K());
+	printf("%s%s\n", g_tabstr, kv.Str());
 
 	g_tabstr[g_tabs++] = ' ';
 	g_tabstr[g_tabs++] = ' ';

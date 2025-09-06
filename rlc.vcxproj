@@ -151,10 +151,12 @@
     <ClCompile Include="tree.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asm.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="evaluate_expression.h" />
     <ClInclude Include="generator.h" />
     <ClInclude Include="lex.h" />
+    <ClInclude Include="llist.h" />
     <ClInclude Include="parse.h" />
     <ClInclude Include="preprocessor.h" />
     <ClInclude Include="semantics.h" />

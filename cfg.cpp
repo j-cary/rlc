@@ -111,7 +111,7 @@ bool cfg_c::SetDataStart(const char* name, int _start)
 {
 	for (int i = 0; i < data.size(); i++)
 	{
-		if (!strcmp(name, data[i]->var->K()))
+		if (!strcmp(name, data[i]->var->Str()))
 		{
 			start[i] = _start;
 			return true;
@@ -125,7 +125,7 @@ bool cfg_c::SetDataEnd(const char* name, int _end)
 {
 	for (int i = 0; i < data.size(); i++)
 	{
-		if (!strcmp(name, data[i]->var->K()))
+		if (!strcmp(name, data[i]->var->Str()))
 		{
 			end[i] = _end;
 			return true;
@@ -139,7 +139,7 @@ void cfg_c::SetDataEndBlock(const char* name, cfg_c* block)
 {
 	for (int i = 0; i < data.size(); i++)
 	{
-		if (!strcmp(name, data[i]->var->K()))
+		if (!strcmp(name, data[i]->var->Str()))
 		{
 			endb[i] = block;
 			return;
@@ -152,7 +152,7 @@ void cfg_c::IncDataUses(const char* name)
 {
 	for (int i = 0; i < data.size(); i++)
 	{
-		if (!strcmp(name, data[i]->var->K()))
+		if (!strcmp(name, data[i]->var->Str()))
 		{
 			uses[i]++;
 			return;
@@ -199,7 +199,7 @@ int cfg_c::R_CheckRedef()
 
 			for (int di = 0; di < (int)sibling->data.size(); di++)
 			{
-				if (!strcmp(sibling->data[di]->var->K(), redef_name))
+				if (!strcmp(sibling->data[di]->var->Str(), redef_name))
 				{//redefinition
 					return CRD_REDEF;
 				}
@@ -221,7 +221,7 @@ int cfg_c::R_CheckGlobalRedef()
 		c = links[i];
 		for (int j = 0; j < c->data.size(); j++)
 		{
-			if (!strcmp(redef_name, c->data[j]->var->K()))
+			if (!strcmp(redef_name, c->data[j]->var->Str()))
 				return CRD_REDEF;
 		}
 
@@ -253,7 +253,7 @@ bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t fl
 	//might still be a global
 	for (int i = 0; i < root->data.size(); i++)
 	{
-		if (!strcmp(name, root->data[i]->var->K()))
+		if (!strcmp(name, root->data[i]->var->Str()))
 			return 0;
 	}
 
@@ -291,7 +291,7 @@ int cfg_c::R_GetScopedData()
 
 			for (int di = 0; di < (int)sibling->data.size(); di++)
 			{
-				if (!strcmp(sibling->data[di]->var->K(), redef_name))
+				if (!strcmp(sibling->data[di]->var->Str(), redef_name))
 				{//found the symbol
 					scopedata = sibling->data[di];
 					scopeblock = sibling;
@@ -316,7 +316,7 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 	{//could still be a global var
 		for (int i = 0; i < root->data.size(); i++)
 		{
-			if (!strcmp(name, root->data[i]->var->K()))
+			if (!strcmp(name, root->data[i]->var->Str()))
 			{
 				scopedata = root->data[i];
 				*localblock = root;
@@ -369,7 +369,7 @@ int cfg_c::R_IsStructInstance(const char* name) const
 
 			for (int di = 0; di < (int)sibling->data.size(); di++)
 			{
-				if (!strcmp(sibling->data[di]->var->K(), name))
+				if (!strcmp(sibling->data[di]->var->Str(), name))
 				{//found it, see if its actually a struct
 					if(sibling->data[di]->flags & DF_STRUCT)
 						return ISI_ISSTRUCT;
@@ -401,7 +401,7 @@ bool cfg_c::IsStructInstance(const char* name, const cfg_c* func, const cfg_c* r
 	//didn't find it in the function - check if its a global
 	for (int i = 0; i < root->data.size(); i++)
 	{
-		if (!strcmp(root->data[i]->var->K(), name))
+		if (!strcmp(root->data[i]->var->Str(), name))
 		{//found it
 			if (root->data[i]->flags & DF_STRUCT)
 				return true;
@@ -455,15 +455,15 @@ void cfg_c::Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata)
 			inode_c* node = &igraph->nodes[i];
 			tdata_t* t1 = &tdata[i];
 
-			//printf("%s:%s\t%i - ", g_ctabstr, t1->var->K(), node->color);
-			printf("%s:%s\t%s - ", g_ctabstr, t1->var->K(), t1->ToStr(t1->size));
+			//printf("%s:%s\t%i - ", g_ctabstr, t1->var->Str(), node->color);
+			printf("%s:%s\t%s - ", g_ctabstr, t1->var->Str(), t1->ToStr(t1->size));
 
 			for (int j = 0; j < node->LinkCnt(); j++)
 			{
 				int l = node->Link(j);
 				tdata_t* t2 = &tdata[l];
 
-				printf("%s ", t2->var->K());
+				printf("%s ", t2->var->Str());
 			}
 			printf("\n");
 		}
@@ -489,8 +489,8 @@ void cfg_c::R_Disp( igraph_c* igraph, tdata_t* tdata)
 
 	for (paralleli_t i = 0; i < data.size(); i++)
 	{
-		//printf(":%s [[%s]] %pi-%pi ", data[pi]->var->K(), endb[pi]->id, start[pi], end[pi]);
-		printf(":%s ", data[i]->var->K());
+		//printf(":%s [[%s]] %pi-%pi ", data[pi]->var->Str(), endb[pi]->id, start[pi], end[pi]);
+		printf(":%s ", data[i]->var->Str());
 		if (startb[i] != endb[i])
 			printf("[[%s]] ", endb[i]->id);
 		printf("%ix %i-%i #%i#", uses[i], start[i], end[i], data[i]->tdata);
@@ -500,7 +500,7 @@ void cfg_c::R_Disp( igraph_c* igraph, tdata_t* tdata)
 
 
 	for (; s_it != this->statements.end(); s_it++)
-		printf("%s%s\n", g_ctabstr, (*s_it)->Hash()->K());
+		printf("%s%s\n", g_ctabstr, (*s_it)->Hash()->Str());
 
 	g_ctabstr[g_ctabs++] = ' ';
 	g_ctabstr[g_ctabs++] = ' ';
