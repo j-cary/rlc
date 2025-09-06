@@ -189,7 +189,7 @@ tdata_t* generator_c::Data(cfg_c* block, tree_c* n)
 tdatai_t generator_c::DataOfs(cfg_c* block, tree_c* node)
 {
 	cfg_c* localblock = NULL;
-	data_t* data = block->ScopedDataEntry(Str(node), graph, graph, &localblock); //recurse through the graph, find the ONLY matching data in scope.
+	const data_t* data = block->ScopedDataEntry(Str(node), graph, graph, &localblock); //recurse through the graph, find the ONLY matching data in scope.
 
 	//fixme: first graph parm should be the current function
 
@@ -227,135 +227,6 @@ const char* generator_c::Str(tree_c* node)
 		return "BADNODE";
 	return node->Hash()->K();
 }
-
-
-
-static int Constant_Expression_Helper(const tree_c* head, int num_kids, int offset, int type)
-{
-	int	r1, r2, ret = 0;
-	int	op_code;
-
-	r1 = Constant_Expression(head->Get(offset));
-	op_code = head->Get(offset + 1)->Hash()->V();
-	r2 = Constant_Expression(head->Get(offset + 2));
-
-	if (type == 0)
-	{
-		switch (op_code)
-		{
-		case T_LEFT_SHIFT: ret = r1 << r2; break;
-		case T_RIGHT_SHIFT: ret = r1 >> r2; break;
-		default: Error("Bad shift operator"); break;
-		}
-	}
-	else if (type == 1)
-	{
-		switch (op_code)
-		{
-		case CODE_PLUS: ret = r1 + r2; break;
-		case CODE_MINUS: ret = r1 - r2; break;
-		default: Error("Bad additive operator"); break;
-		}
-	}
-	else if (type == 2)
-	{
-		switch (op_code)
-		{
-		case CODE_STAR: ret = r1 * r2; break;
-		case CODE_FSLASH: ret = r1 / r2; break;
-		case CODE_PERCENT: ret = r1 % r2; break;
-		default: Error("Bad additive operator"); break;
-		}
-	}
-
-
-
-	for (int i = offset + 3; i < num_kids; i += 2)
-	{
-		op_code = head->Get(i)->Hash()->V();
-		r1 = Constant_Expression(head->Get(i + 1));
-
-		if (type == 0)
-		{
-			switch (op_code)
-			{
-			case T_LEFT_SHIFT: ret <<= r1; break;
-			case T_RIGHT_SHIFT: ret >>= r1; break;
-			default: Error("Bad shift operator"); break;
-			}
-		}
-		else if (type == 1)
-		{
-			switch (op_code)
-			{
-			case CODE_PLUS: ret += r1; break;
-			case CODE_MINUS: ret -= r1; break;
-			default: Error("Bad additive operator"); break;
-			}
-		}
-		else if (type == 2)
-		{
-			switch (op_code)
-			{
-			case CODE_STAR: ret *= r1; break;
-			case CODE_FSLASH: ret /= r1; break;
-			case CODE_PERCENT: ret %= r1; break;
-			default: Error("Bad additive operator"); break;
-			}
-		}
-	}
-
-	return ret;
-}
-
-int Constant_Expression(const tree_c* head)
-{
-	int		kids;
-	int		ret = 0;
-	int		op_code;
-
-	for (kids = 0; head->Get(kids); kids++);
-
-	switch (head->Hash()->V())
-	{
-	case CODE_NUM_DEC:				ret = atoi(head->Hash()->K()); break;
-	case NT_SHIFT_EXPR:				ret = Constant_Expression_Helper(head, kids, 0, 0);break;
-	case NT_ADDITIVE_EXPR:			ret = Constant_Expression_Helper(head, kids, 0, 1);break;
-	case NT_MULTIPLICATIVE_EXPR:	ret = Constant_Expression_Helper(head, kids, 0, 2);break;
-	case NT_ARITHMETIC_PRIMARY_EXPR:
-		
-		ret = Constant_Expression(head->Get(1));//skip over the (, *, &, etc.
-		op_code = head->Get(0)->Hash()->V();
-
-		if (op_code == CODE_MINUS)
-			ret = -ret;
-		else if (op_code == CODE_STAR || op_code == CODE_AMPERSAND)
-			Error("referencing/de-referencing is not allowed in a constant expression");
-
-		break;
-
-	case NT_ARITHMETIC_POSTFIX_EXPR:
-		Error("Postfix operators are not allowed in constant expressions");
-		break;
-	case CODE_NUM_BIN:
-		ret = strtol(head->Hash()->K() + 1, NULL, 2);
-		break;
-	case CODE_NUM_HEX:
-		ret = strtol(head->Hash()->K() + 1, NULL, 16);
-
-		//Error("Binary and hex numbers aren't supported in const. exprs. yet");
-		break;
-	case CODE_TEXT:
-		Error("Text value found in const. expr");
-	default:
-		Error("Bad expression");
-		break;
-	}
-
-	return ret;
-}
-
-
 
 int generator_c::GetForLabel(char* buf)
 {

@@ -172,7 +172,7 @@ void cfg_c::IncDataUses(const char* name)
 
 //no need to pass these as parameters every time
 const char* redef_name;
-cfg_c*		redef_block;
+const cfg_c*		redef_block;
 //dataflags_t redef_flags;
 
 //set above vars before calling
@@ -265,8 +265,8 @@ bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t fl
 #define GSD_DECL	2
 
 //these are set by the function
-data_t* scopedata;
-cfg_c*	scopeblock;
+static const data_t*	scopedata;
+static const cfg_c*	scopeblock;
 
 int cfg_c::R_GetScopedData()
 {
@@ -307,7 +307,7 @@ int cfg_c::R_GetScopedData()
 	return CRD_DEADEND; //this should never be the final return value from this function
 }
 
-data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock)
+data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock) const
 {
 	redef_name = name;
 	redef_block = this;
@@ -320,14 +320,15 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 			{
 				scopedata = root->data[i];
 				*localblock = root;
-				return scopedata;
+				return (data_t*)scopedata;
 			}
 		}
 		return NULL;
 	}
 
-	*localblock = scopeblock;
-	return scopedata;
+	// These are just const because they aren't modified in the function
+	*localblock = (cfg_c*)scopeblock;
+	return (data_t*)scopedata;
 }
 
 #undef CRD_DEADEND
@@ -343,9 +344,9 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 
 //recurse until the source block is found
 //then search from the bottom up for the declaration
-cfg_c* instanceblock; //the block that the instance is being used in
+static const cfg_c* instanceblock; //the block that the instance is being used in
 
-int cfg_c::R_IsStructInstance(const char* name)
+int cfg_c::R_IsStructInstance(const char* name) const
 {
 	if (instanceblock == this)
 		return ISI_NOTSTRUCT;
@@ -385,7 +386,7 @@ int cfg_c::R_IsStructInstance(const char* name)
 	return ISI_NOTFOUND;
 }
 
-bool cfg_c::IsStructInstance(const char* name, cfg_c* func, cfg_c* root)
+bool cfg_c::IsStructInstance(const char* name, const cfg_c* func, const cfg_c* root) const
 {
 	int ret;
 

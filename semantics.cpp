@@ -1,4 +1,5 @@
 #include "semantics.h"
+#include "evaluate_expression.h"
 
 void analyzer_c::GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, structlist_c* sl)
 {
@@ -404,7 +405,7 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	{//array decl
 		if (block == graph)
 			flags |= DF_GLOBAL;
-		Constant_Expression(node->Get(start + 2)); //check if the size is const
+		Constant(node->Get(start + 2)); //check if the size is const
 
 		flags |= DF_ARRAY;
 
@@ -707,6 +708,7 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 	int length;
 	bool struct_def = struct_ && structname;
 	const char* local_structname = NULL;
+	eval_expr_c eval_expr;
 
 	//subchild = node->Get(*iterator);
 
@@ -761,7 +763,7 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 		if (lbrace->Hash()->V() == CODE_LBRACE)
 		{//array
 			(*iterator)++;
-			arraylength = Constant_Expression(node->Get(++(*iterator)));
+			arraylength = eval_expr.Constant(node->Get(++(*iterator)));
 			init = node->Get((*iterator) + 4); //get the initializer list if there is one
 			(*flags) |= DF_ARRAY;
 		}
@@ -806,37 +808,41 @@ data_t* analyzer_c::GetDataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 {
 	data_t* data;
 	const char* name = d->Hash()->K();
-	bool simple_ident = true; //set if the expression is just an identifier
+	const int name_code = d->Hash()->V();
+	eval_expr_c eval_expr;
 
 	//FIXME: variables inside these expressions need to be checked for.
 	//problem for arithmetic and mem expressions - this will do for now.
-	if (DECL_NA(d->Hash()->V()))
+	if (DECL_NA(name_code))
 		return NULL;
-
-	if (d->Hash()->V() == NT_MEMORY_EXPR)
+#if 0
+	if (name_code == NT_MEMORY_EXPR)
 	{//ident.member
 		name = d->Get(0)->Hash()->K();
 
 		if(!block->IsStructInstance(name, cur_func, graph))
 			Error("Cannot use member access operator on non-struct variable '%s'", name); //check if this is a valid struct instance
-
-		simple_ident = false;
 	}
-	else if (d->Hash()->V() == NT_MEMORY_PRIMARY_EXPR)
+	else if (name_code == NT_MEMORY_PRIMARY_EXPR)
 	{//*ident
 		name = d->Get(1)->Hash()->K();
 		//TODO: this can either be an ident or a mem expr. recursively call this func if its an expr
-		simple_ident = false;
 	}
+#endif
+
+	tree_c* data_name;
+	int offset;
+	offset = eval_expr.Memory(d, block, cur_func, graph, &data_name);
+	name = data_name->Hash()->K();
+
+	//if(offset && !block->IsStructInstance(name, cur_func, graph))
+	//ASSERT_FALSE(offset && !block->IsStructInstance(name, cur_func, graph), 
+	//	"Cannot use member access operator on non-struct variable '%s'", name);
+
 
 	//check if the data here is in scope
 	if (!(data = block->ScopedDataEntry(name, cur_func, graph, localblock)))
 		Error("Symbol '%s' is undeclared", name);
-
-	if (!simple_ident)
-	{//
-
-	}
 
 	return data;
 

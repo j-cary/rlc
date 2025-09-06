@@ -1,12 +1,13 @@
 #include "generator.h"
+#include "evaluate_expression.h"
 
 void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 {
 	constexpr int ops_max = 8; //tmp
 	tree_c* operand_list = node->Get(1);
 	int		op_cnt = 0;
-	const tdata_t*op_data[ops_max + 1];
-	const tree_c* op_list[ops_max + 1];
+	op_info_t op_info[ops_max + 1];
+	eval_expr_c eval_expr;
 
 
 	//Count the operands; get their indices and links to their data
@@ -17,25 +18,32 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 		if (code == CODE_COMMA)
 			continue;
 
-		if (code == NT_MEMORY_EXPR)
-			Error("Mem exprs not supported\n");
-
 		if (op_cnt > ops_max)
 			Error("TMP: %s has too many ops", Str(node->Get(0)));
 
-		if (Code(op) == CODE_TEXT)
-			op_data[op_cnt] = Data(block, op);
-		else
-			op_data[op_cnt] = NULL;
+		if (code == NT_MEMORY_EXPR || code == NT_MEMORY_PRIMARY_EXPR || code == CODE_TEXT)
+		{
+			tree_c* data; //The actual struct/array instance
 
-		op_list[op_cnt++] = op;
+			//op_info[op_cnt].offset = Memory_Expression(op, block, func, graph, &data);
+			op_info[op_cnt].offset = eval_expr.Memory(op, block, func, graph, &data);
+			op_info[op_cnt].data = Data(block, data);
+		}
+		else
+		{
+			op_info[op_cnt].offset = 0;
+			op_info[op_cnt].data = NULL;
+		}
+
+		op_info[op_cnt++].node = op;
 	}
 
 
 	switch (node->Get(0)->Hash()->V())
 	{
 	case CODE_LD:
-		CG_Load(op_data, op_list, op_cnt);
+		//CG_Load(op_data, op_list, op_cnt);
+		CG_Load(op_info, op_cnt);
 		break;
 	case CODE_ADD: break;
 	case CODE_RET: break;

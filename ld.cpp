@@ -1,6 +1,8 @@
 #include "generator.h"
+#include "evaluate_expression.h"
 
 static asm_c* sm;
+static eval_expr_c eval_expr;
 
 #pragma region hl_src
 
@@ -44,8 +46,8 @@ static INSTR_GEN_FUNC(reg2hl)
 
 static INSTR_GEN_FUNC(reg2reg)
 {
-	const tdata_t* src = data[cnt - 1];
-	const tdata_t* dst = data[cnt - 2];
+	const tdata_t* const src = info[cnt - 1].data;
+	const tdata_t* const dst = info[cnt - 2].data;
 
 	ASSERT_WARN(dst->size >= src->size, "Truncation required in load %s <- %s", dst->var->K(), src->var->K());
 
@@ -74,7 +76,9 @@ static INSTR_GEN_FUNC(reg2reg)
 		sm->RLoad((REG::REG)(dst->si.reg + 1), (REG::REG)(src->si.reg + 1), 1); //Should check that this is valid
 	}
 	else
+	{
 		INTERNAL_ASSERT(0, "Bogus register sizes in load %s <- %s");
+	}
 
 }
 
@@ -156,11 +160,12 @@ static INSTR_GEN_FUNC(auto2auto)
 
 static INSTR_GEN_FUNC(const2hl)
 {
-	const tree_c* src = nodes[cnt - 1];
-	const tdata_t* dst = data[cnt - 2];
+	const tree_c* src = info[cnt - 1].node;
+	const tdata_t* dst = info[cnt - 2].data;
 	const int min = ((dst->flags | DF_SIGNED) ? INT16_MIN : 0);
 	const int max = ((dst->flags | DF_SIGNED) ? INT16_MAX : UINT16_MAX);
-	const int const_val = Constant_Expression(src);
+	//const int const_val = Constant_Expression(src);
+	const int const_val = eval_expr.Constant(src);
 
 	ASSERT_WARN(const_val >= min && const_val <= max, "Truncation required from %i", const_val);
 
@@ -169,9 +174,9 @@ static INSTR_GEN_FUNC(const2hl)
 
 static INSTR_GEN_FUNC(const2reg)
 {
-	const tree_c* src = nodes[cnt - 1];
-	const tdata_t* dst = data[cnt - 2];
-	const int const_val = Constant_Expression(src);
+	const tree_c* src = info[cnt - 1].node;
+	const tdata_t* dst = info[cnt - 2].data;
+	const int const_val = eval_expr.Constant(src);
 	int min;
 	int max;
 
@@ -188,13 +193,13 @@ static INSTR_GEN_FUNC(const2reg)
 
 	ASSERT_WARN(const_val >= min && const_val <= max, "Truncation required from %i while loading to %s", const_val, dst->var->K());
 
-	sm->CLoad((REG::REG)dst->si.reg, Constant_Expression(src), dst->size);
+	sm->CLoad((REG::REG)dst->si.reg, eval_expr.Constant(src), dst->size);
 }
 
 static INSTR_GEN_FUNC(const2stack)
 {
-	const tdata_t* dst = data[cnt - 2];
-	int const_val = Constant_Expression(nodes[cnt - 1]); 
+	const tdata_t* dst = info[cnt - 2].data;
+	int const_val = eval_expr.Constant(info[cnt - 1].node);
 
 	//FIXME: check for truncation here
 
@@ -208,8 +213,8 @@ static INSTR_GEN_FUNC(const2stack)
 
 static INSTR_GEN_FUNC(const2auto)
 {
-	const tdata_t* dst = data[cnt - 2];
-	int const_val = Constant_Expression(nodes[cnt - 1]);
+	const tdata_t* dst = info[cnt - 2].data;
+	int const_val = eval_expr.Constant(info[cnt - 1].node);
 
 	//Store byte by byte
 	for (int i = 0; i < dst->size; ++i)
@@ -238,7 +243,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 	enum { BAD = -1, HL = 0, REG = 1, STACK = 2, AUTO = 3, CONST = 4 } 
 	src_tbl = BAD, dst_tbl = BAD;
 	instr_gen_func_t func = NULL;
-	const tdata_t* src = data[cnt - 1];
+	const tdata_t* src = info[cnt - 1].data;
 
 	sm = &assembler;
 
@@ -257,7 +262,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 	//TMP: just do 2 ops for right now
 	for (int i = cnt - 2; i > cnt - 3 /*0*/; --i)
 	{
-		const tdata_t* dst = data[i];
+		const tdata_t* dst = info[i].data;
 
 		INTERNAL_ASSERT(dst, "Failed to determine storage dest operand");
 		if (dst->si.reg_flag)
@@ -269,7 +274,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 
 		INTERNAL_ASSERT(dst_tbl != BAD, "Failed to determine storage of %s", dst->var->K());
 
-		(*ld_table[src_tbl][dst_tbl]) (data, nodes, cnt);
+		(*ld_table[src_tbl][dst_tbl]) (info, cnt);
 	}
 
 }

@@ -15,7 +15,11 @@
 enum CODES
 {
 	CODE_NONE = 0, 
-	CODE_LPAREN, CODE_RPAREN, CODE_LBRACE, CODE_RBRACE, CODE_LBRACKET, CODE_RBRACKET,
+	CODE_LPAREN, CODE_RPAREN, 
+	CODE_LBRACE, //'['
+	CODE_RBRACE, //']'
+	CODE_LBRACKET, //'{'
+	CODE_RBRACKET,//'}'
 	CODE_AT, CODE_POUND, CODE_PERIOD, CODE_COMMA, /*CODE_QUOTE_DOUBLE, CODE_QUOTE_SINGLE,*/ CODE_SEMICOLON,
 	CODE_COLON, CODE_LARROW, CODE_RARROW, CODE_EXCLAMATION, CODE_AMPERSAND, CODE_BAR,
 	CODE_EQUALS, CODE_PLUS, CODE_MINUS, CODE_STAR, CODE_FSLASH, CODE_PERCENT,//arithmetic
@@ -322,6 +326,9 @@ void Error(const char* msg, ...);
 void SetOutFlags(unsigned short flags); //same as WORD
 void ResetOutFlags();
 
+#define _STRINGIFY(X) #X
+#define STRINGIFY(X) _STRINGIFY(X)
+
 /* Assert used for a user mistake in his program */
 #define ASSERT(cond, ...) \
 	do { \
@@ -329,19 +336,24 @@ void ResetOutFlags();
 			Error(__VA_ARGS__);\
 	} while(0)
 
-/* Assert used for situations which should never arise, i.e. bugs */
-#define INTERNAL_ASSERT(cond, ...) \
-	do { \
-		if(!(cond))\
-			Error("INTERNAL ERROR|" __FUNCTION__ "|" __VA_ARGS__); \
-	} while(0)
+// User error; error if cond is true
+#define ASSERT_FALSE(cond, ...) ASSERT(!(cond), __VA_ARGS__)
 
+// User error; warn if cond is true
 #define ASSERT_WARN(cond, ...) \
 	do {\
 		if(!(cond)) \
 			Warning(__VA_ARGS__);\
 	} while(0)
 
+/* Assert used for situations which should never arise, i.e. bugs */
+#define INTERNAL_ASSERT(cond, ...) \
+	do { \
+		if(!(cond))\
+			Error("INTERNAL ERROR|" __FUNCTION__ "|" STRINGIFY(__LINE__) "|" __VA_ARGS__); \
+	} while(0)
+
+			//Error("INTERNAL_ERROR|" fmt, __VA_ARGS__); \
 //same as in consoleapi2.h - don't want to include this in every file
 #ifndef FOREGROUND_BLUE
 #define FOREGROUND_BLUE      0x0001 // text color contains blue.

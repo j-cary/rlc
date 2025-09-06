@@ -9,12 +9,20 @@ typedef struct
 	tdatai_t held; //hold the index of the data that this is holding per block
 } register_t;
 
+// Operand information passed into the instruction modules
+typedef struct
+{
+	const tdata_t* data;
+	const tree_c* node;
+	int offset;
+} op_info_t;
+
 //ld a, (nn)/n/(bc)/(de)/(hl)/a/b/c/d/e/h/l
 //ld (nn)/(bc)/(de)/(hl)/a/b/c/d/e/h/l, a
 //ld x,		 n/			 (hl)/a/b/c/d/e/h/l
 //ld				(hl)/a/b/c/d/e/h/l, x
 
-#define INSTR_GEN_FUNC_ARGS	const tdata_t* data[], const tree_c* nodes[], int cnt
+#define INSTR_GEN_FUNC_ARGS	const op_info_t info[], int cnt 
 #define INSTR_GEN_FUNC(fn)	void fn					(INSTR_GEN_FUNC_ARGS)
 typedef						void(*instr_gen_func_t)	(INSTR_GEN_FUNC_ARGS);
 typedef instr_gen_func_t instr_gen_table_t[5][4];
@@ -110,11 +118,13 @@ class generator_c
 {
 	asm_c assembler;
 	tree_c*		root;
-	cfg_c*		graph;
+	cfg_c*		graph; //The root of the control flow graph
 	tdata_t*	tdata;
+	const structlist_c *sl;
+
 
 	bool	data_decls_allowed;
-	const char* subr_name = NULL;
+	const cfg_c* func; //The current function
 
 	unsigned	symtbl_top; //rename - sizeof tdata
 
@@ -183,7 +193,7 @@ class generator_c
 public:
 	generator_c() : assembler("C:/ti83/rl/test.z80", this) { }
 
-	void Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top);
+	void Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, const structlist_c* _sl);
 
 
 	//

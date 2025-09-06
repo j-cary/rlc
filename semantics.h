@@ -109,14 +109,14 @@ typedef struct struct_s
 class structlist_c
 {
 private:
-	struct_t structs[STRUCTURES_MAX];
-	int struct_cnt = 0;
+	struct_t	structs[STRUCTURES_MAX];
+	int			struct_cnt = 0;
 public:
 	int AddStruct(const char* name); //returns index of the new struct
 	void AddMemberVar(int struct_idx, const char* name, dataflags_t flags, int length, tree_c* init_val, const char* structname);
 
-	int GetStruct(const char* name); // < 0 if invalid
-	int StructLen(int struct_idx) { return structs[struct_idx].length; }
+	int GetStruct(const char* name) const; // < 0 if invalid
+	int StructLen(int struct_idx) const { return structs[struct_idx].length; }
 	void SetLen(int struct_idx, int len) { structs[struct_idx].length = len; }
 
 	const struct_t* StructInfo(int idx);
@@ -233,7 +233,6 @@ class cfg_c
 private:
 	std::vector<tree_c*>	statements; //this will be clear()'d on deletion, but the actual nodes will be deleted by the parse tree
 	std::vector<cfg_c*>		links;
-	std::vector<struct_t>	structs; //only ROOT really needs this
 
 	//parallel
 	std::vector<data_t*>	data;
@@ -263,7 +262,7 @@ private:
 	int R_CheckGlobalRedef();
 	int R_CheckRedef();
 	int R_GetScopedData();
-	int R_IsStructInstance(const char* name);
+	int R_IsStructInstance(const char* name) const;
 
 	void R_Disp( igraph_c* igraph, tdata_t* tdata);
 public:
@@ -293,8 +292,8 @@ public:
 	void BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata);
 
 	bool CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags);
-	data_t* ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock);
-	bool IsStructInstance(const char* name, cfg_c* func, cfg_c* root); 
+	data_t* ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock) const;
+	bool IsStructInstance(const char* name, const cfg_c* func, const cfg_c* root) const;
 
 	void Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata);
 	~cfg_c();
@@ -346,5 +345,10 @@ public:
 	void GenerateAST(tree_c* _root, cfg_c* _graph, data_t* symbols, unsigned* symbols_top, tdata_t** _tdata, structlist_c* sl);
 };
 
+#if 0
 //generator_util
+
 int Constant_Expression(const tree_c* head);
+/* Returns the constant offset from the object. Name is the var name of the struct */
+int Memory_Expression(const tree_c* head, const cfg_c* _block, const cfg_c* _func, const cfg_c* root, tree_c** data);
+#endif

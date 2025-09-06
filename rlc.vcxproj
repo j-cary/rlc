@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="asm.cpp" />
+    <ClCompile Include="evaluate_expression.cpp" />
     <ClCompile Include="generator.cpp" />
     <ClCompile Include="generator_instruction.cpp" />
     <ClCompile Include="generator_statement.cpp" />
@@ -151,11 +152,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h" />
+    <ClInclude Include="evaluate_expression.h" />
     <ClInclude Include="generator.h" />
     <ClInclude Include="lex.h" />
     <ClInclude Include="parse.h" />
     <ClInclude Include="preprocessor.h" />
     <ClInclude Include="semantics.h" />
+    <ClInclude Include="template.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="bnf.txt" />

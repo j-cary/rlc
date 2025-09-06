@@ -60,7 +60,7 @@ void structlist_c::AddMemberVar(int struct_idx, const char* name, dataflags_t fl
 	} while (1);
 }
 
-int structlist_c::GetStruct(const char* name)
+int structlist_c::GetStruct(const char* name) const
 {
 	for (int i = 0; i < struct_cnt; i++)
 	{

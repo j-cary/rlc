@@ -1,6 +1,7 @@
 #include "generator.h"
+#include "evaluate_expression.h"
 
-void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top)
+void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, const structlist_c* _sl)
 {
 	cfg_c* block;
 
@@ -11,6 +12,7 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsign
 	symtbl_top = *symbol_top;
 	root = _root;
 	graph = _graph;
+	sl = _sl;
 
 	for (int i = 0; block = graph->GetLink(i); i++)
 	{
@@ -93,7 +95,7 @@ void generator_c::CG_FunctionBlock(cfg_c* block)
 {
 	assembler.Label(block->id);
 	assembler.ResetStack();
-	subr_name = block->id;
+	func = block;
 	data_decls_allowed = true;
 
 	for (int i = 0; cfg_c* b = block->GetLink(i); i++)
@@ -114,7 +116,7 @@ void generator_c::CG_FunctionBlock(cfg_c* block)
 
 
 	assembler.UnQueueData();
-	subr_name = NULL;
+	func = NULL;
 }
 
 void generator_c::CG_RegBlock(cfg_c* block)
@@ -180,6 +182,7 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 	int		i; 
 	int		code;
 	int		res;
+	eval_expr_c eval_expr;
 
 	//Locate the actual varname/decl node
 	//there is a data type before the ident at the very least; skip it
@@ -206,7 +209,8 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 
 		if (code == NT_SINGLE_DATA_DECL)
 		{//constant expression
-			res = Constant_Expression(child->Get(2));
+			//res = Constant_Expression(child->Get(2));
+			res = eval_expr.Constant(child->Get(2));
 			child = child->Get(0); //get the actual name
 		}
 

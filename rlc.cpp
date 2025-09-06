@@ -28,6 +28,13 @@ const char title_msg[] =
 "Version 1.0 compiled " __DATE__ "\n"
 "\n";
 
+/*
+* Restructure todo
+*	Clean up program, add comments
+*	Every class/function should have a set of guarantees and side-effects
+*	Somehow reconcile the data/tdata split (tdata isn't even close to temporary anymore)
+*/
+
 //TODO:
 //Fix struct/array/ptr parsing in CG_DataDeclaration/CG_StructDeclaration
 //Keep track of line #
@@ -41,7 +48,7 @@ const char title_msg[] =
 //	also check dload
 //	manage checking inside expressions in general:
 //	handle expression operands in instructions - check for def, update usage
-//	don't allow [][] in mem exprs
+//	don't allow [][] in mem exprs - maybe do? ([index][offset] in 1-d)
 //	check that the operators make sense ex. 1.member is a valid logical expression
 //Mark 'a' with the last loaded sreg
 //symbol declarations in expressions
@@ -117,7 +124,7 @@ int main()
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, 0);
 	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top, &tdata, &sl);
-	generator.Generate(&tree, &graph, tdata, &symtbl_top);
+	generator.Generate(&tree, &graph, tdata, &symtbl_top, &sl);
 
 	ftime(&end);
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
@@ -154,7 +161,7 @@ void Warning(const char* msg, ...)
 
 	SetConsoleTextAttribute(cons, BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN);
 
-	printf("\nError | Line no. %i col no. %i | ", 1, 2);
+	printf("\nError|Line no. %i col no. %i| ", 1, 2);
 	va_start(args, msg);
 	vprintf(msg, args);
 	va_end(args);
