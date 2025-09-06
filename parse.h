@@ -208,8 +208,8 @@ public:
 };
 
 //#define PEEKCP(x)	(list->Peek()->Code() == x)
-#define PEEKCP(x)	(list->Peek() ? list->Peek()->V() == x : false)
-#define GETCP(x)	(list->Get()->V() == x)
+#define PEEKCP(x)	(list->Peek() ? list->Peek()->Code() == x : false)
+#define GETCP(x)	(list->Get()->Code() == x)
 //#define CL(x, y)	(Call(&parser_c::x, y, NULL))
 //#define CL(x,y,z)	(Call(&parser_c::x, y, z))
 #define CL(x, y)	(Call(&parser_c::x, y))
