@@ -1,3 +1,9 @@
+/***************************************************************************************************
+Purpose: Perform semantic analysis of a program
+Input: A syntactically valid tree representing a program.
+Output: A semantically valid program. A semantically invalid program will cause a failure. TODOTODO
+Explain what else this biotch doeth
+***************************************************************************************************/
 #pragma once
 #include "common.h"
 #include "structs.h"
@@ -11,7 +17,7 @@
 
 namespace REG
 {
-	enum REG : unsigned char //really only 5 bits
+	enum REG : unsigned char // really only 5 bits
 	{
 		A = 0, B, C, D, E, H, L,
 		//AF, BC, DE, HL, 
@@ -27,14 +33,14 @@ namespace REG
 	const char* Str(REG reg, int size);
 
 	// Defines for the bounds of storage areas
-	inline constexpr size_t REG_CNT() { return (size_t)REG::_SIZE; }
-	inline constexpr REG LAST_GENERAL_REG() { return REG::L; } //Last General purpose register
-	inline constexpr int STACK_MIN() { return -127; }
-	inline constexpr int STACK_MAX() { return 128; }
-	inline constexpr int STACK_CNT() { return STACK_MAX(); }
-	inline constexpr unsigned short AUTO_MIN() { return (unsigned short)1; }
-	inline constexpr unsigned short AUTO_MAX() { return (unsigned short)65535; }
-	inline constexpr unsigned short AUTO_CNT() { return AUTO_MAX(); }
+	constexpr size_t REG_CNT = (size_t)REG::_SIZE;
+	constexpr REG	LAST_GENERAL_REG = REG::L;
+	constexpr int	STACK_MIN = -127;
+	constexpr int	STACK_MAX = 128;
+	constexpr int	STACK_CNT = STACK_MAX;
+	constexpr unsigned short AUTO_MIN = 1u;
+	constexpr unsigned short AUTO_MAX = 65535u;
+	constexpr unsigned short AUTO_CNT = AUTO_MAX;
 }
 
 #define SYMBOLS_MAX	32
@@ -48,7 +54,6 @@ typedef struct data_s
 {
 	const kv_c*	var;
 	int			val;
-	void*		block; //FIXME: unnecessary
 	dataflags_t	flags;
 	int			size;
 	tdatai_t	tdata; //link to respective tdata
@@ -63,6 +68,7 @@ typedef struct data_s
 
 #define LINKS_MAX	32
 
+// A node in the interference graph
 class inode_c
 {
 private:
@@ -83,7 +89,7 @@ public:
 	}
 };
 
-//the index of each node is also the index into the cfg's parallel arrays
+// The interference graph
 class igraph_c
 {
 private:
@@ -101,7 +107,6 @@ public:
 
 	igraph_c() { nodes = NULL; num_nodes = 0; }
 	~igraph_c() { Clear(); }
-
 };
 
 enum class BLOCK
@@ -113,10 +118,12 @@ enum class BLOCK
 typedef struct tdata_s
 {
 	const kv_c* var;
-	int			start, end;
-	int			startb, endb;
-	int			size;
 	dataflags_t	flags;
+
+	int			start, end; // Start line in start block, end line in end block
+	int			startb, endb; // Start/end block
+	int			size;
+	//data_t*		link; // Link to 
 
 	union 
 	{
@@ -169,38 +176,62 @@ typedef struct tdata_s
 class cfg_c
 {
 private:
+	enum class CRD { DEADEND, NOREDEF, REDEF }; // Check re-def
+	enum class GSD { DEADEND, NODECL, DECL }; // Get Scoped-Data entry
+	enum class ISI { NOTSTRUCT, ISSTRUCT, NOTFOUND }; // Is Struct Instance
+
 	std::vector<tree_c*>	statements; //this will be clear()'d on deletion, but the actual nodes will be deleted by the parse tree
 	std::vector<cfg_c*>		links;
 
 	//parallel
-	std::vector<data_t*>	data;
-	std::vector<int>		start; //statement number in the start block. this block is ALWAYS the block in which the data is declared
-	std::vector<int>		end; //statement number in the end block
-	std::vector<cfg_c*>		startb;
-	std::vector<cfg_c*>		endb;
-	std::vector<int>		uses; 
-
+	std::vector<data_t*>data;
+	std::vector<int>	start; //statement number in the start block. this block is ALWAYS the block in which the data is declared
+	std::vector<int>	end; //statement number in the end block
+	std::vector<cfg_c*>	startb;
+	std::vector<cfg_c*>	endb;
+	std::vector<int>	uses; 
+	
+	// Remove unused vars. TODO: Implement this
 	int TrimVars(cfg_c* parent, int count );
 
-	//igraph building
+	/* 
+	*  IGraph Building
+	*/
+
+	// Count the Links
 	void R_TotalLinks();
+
+	// Generate a flat list of CFG blocks
 	void R_GenBlockOfs(cfg_c** offsets);
+
+	// TODO
 	void R_BuildTDataList(tdata_t* tdata, cfg_c** offsets);
+
+	//
 	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
 	void SortTDataList(tdata_t** tdata, int count);
 	void FixupStaticInterference(tdata_t** tdata);
 
+	// Get the first available stack index
 	int	StackIndex(tdata_t* var, bool available[], const int size);
+
+	// Get the first auto index
 	int AutoIndex(tdata_t* var, bool stack_available[], const int stack_size, bool local_available[], const int local_size, bool* local);
+
+	// Set up tdata 
 	void ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata);
 
 	/* Autos and stacks use offsets in colorgraph; remove them here*/
 	void FixupStackIndices(int symbol_cnt, tdata_t* tdata);
 
-	int R_CheckGlobalRedef();
-	int R_CheckRedef();
-	int R_GetScopedData();
-	int R_IsStructInstance(const char* name) const;
+	/*
+	*	Recursive, scope-dependent functions
+	*/
+
+	CRD R_CheckGlobalRedef();
+	CRD R_CheckRedef();
+	GSD R_GetScopedData();
+	ISI R_IsStructInstance(const char* name) const;
 
 	void R_Disp( igraph_c* igraph, tdata_t* tdata);
 public:
@@ -214,9 +245,9 @@ public:
 	cfg_c* AddLink(const char* _id, BLOCK _type, cfg_c* sibling); //copy data from sibling instead of from the caller
 	cfg_c* AddLink(const char* _id, BLOCK _type, data_t* init); //add the control variable from loops
 
-	tree_c* GetStmt(int ofs);
-	cfg_c* GetLink(int ofs);
-	int StmtCnt() { return (int)statements.size(); }
+	tree_c* GetStmt(int ofs) const;
+	cfg_c* GetLink(int ofs) const;
+	int StmtCnt() const { return (int)statements.size(); }
 
 	//data
 	void AddData(data_t* _d);
@@ -225,8 +256,7 @@ public:
 	void SetDataEndBlock(const char* name, cfg_c* block);
 	void IncDataUses(const char* name);
 
-
-	
+	// Check for interference between vars; Fill out igraph, create tdata
 	void BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata);
 
 	bool CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags);
@@ -253,18 +283,18 @@ private:
 
 	void SimplifyTree(tree_c* node, tree_c* parent); //Pass 1
 
-	void CFG_Start(tree_c* node); //Pass 2
-	void CFG_DataDecl(tree_c* node);
-	void CFG_FuncDef(tree_c* node);
-	void CFG_Parms(tree_c* node);
-	cfg_c* CFG_Statement(tree_c* node, cfg_c* parent, cfg_c* ancestor);
-	cfg_c* CFG_OpenStatement(tree_c* node, cfg_c* parent, cfg_c* ancestor); //todo: merge these two
-	cfg_c* CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ancestor); //todo: merge these two
-	void CFG_DataDeclaration(tree_c* node, cfg_c* block);
-	void CFG_Instruction(tree_c* node, cfg_c* block);
-	void CFG_TypeDef(tree_c* node, cfg_c* block);
+	void	CFG_Start(tree_c* node); //Pass 2
+	void	CFG_DataDecl(tree_c* node);
+	void	CFG_FuncDef(tree_c* node);
+	void	CFG_Parms(tree_c* node);
+	cfg_c*	CFG_Statement(tree_c* node, cfg_c* parent, cfg_c* ancestor);
+	cfg_c*	CFG_OpenStatement(tree_c* node, cfg_c* parent, cfg_c* ancestor); //todo: merge these two
+	cfg_c*	CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ancestor); //todo: merge these two
+	void	CFG_DataDeclaration(tree_c* node, cfg_c* block);
+	void	CFG_Instruction(tree_c* node, cfg_c* block);
+	void	CFG_TypeDef(tree_c* node, cfg_c* block);
 
-	void CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, CODE exit_code);
+	void	CFG_Node(tree_c* node, cfg_c* link, cfg_c* ancestor, int start, CODE exit_code);
 
 	//Parms:
 	CODE EvaluateDataModifiers(tree_c* node, bool struct_def, int* iterator, const char** structname, dataflags_t* flags);

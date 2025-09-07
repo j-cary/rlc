@@ -1,3 +1,8 @@
+/***************************************************************************************************
+Purpose: Generate the z80 assembly code 
+Inputs: Filename, generator reference, data indicating operators, operands, and respective info
+Outputs: An ascii assembly file ready for assembling
+***************************************************************************************************/
 #pragma once
 #include "common.h"
 #include "generator.h"

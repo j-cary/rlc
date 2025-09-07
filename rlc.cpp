@@ -66,7 +66,7 @@ const char title_msg[] =
 //IGRAPH doesn't need to be saved in generation
 
 
-int main()
+int main(int argc, char* argv[])
 {
 	FILE* fin;
 

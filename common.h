@@ -1,8 +1,15 @@
+/***************************************************************************************************
+Purpose: Define classes/defs/types used by (most) modules
+***************************************************************************************************/
 #pragma once
 #include <iostream>
 #include <vector>
 #include <stdarg.h> //SYS printing
 #include <sys/timeb.h> //Timing
+
+/***************************************************************************************************
+										Defines/Typedefs
+***************************************************************************************************/
 
 #define PROG_MAX_LEN	128
 #define KEY_MAX_LEN		64
@@ -10,6 +17,60 @@
 #define LINES_MAX_CNT	1024
 
 #define DEPTH_MAX	1024 //FIXME!!! this needs to be dynamic. Used for the tab string
+
+#define _STRINGIFY(X) #X
+#define STRINGIFY(X) _STRINGIFY(X)
+
+/* Assert used for a user mistake in his program */
+#define ASSERT(cond, ...) \
+	do { \
+		if(!(cond))\
+			Error(__VA_ARGS__);\
+	} while(0)
+
+// User error; error if cond is true
+#define ASSERT_FALSE(cond, ...) ASSERT(!(cond), __VA_ARGS__)
+
+// User error; warn if cond is true
+#define ASSERT_WARN(cond, ...) \
+	do {\
+		if(!(cond)) \
+			Warning(__VA_ARGS__);\
+	} while(0)
+
+/* Assert used for situations which should never arise, i.e. bugs */
+#define INTERNAL_ASSERT(cond, ...) \
+	do { \
+		if(!(cond))\
+			Error("INTERNAL ERROR|" __FUNCTION__ "|" STRINGIFY(__LINE__) "|" __VA_ARGS__); \
+	} while(0)
+
+			//Error("INTERNAL_ERROR|" fmt, __VA_ARGS__); \
+//same as in consoleapi2.h - don't want to include this in every file
+#ifndef FOREGROUND_BLUE
+#define FOREGROUND_BLUE      0x0001 // text color contains blue.
+#endif
+#ifndef FOREGROUND_GREEN
+#define FOREGROUND_GREEN     0x0002 // text color contains green.
+#endif
+#ifndef FOREGROUND_RED
+#define FOREGROUND_RED       0x0004 // text color contains red.
+#endif
+#ifndef FOREGROUND_INTENSITY
+#define FOREGROUND_INTENSITY 0x0008 // text color is intensified.
+#endif
+#ifndef BACKGROUND_BLUE
+#define BACKGROUND_BLUE      0x0010 // background color contains blue.
+#endif
+#ifndef BACKGROUND_GREEN
+#define BACKGROUND_GREEN     0x0020 // background color contains green.
+#endif
+#ifndef BACKGROUND_RED
+#define BACKGROUND_RED       0x0040 // background color contains red.
+#endif
+#ifndef BACKGROUND_INTENSITY
+#define BACKGROUND_INTENSITY 0x0080 // background color is intensified.
+#endif
 
 enum class CODE
 {
@@ -161,7 +222,7 @@ public:
 	tree_c* InsL(kv_c* _kv);
 	tree_c* InsL(const char* str, CODE code);
 	tree_c* InsL(kv_t _kv);
-	void Ins(kv_t _kv, int idx); //needs work. Currently will only add a child if the list is not empty
+	void	Ins(kv_t _kv, int idx); //needs work. Currently will only add a child if the list is not empty
 	tree_c* Ins(const char* str, CODE code, int idx);
 	tree_c* Ins(tree_c* t, int idx);
 
@@ -182,9 +243,11 @@ public:
 
 	void Set(const kv_c* _kv) { kv.Copy(_kv); }
 	void Set(const char* str, CODE code) { kv.Set(str, code); }
-	const kv_c* Hash() const		{	return &kv;	}//rename this
+	const kv_c* Hash() const	{ return &kv; }
+	const char* Str() const		{ return kv.Str(); }
+	const CODE Code() const		{ return kv.Code(); }
 	 
-	bool IsLeaf() { return leaf; }
+	bool IsLeaf() const { return leaf; }
 
 	void Disp();
 
@@ -211,57 +274,3 @@ void Warning(const char* msg, ...);
 void Error(const char* msg, ...);
 void SetOutFlags(unsigned short flags); //same as WORD
 void ResetOutFlags();
-
-#define _STRINGIFY(X) #X
-#define STRINGIFY(X) _STRINGIFY(X)
-
-/* Assert used for a user mistake in his program */
-#define ASSERT(cond, ...) \
-	do { \
-		if(!(cond))\
-			Error(__VA_ARGS__);\
-	} while(0)
-
-// User error; error if cond is true
-#define ASSERT_FALSE(cond, ...) ASSERT(!(cond), __VA_ARGS__)
-
-// User error; warn if cond is true
-#define ASSERT_WARN(cond, ...) \
-	do {\
-		if(!(cond)) \
-			Warning(__VA_ARGS__);\
-	} while(0)
-
-/* Assert used for situations which should never arise, i.e. bugs */
-#define INTERNAL_ASSERT(cond, ...) \
-	do { \
-		if(!(cond))\
-			Error("INTERNAL ERROR|" __FUNCTION__ "|" STRINGIFY(__LINE__) "|" __VA_ARGS__); \
-	} while(0)
-
-			//Error("INTERNAL_ERROR|" fmt, __VA_ARGS__); \
-//same as in consoleapi2.h - don't want to include this in every file
-#ifndef FOREGROUND_BLUE
-#define FOREGROUND_BLUE      0x0001 // text color contains blue.
-#endif
-#ifndef FOREGROUND_GREEN
-#define FOREGROUND_GREEN     0x0002 // text color contains green.
-#endif
-#ifndef FOREGROUND_RED
-#define FOREGROUND_RED       0x0004 // text color contains red.
-#endif
-#ifndef FOREGROUND_INTENSITY
-#define FOREGROUND_INTENSITY 0x0008 // text color is intensified.
-#endif
-#ifndef BACKGROUND_BLUE
-#define BACKGROUND_BLUE      0x0010 // background color contains blue.
-#endif
-#ifndef BACKGROUND_GREEN
-#define BACKGROUND_GREEN     0x0020 // background color contains green.
-#endif
-#ifndef BACKGROUND_RED
-#define BACKGROUND_RED       0x0040 // background color contains red.
-#endif
-#ifndef BACKGROUND_INTENSITY
-#define BACKGROUND_INTENSITY 0x0080 // background color is intensified.
-#endif

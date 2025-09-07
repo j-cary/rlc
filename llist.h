@@ -1,6 +1,8 @@
+/***************************************************************************************************
+Purpose: Define a linked list capable of describing all tokens in an input program
+***************************************************************************************************/
 #pragma once
 #include "common.h"
-
 
 class node_c
 {
@@ -10,7 +12,6 @@ public:
 	node_c* next;
 	union
 	{
-		//kv_t kv;
 		kv_c kv;
 		int i;
 	};
@@ -60,7 +61,7 @@ public:
 	void Remove(node_c* prev);
 
 	void Disp();
-	int Len() { return len; }
+	int Len() const { return len; }
 
 	node_c* Search(const char* key);
 	node_c* Offset(int ofs);

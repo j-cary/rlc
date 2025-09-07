@@ -872,7 +872,6 @@ void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, int size, unsign
 
 	data = &symtbl[symtbl_top++];
 	data->var = _var;
-	data->block = (void*)_block;
 	data->size = size;
 	data->flags = _flags;
 	_block->AddData(data);

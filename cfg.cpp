@@ -1,5 +1,9 @@
 #include "semantics.h"
 
+/***************************************************************************************************
+                                          Link Section
+***************************************************************************************************/
+
 void cfg_c::Set(const char* _id, BLOCK _type)
 {
 	strncpy_s(id, _id, 16); //change to strcpy once id is dynamic
@@ -70,7 +74,7 @@ cfg_c* cfg_c::AddLink(const char* _id, BLOCK _type, data_t* init)
 }
 
 
-tree_c* cfg_c::GetStmt(int ofs)
+tree_c* cfg_c::GetStmt(int ofs) const
 {
 	int sz = (int)statements.size();
 
@@ -80,7 +84,7 @@ tree_c* cfg_c::GetStmt(int ofs)
 	return statements.at(ofs);
 }
 
-cfg_c* cfg_c::GetLink(int ofs)
+cfg_c* cfg_c::GetLink(int ofs) const
 {
 	int sz = (int)links.size();
 
@@ -90,9 +94,9 @@ cfg_c* cfg_c::GetLink(int ofs)
 	return links.at(ofs);
 }
 
-//
-//DATA
-//
+/***************************************************************************************************
+                                          Data Section
+***************************************************************************************************/
 
 void cfg_c::AddData(data_t* _d)
 {
@@ -104,7 +108,6 @@ void cfg_c::AddData(data_t* _d)
 	startb.push_back(this);
 	endb.push_back(this);
 	uses.push_back(0);
-	//flags.push_back(_flags);
 }
 
 bool cfg_c::SetDataStart(const char* name, int _start)
@@ -117,6 +120,7 @@ bool cfg_c::SetDataStart(const char* name, int _start)
 			return true;
 		}
 	}
+
 	Warning("%s is not a recorded variable", name);
 	return false;
 }
@@ -131,6 +135,7 @@ bool cfg_c::SetDataEnd(const char* name, int _end)
 			return true;
 		}
 	}
+
 	Warning("%s is not a recorded variable", name);
 	return false;
 }
@@ -145,6 +150,7 @@ void cfg_c::SetDataEndBlock(const char* name, cfg_c* block)
 			return;
 		}
 	}
+
 	Warning("%s is not a recorded variable", name);
 }
 
@@ -158,39 +164,37 @@ void cfg_c::IncDataUses(const char* name)
 			return;
 		}
 	}
+
 	Warning("%s is not a recorded variable", name);
 }
 
-
+/***************************************************************************************************
+                                      Redefinition Checking
+***************************************************************************************************/
 
 //To check for redefs, recurse down the tree until the block holding the variable in question is found.
 //From there, go back up the tree and check each node, its younger siblings, but NOT and of their children, has defined the symbol
 
-#define CRD_DEADEND 0
-#define CRD_NOREDEF	1 //first set after finding the block the data in question is in
-#define CRD_REDEF	2
-
 //no need to pass these as parameters every time
 const char* redef_name;
-const cfg_c*		redef_block;
-//dataflags_t redef_flags;
+const cfg_c*redef_block;
 
 //set above vars before calling
-int cfg_c::R_CheckRedef()
+cfg_c::CRD cfg_c::R_CheckRedef()
 {
 	if (this == redef_block)
-		return CRD_NOREDEF; //found the right block
+		return CRD::NOREDEF; //found the right block
 
 	for (int i = 0; i < (int)links.size(); i++)
 	{
 		cfg_c* link = links[i];
-		int ret = link->R_CheckRedef();
+		CRD ret = link->R_CheckRedef();
 
-		if (!ret)
+		if (ret != CRD::DEADEND) //CHECKME
 			continue;
 
-		if (ret == CRD_REDEF)
-			return CRD_REDEF;
+		if (ret == CRD::REDEF)
+			return CRD::REDEF;
 
 		//just found the block, check it and any of its previous siblings for the symbol
 		for (int li = 0; li <= i; li++)
@@ -201,19 +205,19 @@ int cfg_c::R_CheckRedef()
 			{
 				if (!strcmp(sibling->data[di]->var->Str(), redef_name))
 				{//redefinition
-					return CRD_REDEF;
+					return CRD::REDEF;
 				}
 			}
 
 			if (sibling == link)
-				return CRD_NOREDEF;
+				return CRD::NOREDEF;
 		}
 	}
 
-	return CRD_DEADEND; //this should never be the final return value from this function
+	return CRD::DEADEND; //this should never be the final return value from this function
 }
 
-int cfg_c::R_CheckGlobalRedef()
+cfg_c::CRD cfg_c::R_CheckGlobalRedef()
 {
 	cfg_c* c;
 	for (int i = 0; i < links.size(); i++)
@@ -222,14 +226,14 @@ int cfg_c::R_CheckGlobalRedef()
 		for (int j = 0; j < c->data.size(); j++)
 		{
 			if (!strcmp(redef_name, c->data[j]->var->Str()))
-				return CRD_REDEF;
+				return CRD::REDEF;
 		}
 
-		if (c->R_CheckGlobalRedef() == CRD_REDEF)
-			return CRD_REDEF;
+		if (c->R_CheckGlobalRedef() == CRD::REDEF)
+			return CRD::REDEF;
 	}
 
-	return CRD_NOREDEF;
+	return CRD::NOREDEF;
 }
 
 bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags)
@@ -240,12 +244,12 @@ bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t fl
 
 	if (flags & DF_GLOBAL) //also top == NULL
 	{//these are visible from everywhere in the program, and can only be defined in ROOT
-		if(root->R_CheckGlobalRedef() == CRD_REDEF)
+		if(root->R_CheckGlobalRedef() == CRD::REDEF)
 			return 0;
 	}
 	else
 	{
-		if (top->R_CheckRedef() == CRD_REDEF)
+		if (top->R_CheckRedef() == CRD::REDEF)
 			return 0; //found it in the local scope
 	}
 
@@ -260,29 +264,29 @@ bool cfg_c::CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t fl
 	return 1; //not in our function or global scope
 }
 
-#define GSD_DEADEND	0
-#define GSD_NODECL	1
-#define GSD_DECL	2
+/***************************************************************************************************
+                                      Scoped-Data Aquisition
+***************************************************************************************************/
 
 //these are set by the function
 static const data_t*	scopedata;
-static const cfg_c*	scopeblock;
+static const cfg_c*		scopeblock;
 
-int cfg_c::R_GetScopedData()
+cfg_c::GSD cfg_c::R_GetScopedData()
 {
 	if (this == redef_block)
-		return GSD_NODECL; //found the right block
+		return GSD::NODECL; //found the right block
 
 	for (int i = 0; i < (int)links.size(); i++)
 	{
 		cfg_c* link = links[i];
-		int ret = link->R_GetScopedData();
+		GSD ret = link->R_GetScopedData();
 
-		if (ret == GSD_DEADEND)
+		if (ret == GSD::DEADEND)
 			continue;
 
-		if (ret == GSD_DECL)
-			return GSD_DECL;
+		if (ret == GSD::DECL)
+			return GSD::DECL;
 
 		//just found the block, check it and any of its previous siblings for the symbol
 		for (int li = 0; li <= i; li++)
@@ -295,16 +299,16 @@ int cfg_c::R_GetScopedData()
 				{//found the symbol
 					scopedata = sibling->data[di];
 					scopeblock = sibling;
-					return GSD_DECL;
+					return GSD::DECL;
 				}
 			}
 
 			if (sibling == link)
-				return GSD_NODECL;
+				return GSD::NODECL;
 		}
 	}
 
-	return CRD_DEADEND; //this should never be the final return value from this function
+	return GSD::DEADEND; //this should never be the final return value from this function
 }
 
 data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock) const
@@ -312,7 +316,7 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 	redef_name = name;
 	redef_block = this;
 
-	if (top->R_GetScopedData() != GSD_DECL)
+	if (top->R_GetScopedData() != GSD::DECL)
 	{//could still be a global var
 		for (int i = 0; i < root->data.size(); i++)
 		{
@@ -331,36 +335,30 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 	return (data_t*)scopedata;
 }
 
-#undef CRD_DEADEND
-#undef CRD_NOREDEF
-#undef CRD_REDEF
-#undef GSD_DEADEND
-#undef GSD_NODECL
-#undef GSD_DECL
-
-#define ISI_NOTSTRUCT	0
-#define ISI_ISSTRUCT	1
-#define ISI_NOTFOUND	2
+/***************************************************************************************************
+                                     Struct Instance Checking
+***************************************************************************************************/
 
 //recurse until the source block is found
 //then search from the bottom up for the declaration
 static const cfg_c* instanceblock; //the block that the instance is being used in
+static const struct_t* instancestruct; //The struct the var belongs to or NULL if not a struct inst
 
-int cfg_c::R_IsStructInstance(const char* name) const
+cfg_c::ISI cfg_c::R_IsStructInstance(const char* name) const
 {
 	if (instanceblock == this)
-		return ISI_NOTSTRUCT;
+		return ISI::NOTSTRUCT;
 
 	for (int i = 0; i < (int)links.size(); i++)
 	{
 		cfg_c* link = links[i];
-		int ret = link->R_IsStructInstance(name);
+		ISI ret = link->R_IsStructInstance(name);
 
-		if (ret == ISI_NOTFOUND)
+		if (ret == ISI::NOTFOUND)
 			continue;
 
-		if (ret == ISI_ISSTRUCT)
-			return ISI_ISSTRUCT; 
+		if (ret == ISI::ISSTRUCT)
+			return ISI::ISSTRUCT; 
 
 		//just found the block, check it and any of its previous siblings for the symbol
 		for (int li = 0; li <= i; li++)
@@ -372,30 +370,31 @@ int cfg_c::R_IsStructInstance(const char* name) const
 				if (!strcmp(sibling->data[di]->var->Str(), name))
 				{//found it, see if its actually a struct
 					if(sibling->data[di]->flags & DF_STRUCT)
-						return ISI_ISSTRUCT;
+						return ISI::ISSTRUCT;
 					else 
-						return ISI_NOTSTRUCT;
+						return ISI::NOTSTRUCT;
 				}
 			}
 
 			if (sibling == link)
-				return ISI_NOTFOUND;
+				return ISI::NOTFOUND;
 		}
 	}
 
-	return ISI_NOTFOUND;
+	return ISI::NOTFOUND;
 }
 
 bool cfg_c::IsStructInstance(const char* name, const cfg_c* func, const cfg_c* root) const
 {
-	int ret;
+	ISI ret;
 
 	instanceblock = this;
+	instancestruct = NULL;
 	ret = func->R_IsStructInstance(name);
 
-	if (ret == ISI_ISSTRUCT)
+	if (ret == ISI::ISSTRUCT)
 		return true;
-	else if (ret == ISI_NOTSTRUCT)
+	else if (ret == ISI::NOTSTRUCT)
 		return false;
 
 	//didn't find it in the function - check if its a global
@@ -413,11 +412,6 @@ bool cfg_c::IsStructInstance(const char* name, const cfg_c* func, const cfg_c* r
 	Error("IsStructInstance: Couldn't find '%s' anywhere", name); //should never reach this
 	return false;
 }
-
-#undef ISI_NOTSTRUCT
-#undef ISI_ISSTRUCT
-#undef ISI_NOTFOUND
-
 
 cfg_c::~cfg_c()
 {

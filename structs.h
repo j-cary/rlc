@@ -1,3 +1,6 @@
+/***************************************************************************************************
+Purpose: Maintain a collection of user-defined structures
+***************************************************************************************************/
 #pragma once
 #include "common.h"
 
@@ -20,6 +23,7 @@
 
 #define DF_OTHER_MASK (DF_LABEL | DF_FXD | DF_STRUCT | DF_ARRAY)
 
+// Flag type to be used with the DF_* defines
 typedef unsigned dataflags_t;
 
 typedef struct member_s
@@ -28,16 +32,16 @@ typedef struct member_s
 	const char* struct_name; //NULL unless this is a struct 
 	dataflags_t flags;
 	int			length;
-	int			offset; //redundant
-	tree_c* val; //node so that arrays can be initialized
-	member_s* next = NULL;
+	int			offset; //Technically redundant
+	tree_c*		val; //node so that arrays can be initialized
+	member_s*	next = NULL;
 } member_t;
 
 typedef struct struct_s
 {
 	const char* name;
 	int			length;
-	member_t* first_member;
+	member_t*	first_member;
 } struct_t;
 
 class structlist_c

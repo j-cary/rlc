@@ -147,7 +147,7 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 	*/
 
 	//Count the operands
-	for (kids = 0; expr->Get(kids); kids++);
+	for (kids = 0; expr->Get(kids); ++kids);
 
 	code = expr->Hash()->Code();
 
@@ -159,7 +159,7 @@ int eval_expr_c::MemoryOffset(const tree_c* head, tree_c** data)
 		switch (unary_op)
 		{
 		case CODE::STAR: next_type = mem_op_e::OP_DEREF; break;
-		case CODE::AMPERSAND: next_type = mem_op_e::OP_REF;
+		case CODE::AMPERSAND: next_type = mem_op_e::OP_REF; break;
 		default: next_type = mem_op_e::OP_NONE;
 		}
 

@@ -273,13 +273,9 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 
 int	cfg_c::StackIndex(tdata_t* var, bool available[], const int size)
 {
-	int index;
-	int last_general = (int)REG::LAST_GENERAL_REG();
-
-	if (var->flags & DF_OTHER_MASK) //structs, arrays, etc. cannot be held in regs
-		index = last_general + 1;
-	else
-		index = REG::B;
+	int last_general = (int)REG::LAST_GENERAL_REG;
+	int index = (var->flags & DF_OTHER_MASK) ? // structs, arrays, etc. cannot be held in regs
+		last_general + 1 : REG::B;
 
 	for (; index < size; index++)
 	{
@@ -325,7 +321,7 @@ int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size,
 
 		if (var->flags & DF_BYTE)
 		{
-			for (int index = REG::AUTO_MIN(); index <= REG::LAST_GENERAL_REG(); index++)
+			for (int index = REG::AUTO_MIN; index <= REG::LAST_GENERAL_REG; index++)
 				if (stack_available[index])
 				{
 					*local = false;
@@ -334,7 +330,7 @@ int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size,
 		}
 		else
 		{
-			for (int index = REG::AUTO_MIN(); index <= REG::LAST_GENERAL_REG(); index += 2)
+			for (int index = REG::AUTO_MIN; index <= REG::LAST_GENERAL_REG; index += 2)
 				if (stack_available[index] && stack_available[index + 1])
 				{
 					*local = false;
@@ -376,10 +372,10 @@ int cfg_c::AutoIndex(tdata_t* var, bool stack_available[], const int stack_size,
 
 void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 {
-	constexpr int max_stack = REG::LAST_GENERAL_REG() + REG::STACK_MAX();
+	constexpr int max_stack = REG::LAST_GENERAL_REG + REG::STACK_MAX;
 	bool stack_available[max_stack]; //Reg vars, both stack & auto, go in here
-	static bool local_available[REG::AUTO_CNT()];
-	int local_count = REG::AUTO_MIN();
+	static bool local_available[REG::AUTO_CNT];
+	int local_count = REG::AUTO_MIN;
 
 	memset(stack_available, true, sizeof(stack_available));
 	memset(local_available, true, sizeof(local_available));
@@ -425,7 +421,7 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 		{
 			index = StackIndex(x, stack_available, max_stack);
 
-			if (index > REG::LAST_GENERAL_REG())
+			if (index > REG::LAST_GENERAL_REG)
 			{//stack
 				x->si.stack_flag = 1;
 				x->si.stack = index;
@@ -439,7 +435,7 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 		else
 		{
 			bool local;
-			index = AutoIndex(x, stack_available, max_stack, local_available, REG::AUTO_CNT(), &local);
+			index = AutoIndex(x, stack_available, max_stack, local_available, REG::AUTO_CNT, &local);
 
 			if (local)
 			{//saved in a '.db'
@@ -490,7 +486,7 @@ void cfg_c::FixupStackIndices(int symbol_cnt, tdata_t* tdata)
 	for (int symbol = 0; symbol < symbol_cnt; symbol++)
 	{
 		if (tdata[symbol].si.stack_flag)
-			tdata[symbol].si.stack -= REG::LAST_GENERAL_REG();
+			tdata[symbol].si.stack -= REG::LAST_GENERAL_REG;
 	}
 }
 
@@ -499,7 +495,6 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 {
 	int		count = (int)data.size();
 	cfg_c** offsets;
-	int		link_cnt;
 
 	R_TotalLinks(); //set total_links
 	offsets = new cfg_c * [total_links];
@@ -507,8 +502,8 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 	igraph->nodes = new inode_c[symbol_cnt];
 	igraph->num_nodes = symbol_cnt;
 	R_GenBlockOfs(offsets); //generate block indices
-	R_BuildTDataList(*tdata, offsets);//get a plain list of all the data and their respective lifetimes
-	SortTDataList(tdata, symbol_cnt);//control vars first, then sort by usage, globals go last 
+	R_BuildTDataList(*tdata, offsets); // get a plain list of all the data and their respective lifetimes
+	SortTDataList(tdata, symbol_cnt); // control vars first, then sort by usage, globals go last 
 
 	//check for interference between vars
 	for (int i = 0; i < symbol_cnt; i++)

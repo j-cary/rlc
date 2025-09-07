@@ -1,6 +1,13 @@
+/***************************************************************************************************
+Purpose:
+***************************************************************************************************/
 #include "lex.h"
 
-struct {
+/***************************************************************************************************
+										Private Variables
+***************************************************************************************************/
+
+static struct {
 	char reserved;
 	CODE code;
 } reservedchars[] =
@@ -38,7 +45,7 @@ struct {
 
 };
 
-kv_t reservedwords[] =
+static kv_t reservedwords[] =
 {
 	"inline",	CODE::INLINE,
 	"subr",		CODE::SUBR,
@@ -47,8 +54,8 @@ kv_t reservedwords[] =
 	//data types
 	"db",		CODE::BYTE,		"byte",		CODE::BYTE,
 	"dw",		CODE::WORD,		"word",		CODE::WORD,
-	"fxd",		CODE::FIXED,		"fixed",	CODE::FIXED,
-	"lbl",		CODE::LABEL,		"label",	CODE::LABEL,
+	"fxd",		CODE::FIXED,	"fixed",	CODE::FIXED,
+	"lbl",		CODE::LABEL,	"label",	CODE::LABEL,
 
 	"struct",	CODE::STRUCT,
 	"signed",	CODE::SIGNED,
@@ -107,6 +114,10 @@ kv_t reservedwords[] =
 	NULL,		0 //null terminator
 };
 
+/***************************************************************************************************
+										Private Functions
+***************************************************************************************************/
+
 size_t scanner_c::GetTextLump(char text[KEY_MAX_LEN], size_t pi)
 {
 	//char cur;
@@ -126,8 +137,7 @@ size_t scanner_c::GetTextLump(char text[KEY_MAX_LEN], size_t pi)
 	// we're looking at a space NOT found in a string
 	for (int ti = 0; (*cur) && (!isspace(*cur) || hasquote); cur++, ti++)
 	{
-		if (ti >= TEXT_MAX_LEN)
-			Error("Text constant too long. Is there an unclosed quote?");
+		ASSERT(ti < TEXT_MAX_LEN, "Text constant too long. Is there an unclosed quote?");
 
 		if (*cur == '\n')
 		{
@@ -142,8 +152,7 @@ size_t scanner_c::GetTextLump(char text[KEY_MAX_LEN], size_t pi)
 
 			for (cur++; *cur != '#'; cur++)
 			{
-				if (!*cur)
-					Error("Unclosed comment");
+				ASSERT(*cur, "Unclosed comment");
 
 				if (*cur == '\n')
 					newlines.push_back(cur - prog);
@@ -308,13 +317,131 @@ const char* scanner_c::CheckStr(const char* text, size_t prog_index)
 		return text;
 
 	for (cur++; *cur != '"'; cur++)
-		if (!*cur)
-			Error("Unclosed string");
+		ASSERT(*cur, "Unclosed string");
 
 	cur++;
 	InsertLexeme(text, cur - text, CODE::STRING, prog_index);
 	return cur;
 }
+
+
+
+
+
+void scanner_c::InsertLexeme(const char* text, size_t len, CODE code, size_t character_index)
+{
+	size_t line_no = CalculateLineNo(character_index);
+	char key[KEY_MAX_LEN];
+
+	strncpy_s(key, text, len); //'text' points to a text lump, we need to give the list only this specific lexeme.
+	list->Insert(NULL, key, code, line_no);
+}
+
+size_t scanner_c::CalculateLineNo(size_t character_index)
+{
+	size_t size = newlines.size();
+
+	//atm, char_idx is the index of the LAST element of the lexeme.
+	//there SHOULD be sufficient info in newlines to pinpoint the line on which a lexeme lives, as well as its col no.
+	//strings / comments can be multi-line. Keep track of start AND stop line?
+	//How about defs? '\'?
+
+	for (size_t i = 0; i < size; i++)
+	{
+		//This is hit if the lexeme directly precedes a newline
+		//ex. ';'\n
+		if (character_index < newlines[i])
+			return i;
+	}
+
+	//all other cases
+	//ex. ';'\t\n
+	//ex. 'db' 'b1' '=' '1' ';' (space) \n
+	return size;
+}
+
+size_t scanner_c::CalculateColNo(const char* text, size_t line_no)
+{
+	return 0;
+}
+
+
+
+void scanner_c::AddReservedChar(char c, CODE code)
+{
+	kv_t ins;
+	ins.k[0] = c;
+	ins.v = code;
+	list->Insert(NULL, ins);
+}
+
+void scanner_c::AddLexeme(char* lexeme)
+{
+	kv_t ins;
+
+	strcpy_s(ins.k, lexeme);
+	ins.v = CODE::TEXT;
+
+	for (int rwi = 0; rwi < sizeof(reservedwords) / sizeof(kv_t); rwi++)
+	{//check for reserved words
+		if (!strcmp(lexeme, reservedwords[rwi].k))
+			ins.v = reservedwords[rwi].v;
+	}
+
+	//need to check for text, bin, dec, hex, etc.
+	if (lexeme[0] == '$')
+	{
+		for (int i = 1; lexeme[i]; i++)
+			ASSERT(isxdigit(lexeme[i]), "Invalid hexadecimal constant");
+
+		ins.v = CODE::NUM_HEX;
+	}
+	else if (lexeme[0] == '%')
+	{
+		for (int i = 1; lexeme[i]; i++)
+			ASSERT(lexeme[i] == '0' || lexeme[i] == '1', "Invalid binary constant");
+
+		ins.v = CODE::NUM_BIN;
+	}
+	else if (isdigit(lexeme[0]))
+	{
+		bool point = false;
+		for (int i = 1; lexeme[i]; i++)
+		{
+			if (lexeme[i] == '.')
+			{
+				ASSERT(!point, "Unexpected '.' in fixed constant");
+				point = true;
+			}
+			else if (!isdigit(lexeme[i]))
+				ASSERT(0, "Invalid decimal constant");
+		}
+
+		ins.v = point ? CODE::NUM_FXD : CODE::NUM_DEC;
+	}
+	else if (isalpha(lexeme[0]))
+	{
+		for (int i = 1; lexeme[i]; i++)
+		{
+			ASSERT(isdigit(lexeme[i]) || isalpha(lexeme[i]) || lexeme[i] == '_',
+				"Invalid text constant %s", lexeme);
+		}
+	}
+	else if (lexeme[0] == '"')
+	{
+		ins.v = CODE::STRING;
+	}
+	else
+		ASSERT(0, "Unrecognized primary character in lexeme %s", lexeme);
+
+	list->Insert(NULL, ins);
+
+	memset(lexeme, 0, KEY_MAX_LEN);
+}
+
+/***************************************************************************************************
+									   Interface Functions
+***************************************************************************************************/
 
 void scanner_c::Lex(const char* prog_, llist_c* _list, bool _debug)
 {
@@ -365,124 +492,4 @@ void scanner_c::Lex(const char* prog_, llist_c* _list, bool _debug)
 	list->Insert(NULL, nullkv); //null terminator
 	if(debug)
 		list->Disp();
-}
-
-
-
-void scanner_c::InsertLexeme(const char* text, size_t len, CODE code, size_t character_index)
-{
-	size_t line_no = CalculateLineNo(character_index);
-	char key[KEY_MAX_LEN]; 
-
-	strncpy_s(key, text, len); //'text' points to a text lump, we need to give the list only this specific lexeme.
-	list->Insert(NULL, key, code, line_no);
-}
-
-size_t scanner_c::CalculateLineNo(size_t character_index)
-{
-	size_t size = newlines.size();
-
-	//atm, char_idx is the index of the LAST element of the lexeme.
-	//there SHOULD be sufficient info in newlines to pinpoint the line on which a lexeme lives, as well as its col no.
-	//strings / comments can be multi-line. Keep track of start AND stop line?
-	//How about defs? '\'?
-
-	for (size_t i = 0; i < size; i++)
-	{
-		//This is hit if the lexeme directly precedes a newline
-		//ex. ';'\n
-		if (character_index < newlines[i])
-			return i; 
-	}
-
-	//all other cases
-	//ex. ';'\t\n
-	//ex. 'db' 'b1' '=' '1' ';' (space) \n
-	return size; 
-}
-
-size_t scanner_c::CalculateColNo(const char* text, size_t line_no)
-{
-	return 0;
-}
-
-
-
-void scanner_c::AddReservedChar(char c, CODE code)
-{
-	kv_t ins;
-	ins.k[0] = c;
-	ins.v = code;
-	list->Insert(NULL, ins);
-}
-
-void scanner_c::AddLexeme(char* lexeme)
-{
-	kv_t ins;
-
-	strcpy_s(ins.k, lexeme);
-	ins.v = CODE::TEXT;
-
-	for (int rwi = 0; rwi < sizeof(reservedwords) / sizeof(kv_t); rwi++)
-	{//check for reserved words
-		if (!strcmp(lexeme, reservedwords[rwi].k))
-			ins.v = reservedwords[rwi].v;
-	}
-
-	//need to check for text, bin, dec, hex, etc.
-	if (lexeme[0] == '$')
-	{
-		for (int i = 1; lexeme[i]; i++)
-		{
-			if (!isxdigit(lexeme[i]))
-				Error("Invalid hexadecimal number");
-		}
-
-		ins.v = CODE::NUM_HEX;
-	}
-	else if (lexeme[0] == '%')
-	{
-		for (int i = 1; lexeme[i]; i++)
-		{
-			if (lexeme[i] != '0' && lexeme[i] != '1')
-				Error("Invalid binary number");
-		}
-
-		ins.v = CODE::NUM_BIN;
-	}
-	else if (isdigit(lexeme[0]))
-	{
-		bool point = false;
-		for (int i = 1; lexeme[i]; i++)
-		{
-			if (lexeme[i] == '.')
-			{
-				if (point) //there can't be two decimal points in a number
-					Error("Invalid fixed number");
-				point = true;
-			}
-			else if (!isdigit(lexeme[i]))
-				Error("Invalid decimal number");
-		}
-		if (point)
-			ins.v = CODE::NUM_FXD;
-		else
-			ins.v = CODE::NUM_DEC;
-	}
-	else if (isalpha(lexeme[0]))
-	{
-		for (int i = 1; lexeme[i]; i++)
-		{
-			if (!isdigit(lexeme[i]) && !isalpha(lexeme[i]) && lexeme[i] != '_')
-				Error("Invalid text constant %s", lexeme);
-		}
-	}
-	else if (lexeme[0] == '"')
-		ins.v = CODE::STRING;
-	else
-		Error("Unrecognized starting character in lexeme %s", lexeme);
-
-	list->Insert(NULL, ins);
-
-	memset(lexeme, 0, KEY_MAX_LEN);
 }

@@ -4,6 +4,10 @@ Purpose: Provide expression evaluation for analysis and code generation
 #pragma once
 #include "semantics.h"
 
+/***************************************************************************************************
+										Defines/Typedefs
+***************************************************************************************************/
+
 class eval_expr_c
 {
 private:
@@ -35,4 +39,13 @@ public:
 
 	/* Returns the constant offset from the object. Name is the var name of the struct */
 	int Memory(const tree_c* head, const cfg_c* _block, const cfg_c* _func, const cfg_c* root, tree_c** data);
+
+	// Default constructor to appease the compiler
+	eval_expr_c()
+	{
+		ref_level = 0;
+		block = NULL;
+		func = NULL;
+		root = NULL;
+	}
 };

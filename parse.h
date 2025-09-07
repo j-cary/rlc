@@ -1,3 +1,10 @@
+/***************************************************************************************************
+Purpose: Parse a tokenized program. 
+Input: A tokenized program with no invalid characters/tokens
+Output: A tree representing the grammar of the program. This program is guaranteed to be 
+syntactically valid. Syntactically invalid programs will cause the compiler to exit. No semantic
+evaluation is done.
+***************************************************************************************************/
 #pragma once
 #include "common.h"
 #include "llist.h"
@@ -203,13 +210,9 @@ public:
 	parser_c()
 	{
 		list = NULL;
-		//root.tree_c::tree_c();
 	}
 };
 
-//#define PEEKCP(x)	(list->Peek()->Code() == x)
 #define PEEKCP(x)	(list->Peek() ? list->Peek()->Code() == x : false)
 #define GETCP(x)	(list->Get()->Code() == x)
-//#define CL(x, y)	(Call(&parser_c::x, y, NULL))
-//#define CL(x,y,z)	(Call(&parser_c::x, y, z))
 #define CL(x, y)	(Call(&parser_c::x, y))
