@@ -103,8 +103,8 @@ void cfg_c::AddData(data_t* _d)
 {
 	int pos = StmtCnt();
 
-	_d->start_line = pos; //start.push_back(pos);
-	_d->end_line = pos; //end.push_back(pos);
+	_d->start_line = pos;
+	_d->end_line = pos;
 	startb.push_back(this);
 	endb.push_back(this);
 	uses.push_back(0);
@@ -133,7 +133,7 @@ bool cfg_c::SetDataEnd(const char* name, int _end)
 	{
 		if (!strcmp(name, data[i]->var->Str()))
 		{
-			data[i]->end_line = _end; // end[i] = _end;
+			data[i]->end_line = _end; 
 			return true;
 		}
 	}
@@ -414,8 +414,6 @@ cfg_c::~cfg_c()
 	links.clear();//Hopefully clear the list...
 	statements.clear();
 	data.clear();
-	//start.clear();
-	//end.clear();
 	startb.clear();
 	endb.clear();
 	uses.clear();
@@ -441,7 +439,6 @@ void cfg_c::Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata)
 			inode_c* node = &igraph->nodes[i];
 			tdata_t* t1 = &tdata[i];
 
-			//printf("%s:%s\t%i - ", g_ctabstr, t1->var->Str(), node->color);
 			printf("%s:%s\t%s - ", g_ctabstr, t1->var->Str(), t1->ToStr(t1->size));
 
 			for (int j = 0; j < node->LinkCnt(); j++)
@@ -475,12 +472,10 @@ void cfg_c::R_Disp( igraph_c* igraph, tdata_t* tdata)
 
 	for (paralleli_t i = 0; i < data.size(); i++)
 	{
-		//printf(":%s [[%s]] %pi-%pi ", data[pi]->var->Str(), endb[pi]->id, start[pi], end[pi]);
 		printf(":%s ", data[i]->var->Str());
 		if (startb[i] != endb[i])
 			printf("[[%s]] ", endb[i]->id);
 		printf("%ix %i-%i", uses[i], data[i]->start_line, data[i]->end_line);
-		//printf("%ix %i-%i #%i#", uses[i], start[i], end[i], data[i]->tdata);
 
 	}
 	printf("\n");

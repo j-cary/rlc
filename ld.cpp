@@ -46,8 +46,8 @@ static INSTR_GEN_FUNC(reg2hl)
 
 static INSTR_GEN_FUNC(reg2reg)
 {
-	const tdata_t* const src = info[cnt - 1].data;
-	const tdata_t* const dst = info[cnt - 2].data;
+	const data_t* const src = info[cnt - 1].data;
+	const data_t* const dst = info[cnt - 2].data;
 
 	ASSERT_WARN(dst->size >= src->size, "Truncation required in load %s <- %s", dst->var->Str(), src->var->Str());
 
@@ -161,7 +161,7 @@ static INSTR_GEN_FUNC(auto2auto)
 static INSTR_GEN_FUNC(const2hl)
 {
 	const tree_c* src = info[cnt - 1].node;
-	const tdata_t* dst = info[cnt - 2].data;
+	const data_t* dst = info[cnt - 2].data;
 	const int min = ((dst->flags | DF_SIGNED) ? INT16_MIN : 0);
 	const int max = ((dst->flags | DF_SIGNED) ? INT16_MAX : UINT16_MAX);
 	//const int const_val = Constant_Expression(src);
@@ -175,7 +175,7 @@ static INSTR_GEN_FUNC(const2hl)
 static INSTR_GEN_FUNC(const2reg)
 {
 	const tree_c* src = info[cnt - 1].node;
-	const tdata_t* dst = info[cnt - 2].data;
+	const data_t* dst = info[cnt - 2].data;
 	const int const_val = eval_expr.Constant(src);
 	int min;
 	int max;
@@ -198,7 +198,7 @@ static INSTR_GEN_FUNC(const2reg)
 
 static INSTR_GEN_FUNC(const2stack)
 {
-	const tdata_t* dst = info[cnt - 2].data;
+	const data_t* dst = info[cnt - 2].data;
 	int const_val = eval_expr.Constant(info[cnt - 1].node);
 
 	//FIXME: check for truncation here
@@ -213,7 +213,7 @@ static INSTR_GEN_FUNC(const2stack)
 
 static INSTR_GEN_FUNC(const2auto)
 {
-	const tdata_t* dst = info[cnt - 2].data;
+	const data_t* dst = info[cnt - 2].data;
 	const int const_val = eval_expr.Constant(info[cnt - 1].node);
 	const int base = dst->si.local + info[cnt - 2].mem.offset;
 
@@ -262,7 +262,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 	enum { BAD = -1, HL = 0, REG = 1, STACK = 2, AUTO = 3, CONST = 4 } 
 	src_tbl = BAD, dst_tbl = BAD;
 	instr_gen_func_t func = NULL;
-	const tdata_t* src = info[cnt - 1].data;
+	const data_t* src = info[cnt - 1].data;
 
 	sm = &assembler;
 
@@ -281,7 +281,7 @@ void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 	//TMP: just do 2 ops for right now
 	for (int i = cnt - 2; i > cnt - 3 /*0*/; --i)
 	{
-		const tdata_t* dst = info[i].data;
+		const data_t* dst = info[i].data;
 
 		INTERNAL_ASSERT(dst, "Failed to determine storage dest operand");
 		if (dst->si.reg_flag)

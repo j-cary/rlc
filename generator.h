@@ -16,7 +16,7 @@ Output:
 // Operand information passed into the instruction modules
 typedef struct
 {
-	const tdata_t* data;
+	const data_t* data;
 	const tree_c* node;
 	eval_expr_c::mem_result_t mem;
 	//int offset;
@@ -39,7 +39,6 @@ class generator_c
 	asm_c assembler;
 	tree_c*		root;
 	cfg_c*		graph; //The root of the control flow graph
-	tdata_t*	tdata;
 	const structlist_c *slist;
 
 
@@ -99,9 +98,7 @@ class generator_c
 	void MarkReg(regi_t reg, tdatai_t data);
 	bool IsMarked(regi_t reg, paralleli_t data);
 
-	tdata_t* Data(cfg_c* block, tree_c* n);
-	tdatai_t DataOfs(cfg_c* block, tree_c* n);
-	const char* DataName(tdatai_t data);
+	data_t* Data(cfg_c* block, tree_c* n);
 
 	CODE Code(tree_c* node);
 	const char* Str(tree_c* node);
@@ -113,7 +110,7 @@ class generator_c
 public:
 	generator_c() : assembler("C:/ti83/rl/test.z80", this) { }
 
-	void Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, const structlist_c* _sl);
+	void Generate(tree_c* _root, cfg_c* _graph, unsigned* symbol_top, const structlist_c* _sl);
 
 	//
 	//Standard library

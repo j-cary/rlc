@@ -1,5 +1,36 @@
 #include "semantics.h"
 
+const char* data_t::ToStr(int size, int width) const
+{
+	const size_t maxstrlen = 6;
+	static char str[maxstrlen];
+
+	if (si.reg_flag)
+	{
+		return REG::Str((REG::REG)si.reg, size);
+	}
+	else if (si.stack_flag)
+	{
+		signed char actual = si.stack;
+
+		snprintf(str, maxstrlen, "(%i)", actual);
+
+		for (size_t i = strlen(str); i < maxstrlen - 1; i++)
+			str[i] = ' ';
+		return str;
+	}
+	else if (si.local_flag)
+	{
+		snprintf(str, maxstrlen, "%i", si.local);
+
+		for (size_t i = strlen(str); i < maxstrlen - 1; i++)
+			str[i] = ' ';
+		return str;
+	}
+
+	return "REALLYBAD";
+}
+
 int structlist_c::AddStruct(const char* name)
 {
 	struct_t* s = &structs[struct_cnt];

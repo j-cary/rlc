@@ -181,38 +181,22 @@ bool generator_c::IsMarked(regi_t reg, tdatai_t data)
 }
 
 //Returns NULL if the var is unused
-tdata_t* generator_c::Data(cfg_c* block, tree_c* n)
-{
-	return &tdata[DataOfs(block, n)];
-}
-
-tdatai_t generator_c::DataOfs(cfg_c* block, tree_c* node)
+data_t* generator_c::Data(cfg_c* block, tree_c* n)
 {
 	cfg_c* localblock = NULL;
-	const data_t* data = block->ScopedDataEntry(Str(node), graph, graph, &localblock); //recurse through the graph, find the ONLY matching data in scope.
+	data_t* data = block->ScopedDataEntry(Str(n), graph, graph, &localblock); //recurse through the graph, find the ONLY matching data in scope.
 
 	//fixme: first graph parm should be the current function
 
-	return data->tdata;
-
-	//plan: 
-	// tdata only needs to be in dataname - the indices will suffice elsewhere
-	//fix asm_dload
+	return data;
 }
+
 /*
 colori_t generator_c::DataColor(tdatai_t index)
 {
 	return (*igraph)[index]->color;
 }
 */
-
-const char* generator_c::DataName(tdatai_t data)
-{
-	if (data < 0 || data >= (tdatai_t)symtbl_top)
-		Error("Bad data index %i", data);
-
-	return tdata[data].var->Str();
-}
 
 
 

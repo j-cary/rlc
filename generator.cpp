@@ -1,14 +1,12 @@
 #include "generator.h"
 #include "evaluate_expression.h"
 
-void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsigned* symbol_top, const structlist_c* _sl)
+void generator_c::Generate(tree_c* _root, cfg_c* _graph, unsigned* symbol_top, const structlist_c* _sl)
 {
 	cfg_c* block;
 
 	printf("Generating code...\n");
 
-	//symtbl = symbols;
-	tdata = _tdata;
 	symtbl_top = *symbol_top;
 	root = _root;
 	graph = _graph;
@@ -195,7 +193,7 @@ void generator_c::CG_DataDeclaration(tree_c* node, cfg_c* block)
 
 	do
 	{
-		tdata_t* t;
+		data_t* t;
 
 		child = node->Get(i);
 		code = child->Hash()->Code();

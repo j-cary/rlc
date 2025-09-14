@@ -70,15 +70,14 @@ typedef struct data_s
 	const kv_c*	var;
 	dataflags_t	flags;
 	int			size;
-	tdatai_t	tdata; // Removeme
 	const char* struct_name; // NULL if this isn't a struct
 
-	// Plan - move start and end arrays into here
-	// Place the offset into the array in here
 	int start_line, end_line;
 	int start_block, end_block;
 
 	storageinfo_t si;
+
+	const char* ToStr(int size, int width=-1) const;
 } data_t;
 
 //purpose: simplify the parse tree 
@@ -216,8 +215,6 @@ private:
 	// TODO
 	void R_BuildTDataList(tdata_t* tdata, cfg_c** offsets);
 
-	//
-	bool R_SwapTDataIndices(tdatai_t old, tdatai_t _new);
 	void SortTDataList(tdata_t** tdata, int count);
 	void FixupStaticInterference(tdata_t** tdata);
 

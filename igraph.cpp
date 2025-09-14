@@ -139,14 +139,12 @@ void cfg_c::R_BuildTDataList(tdata_t* tdata, cfg_c** offsets)
 	{
 		tdata_t* t = &tdata[tdatai];
 		t->var = data[ti]->var;
-		t->start = data[ti]->start_line; // start[ti];
-		t->end = data[ti]->end_line; // end[ti];
+		t->start = data[ti]->start_line;
+		t->end = data[ti]->end_line;
 		t->size = data[ti]->size;
 		t->flags = data[ti]->flags;
 		t->data_link = data[ti];
 		++tdatai;
-		//t->data_link = ti; // Remember which datum this stands for
-		//data[ti]->tdata = tdatai++;
 
 		//generate the block offsets for the start and end blocks of this variable
 		int gotone = 0;
@@ -172,28 +170,6 @@ void cfg_c::R_BuildTDataList(tdata_t* tdata, cfg_c** offsets)
 
 	for (int i = 0; i < (int)links.size(); i++)
 		links[i]->R_BuildTDataList(tdata, offsets);
-}
-
-bool cfg_c::R_SwapTDataIndices(tdatai_t old, tdatai_t _new)
-{
-	/*
-	for (int i = 0; i < data.size(); i++)
-	{
-		if (data[i]->tdata == old)
-		{//done
-			data[i]->tdata = _new;
-			return true;
-		}
-	}
-	*/
-
-	for (int i = 0; i < links.size(); i++)
-	{
-		if (links[i]->R_SwapTDataIndices(old, _new))
-			return true;
-	}
-
-	return false;
 }
 
 //Priority list: static vars, loop control vars, usage count
@@ -244,16 +220,8 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 				y = &(*tdata)[j];
 				z = &(*tdata)[j - 1];
 				*y = *z;
-
-				if (j == i)
-					R_SwapTDataIndices(j - 1, -1); //this can't just be set to j since the source is already j
-				else
-					R_SwapTDataIndices(j - 1, j);
-				//R_SwapTDataIndices(j - 1, j == i ? -1 : j);
 			}
 			(*tdata)[j] = x; //this will be to the right of all previous control vars. Order shouldn't really matter between these
-			R_SwapTDataIndices(i, j);
-			R_SwapTDataIndices(-1, i);
 		}
 		else
 		{//regular var - sort it by most frequent usage
@@ -395,7 +363,7 @@ void cfg_c::ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata)
 
 		if (x->flags & DF_LABEL)
 		{//pseudo data type
-			x->si.data = 0;//n->si.data = 0;
+			x->si.data = 0;
 			continue;
 		} 
 
@@ -500,12 +468,6 @@ void cfg_c::FixupData(int symbol_cnt, tdata_t* tdata)
 {
 	for (int symbol = 0; symbol < symbol_cnt; symbol++)
 	{
-		tdata_t* const tdatum = &tdata[symbol];
-		//data_t* const datum = tdatum->data_link;
-		//storageinfo_t si = tdatum->si;
-
-		//datum->si = si;
-		//datum->si = tdatum->si;
 		tdata[symbol].data_link->si = tdata[symbol].si;
 	}
 }
@@ -562,7 +524,9 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 
 			//TESTME!!!
 			if (sb2 < eb1 && eb2 > sb1)
+			{
 				(*igraph)[i]->AddLink(j);
+			}
 			else if (sb2 == eb1 && eb2 == sb1)
 			{
 				if (s2 <= e1 && e2 >= s1)

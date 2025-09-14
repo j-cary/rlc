@@ -35,8 +35,8 @@ const char title_msg[] =
 *	Somehow reconcile the data/tdata split (tdata isn't even close to temporary anymore)
 */
 
-//ERROR: When taking address of something, data start should... update? Maybe keep these around for
-//The liftime of the function...
+//ERROR: When taking address of something, data should be made live for the duration of its decl block
+//
 
 //TODO:
 //Fix struct/array/ptr parsing in CG_DataDeclaration/CG_StructDeclaration
@@ -46,6 +46,7 @@ const char title_msg[] =
 //	don't allocate registers for data used 0-0 or 7-7
 //	^need to skip data decls and instructions with only un allocated-vars
 //	OLD_REG_CODE
+//	New system for storage info
 //Semantic analysis
 //	in generator-check out dataofs with redefs
 //	also check dload
@@ -127,7 +128,7 @@ int main(int argc, char* argv[])
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, 0);
 	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top, &tdata, &sl);
-	//generator.Generate(&tree, &graph, tdata, &symtbl_top, &sl);
+	generator.Generate(&tree, &graph, &symtbl_top, &sl);
 
 	ftime(&end);
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
