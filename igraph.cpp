@@ -64,7 +64,7 @@ void igraph_c::Disp()
 int cfg_c::TrimVars(cfg_c* parent, int count)
 {
 	int newcount = count;
-
+#if 0
 	//figure out which variables are even used
 	for (paralleli_t i = count - 1; i >= 0; i--)
 	{
@@ -84,7 +84,7 @@ int cfg_c::TrimVars(cfg_c* parent, int count)
 			newcount--;
 		}
 	}
-
+#endif
 	return newcount;
 }
 
@@ -139,11 +139,14 @@ void cfg_c::R_BuildTDataList(tdata_t* tdata, cfg_c** offsets)
 	{
 		tdata_t* t = &tdata[tdatai];
 		t->var = data[ti]->var;
-		t->start = start[ti];
-		t->end = end[ti];
+		t->start = data[ti]->start_line; // start[ti];
+		t->end = data[ti]->end_line; // end[ti];
 		t->size = data[ti]->size;
 		t->flags = data[ti]->flags;
-		data[ti]->tdata = tdatai++;
+		t->data_link = data[ti];
+		++tdatai;
+		//t->data_link = ti; // Remember which datum this stands for
+		//data[ti]->tdata = tdatai++;
 
 		//generate the block offsets for the start and end blocks of this variable
 		int gotone = 0;
@@ -173,6 +176,7 @@ void cfg_c::R_BuildTDataList(tdata_t* tdata, cfg_c** offsets)
 
 bool cfg_c::R_SwapTDataIndices(tdatai_t old, tdatai_t _new)
 {
+	/*
 	for (int i = 0; i < data.size(); i++)
 	{
 		if (data[i]->tdata == old)
@@ -181,6 +185,7 @@ bool cfg_c::R_SwapTDataIndices(tdatai_t old, tdatai_t _new)
 			return true;
 		}
 	}
+	*/
 
 	for (int i = 0; i < links.size(); i++)
 	{
@@ -244,6 +249,7 @@ void cfg_c::SortTDataList(tdata_t** tdata, int count)
 					R_SwapTDataIndices(j - 1, -1); //this can't just be set to j since the source is already j
 				else
 					R_SwapTDataIndices(j - 1, j);
+				//R_SwapTDataIndices(j - 1, j == i ? -1 : j);
 			}
 			(*tdata)[j] = x; //this will be to the right of all previous control vars. Order shouldn't really matter between these
 			R_SwapTDataIndices(i, j);
@@ -490,6 +496,20 @@ void cfg_c::FixupStackIndices(int symbol_cnt, tdata_t* tdata)
 	}
 }
 
+void cfg_c::FixupData(int symbol_cnt, tdata_t* tdata)
+{
+	for (int symbol = 0; symbol < symbol_cnt; symbol++)
+	{
+		tdata_t* const tdatum = &tdata[symbol];
+		//data_t* const datum = tdatum->data_link;
+		//storageinfo_t si = tdatum->si;
+
+		//datum->si = si;
+		//datum->si = tdatum->si;
+		tdata[symbol].data_link->si = tdata[symbol].si;
+	}
+}
+
 //todo: make this an analyzer function
 void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 {
@@ -563,6 +583,7 @@ void cfg_c::BuildIGraph(int symbol_cnt, igraph_c* igraph, tdata_t** tdata)
 
 	ColorGraph(symbol_cnt, igraph, *tdata);
 	FixupStackIndices(symbol_cnt, *tdata);
+	FixupData(symbol_cnt, *tdata);
 
 	delete[] offsets;
 }

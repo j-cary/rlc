@@ -50,14 +50,35 @@ typedef int regi_t; //index into generator_c's regs array [1 - a lot] 0 is unuse
 typedef int paralleli_t; //index into the parallel arrays in cfg_c
 typedef int tdatai_t; //tdata/igrpah index
 
+typedef union storageinfo_u
+{
+	struct
+	{
+		//Note: reg&stack are indices into the same array
+		unsigned int	reg : 5; //0-21 
+		signed int		stack : 8; //store the full signed index- -128:127
+		unsigned int	local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
+		unsigned int	reg_flag : 1;
+		unsigned int	stack_flag : 1;
+		unsigned int	local_flag : 1;
+	};
+	unsigned int data;
+} storageinfo_t;
+
 typedef struct data_s
 {
 	const kv_c*	var;
-	int			val;
 	dataflags_t	flags;
 	int			size;
-	tdatai_t	tdata; //link to respective tdata
+	tdatai_t	tdata; // Removeme
 	const char* struct_name; // NULL if this isn't a struct
+
+	// Plan - move start and end arrays into here
+	// Place the offset into the array in here
+	int start_line, end_line;
+	int start_block, end_block;
+
+	storageinfo_t si;
 } data_t;
 
 //purpose: simplify the parse tree 
@@ -121,25 +142,12 @@ typedef struct tdata_s
 	const kv_c* var;
 	dataflags_t	flags;
 
-	int			start, end; // Start line in start block, end line in end block
-	int			startb, endb; // Start/end block
-	int			size;
-	//data_t*		link; // Link to 
+	int	start, end; // Start line in start block, end line in end block
+	int	startb, endb; // Start/end block
+	int	size;
+	data_t* data_link; // Link to respective data entry
 
-	union 
-	{
-		struct
-		{
-			//Note: reg&stack are indices into the same array
-			unsigned int	reg : 5; //0-21 
-			signed int		stack : 8; //store the full signed index- -128:127
-			unsigned int	local : 16; //static- 0:65535 -- CHECKME: have to be careful towards either end of the address space
-			unsigned int	reg_flag : 1;
-			unsigned int	stack_flag : 1;
-			unsigned int	local_flag : 1;
-		};
-		unsigned int data;
-	} si{};
+	storageinfo_t si{};
 
 	const char* ToStr(int size) const
 	{
@@ -186,8 +194,8 @@ private:
 
 	//parallel
 	std::vector<data_t*>data;
-	std::vector<int>	start; //statement number in the start block. this block is ALWAYS the block in which the data is declared
-	std::vector<int>	end; //statement number in the end block
+	//std::vector<int>	start; //statement number in the start block. this block is ALWAYS the block in which the data is declared
+	//std::vector<int>	end; //statement number in the end block
 	std::vector<cfg_c*>	startb;
 	std::vector<cfg_c*>	endb;
 	std::vector<int>	uses; 
@@ -222,8 +230,11 @@ private:
 	// Set up tdata 
 	void ColorGraph(int symbol_count, igraph_c* graph, tdata_t* tdata);
 
-	/* Autos and stacks use offsets in colorgraph; remove them here*/
+	/* Autos and stacks use offsets in colorgraph; remove them here */
 	void FixupStackIndices(int symbol_cnt, tdata_t* tdata);
+
+	// Update the data with storage information calculated during regalloc
+	void FixupData(int symbol_cnt, tdata_t* tdata);
 
 	/*
 	*	Recursive, scope-dependent functions

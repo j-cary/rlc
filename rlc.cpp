@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
 	//actually do the preprocessing here
 	parse.Parse(&list, &tree, 0);
 	semantic.GenerateAST(&tree, &graph, symtbl, &symtbl_top, &tdata, &sl);
-	generator.Generate(&tree, &graph, tdata, &symtbl_top, &sl);
+	//generator.Generate(&tree, &graph, tdata, &symtbl_top, &sl);
 
 	ftime(&end);
 	time_seconds = (1000 * (end.time - start.time) + (end.millitm - start.millitm)) / 1000.0f;
