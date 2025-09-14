@@ -24,8 +24,10 @@ Purpose: Define classes/defs/types used by (most) modules
 /* Assert used for a user mistake in his program */
 #define ASSERT(cond, ...) \
 	do { \
-		if(!(cond))\
+		if(!(cond)) {\
 			Error(__VA_ARGS__);\
+			abort(); /* Never gets hit; Quiets the compiler */ \
+		} \
 	} while(0)
 
 // User error; error if cond is true
@@ -41,8 +43,10 @@ Purpose: Define classes/defs/types used by (most) modules
 /* Assert used for situations which should never arise, i.e. bugs */
 #define INTERNAL_ASSERT(cond, ...) \
 	do { \
-		if(!(cond))\
+		if(!(cond)) {\
 			Error("INTERNAL ERROR|" __FUNCTION__ "|" STRINGIFY(__LINE__) "|" __VA_ARGS__); \
+			abort(); /* Never gets hit; Quiets the compiler */\
+		} \
 	} while(0)
 
 			//Error("INTERNAL_ERROR|" fmt, __VA_ARGS__); \

@@ -12,7 +12,7 @@ void generator_c::Generate(tree_c* _root, cfg_c* _graph, tdata_t* _tdata, unsign
 	symtbl_top = *symbol_top;
 	root = _root;
 	graph = _graph;
-	sl = _sl;
+	slist = _sl;
 
 	for (int i = 0; block = graph->GetLink(i); i++)
 	{

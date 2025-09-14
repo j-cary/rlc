@@ -10,9 +10,19 @@ Purpose: Provide expression evaluation for analysis and code generation
 
 class eval_expr_c
 {
+public:
+	typedef struct
+	{
+		int offset;
+		int ref_level;
+	} mem_result_t;
+
 private:
-	int ref_level; // > 0 for references, < 0 for dereferences
 	const cfg_c* block, * func, * root;
+	const struct_t* cur_struct;
+	const structlist_c* slist;
+	mem_result_t mem_result;
+	bool error_on_invalid;
 
 	enum class mem_op_e
 	{
@@ -33,19 +43,26 @@ private:
 	/* Plucks leading '*'s and '&'s off the expr. Referencing can only happen at the beginning. */
 	int MemoryPrimary(const tree_c* head, tree_c** data, mem_op_e type);
 
+	inline void init(bool invalid_eq_error)
+	{
+		block = NULL;
+		func = NULL;
+		root = NULL;
+		cur_struct = NULL;
+		slist = NULL;
+		error_on_invalid = invalid_eq_error;
+	}
+
 public:
 	/* Evaluates a const expr. Asserts if invalid */
 	int Constant(const tree_c* head) const;
 
 	/* Returns the constant offset from the object. Name is the var name of the struct */
-	int Memory(const tree_c* head, const cfg_c* _block, const cfg_c* _func, const cfg_c* root, tree_c** data);
+	mem_result_t Memory(
+		const tree_c* head, const cfg_c* _block, const cfg_c* _func, const cfg_c* root, 
+		const structlist_c* sl, 
+		tree_c** data);
 
-	// Default constructor to appease the compiler
-	eval_expr_c()
-	{
-		ref_level = 0;
-		block = NULL;
-		func = NULL;
-		root = NULL;
-	}
+	eval_expr_c() { init(true); }
+	eval_expr_c(bool fail_on_invalid_expr) { init(fail_on_invalid_expr); }
 };

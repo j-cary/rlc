@@ -3,6 +3,7 @@ Purpose: Maintain a collection of user-defined structures
 ***************************************************************************************************/
 #pragma once
 #include "common.h"
+#include "semantics.h"
 
 #define STRUCTURES_MAX	32
 
@@ -42,6 +43,15 @@ typedef struct struct_s
 	const char* name;
 	int			length;
 	member_t*	first_member;
+
+	const member_t* GetMemberInfo(const char* name) const
+	{
+		for (const member_t* m = first_member; m; m = m->next)
+			if (!strcmp(name, m->name))
+				return m;
+		return NULL;
+	}
+
 } struct_t;
 
 class structlist_c
@@ -57,7 +67,8 @@ public:
 	int StructLen(int struct_idx) const { return structs[struct_idx].length; }
 	void SetLen(int struct_idx, int len) { structs[struct_idx].length = len; }
 
-	const struct_t* StructInfo(int idx);
+	const struct_t* StructInfo(int idx) const;
+	const struct_t* StructInfo(const char* struct_name) const;
 
 	~structlist_c(); //delete all member vars
 };

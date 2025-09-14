@@ -1,4 +1,5 @@
 #include "semantics.h"
+#include "evaluate_expression.h"
 
 /***************************************************************************************************
                                           Link Section
@@ -121,7 +122,7 @@ bool cfg_c::SetDataStart(const char* name, int _start)
 		}
 	}
 
-	Warning("%s is not a recorded variable", name);
+	/* Const exprs may be piped into these; it's ok to just let them fail */
 	return false;
 }
 
@@ -136,7 +137,6 @@ bool cfg_c::SetDataEnd(const char* name, int _end)
 		}
 	}
 
-	Warning("%s is not a recorded variable", name);
 	return false;
 }
 
@@ -150,8 +150,6 @@ void cfg_c::SetDataEndBlock(const char* name, cfg_c* block)
 			return;
 		}
 	}
-
-	Warning("%s is not a recorded variable", name);
 }
 
 void cfg_c::IncDataUses(const char* name)
@@ -164,8 +162,6 @@ void cfg_c::IncDataUses(const char* name)
 			return;
 		}
 	}
-
-	Warning("%s is not a recorded variable", name);
 }
 
 /***************************************************************************************************
@@ -335,14 +331,13 @@ data_t* cfg_c::ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c*
 	return (data_t*)scopedata;
 }
 
+#if 0
 /***************************************************************************************************
                                      Struct Instance Checking
 ***************************************************************************************************/
-
 //recurse until the source block is found
 //then search from the bottom up for the declaration
 static const cfg_c* instanceblock; //the block that the instance is being used in
-static const struct_t* instancestruct; //The struct the var belongs to or NULL if not a struct inst
 
 cfg_c::ISI cfg_c::R_IsStructInstance(const char* name) const
 {
@@ -389,7 +384,6 @@ bool cfg_c::IsStructInstance(const char* name, const cfg_c* func, const cfg_c* r
 	ISI ret;
 
 	instanceblock = this;
-	instancestruct = NULL;
 	ret = func->R_IsStructInstance(name);
 
 	if (ret == ISI::ISSTRUCT)
@@ -402,16 +396,14 @@ bool cfg_c::IsStructInstance(const char* name, const cfg_c* func, const cfg_c* r
 	{
 		if (!strcmp(root->data[i]->var->Str(), name))
 		{//found it
-			if (root->data[i]->flags & DF_STRUCT)
-				return true;
-			else
-				return false;
+			return root->data[i]->flags & DF_STRUCT;
 		}
 	}
 
 	Error("IsStructInstance: Couldn't find '%s' anywhere", name); //should never reach this
 	return false;
 }
+#endif
 
 cfg_c::~cfg_c()
 {

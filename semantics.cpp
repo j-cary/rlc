@@ -282,7 +282,7 @@ cfg_c* analyzer_c::CFG_ClosedStatement(tree_c* node, cfg_c* parent, cfg_c* ances
 		else
 			Error("A for loop control variable may only be a byte or a word"); 
 
-		MakeDataEntry(child->Hash(), if_link, length, flags);
+		MakeDataEntry(child->Hash(), if_link, length, flags, NULL);
 	}
 	else if (code == CODE::NT_WHILE_CLAUSE)
 		if_link = parent->AddLink("CLOSED_WHILE", BLOCK::WHILE);
@@ -370,8 +370,9 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	CODE	code = node->Get(0)->Hash()->Code();
 	int		length;
 	int		k = 0;
+	const char* struct_name; // The name of the struct or NULL
 
-	length = EvaluateFirstDataSize(node, NULL, &k, &varname, NULL, &flags);
+	length = EvaluateFirstDataSize(node, NULL, &k, &varname, &struct_name, &flags);
 
 	if (block == graph)
 		flags |= DF_GLOBAL;
@@ -415,7 +416,7 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 	}
 	*/
 
-	MakeDataEntry(varname->Hash(), block, length, flags);
+	MakeDataEntry(varname->Hash(), block, length, flags, struct_name);
 
 	if (block == graph)
 	{
@@ -438,7 +439,7 @@ void analyzer_c::CFG_DataDeclaration(tree_c* node, cfg_c* block)
 
 		
 
-		MakeDataEntry(child->Hash(), block, length, flags);
+		MakeDataEntry(child->Hash(), block, length, flags, NULL);
 	}
 
 	block->AddStmt(node);
@@ -571,18 +572,22 @@ void analyzer_c::CFG_Instruction(tree_c* node, cfg_c* block)
 	for (int i = 2; op = child->Get(i); i += 2)
 	{
 		symbol = GetDataEntry(op, block, &localblock);
+
+		// Can be text, mem, const
+		name = symbol ? symbol->var->Str() : op->Hash()->Str();
+
 		if (block == localblock)
-			block->SetDataEnd(op->Hash()->Str(), block->StmtCnt());
+			block->SetDataEnd(name, block->StmtCnt());
 		else
 		{
-			localblock->SetDataEnd(op->Hash()->Str(), block->StmtCnt());
-			localblock->SetDataEndBlock(op->Hash()->Str(), block);
+			localblock->SetDataEnd(name, block->StmtCnt());
+			localblock->SetDataEndBlock(name, block);
 		}
 
 		if (symbol)
 		{
 			symbol->flags |= DF_USED;
-			localblock->IncDataUses(op->Hash()->Str());
+			localblock->IncDataUses(name);
 		}
 	}
 
@@ -710,24 +715,9 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 	const char* local_structname = NULL;
 	eval_expr_c eval_expr;
 
-	//subchild = node->Get(*iterator);
-
-	/*
-	switch (subchild->Hash()->Code())
-	{
-	case CODE::STRUCT:
-		local_structname = node->Get(++(*iterator))->Hash()->Str();
-		dtype = subchild->Hash()->Code();
-		break;
-	case CODE::SIGNED:
-		(*flags) |= DF_SIGNED;
-		subchild = node->Get(++(*iterator));
-	default:
-		dtype = subchild->Hash()->Code();
-		break;
-	}
-	*/
 	dtype = EvaluateDataModifiers(node, struct_def, iterator, &local_structname, flags);
+
+	INTERNAL_ASSERT(structname, "Structname is null");
 
 	switch (dtype)
 	{
@@ -736,8 +726,8 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 			Error("Structures cannot contain labels"); 
 		(*flags) |= DF_LABEL;
 		break;
-	case CODE::BYTE:			(*flags) |= DF_BYTE; break;
-	case CODE::WORD:			(*flags) |= DF_WORD; break;
+	case CODE::BYTE:		(*flags) |= DF_BYTE; break;
+	case CODE::WORD:		(*flags) |= DF_WORD; break;
 	case CODE::FIXED:		(*flags) |= DF_FXD; break;
 	case CODE::STRUCT:		(*flags) |= DF_STRUCT; break;
 	default: break;
@@ -791,8 +781,7 @@ int analyzer_c::EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterat
 			length = arraylength; //byte array
 	}
 
-	if(struct_def)
-		*structname = local_structname;
+	*structname = local_structname; //Return the name of the struct
 	return length;
 }
 
@@ -831,8 +820,7 @@ data_t* analyzer_c::GetDataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 #endif
 
 	tree_c* data_name;
-	int offset;
-	offset = eval_expr.Memory(d, block, cur_func, graph, &data_name);
+	eval_expr_c::mem_result_t mem = eval_expr.Memory(d, block, cur_func, graph, slist, &data_name);
 	name = data_name->Hash()->Str();
 
 	//if(offset && !block->IsStructInstance(name, cur_func, graph))
@@ -858,7 +846,7 @@ data_t* analyzer_c::GetDataEntry(tree_c* d, cfg_c* block, cfg_c** localblock)
 	*/
 }
 
-void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, int size, unsigned _flags)
+void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, int size, unsigned _flags, const char* struct_name)
 {
 	data_t* data;
 
@@ -874,6 +862,7 @@ void analyzer_c::MakeDataEntry(const kv_c* _var, cfg_c* _block, int size, unsign
 	data->var = _var;
 	data->size = size;
 	data->flags = _flags;
+	data->struct_name = struct_name;
 	_block->AddData(data);
 	//_block->SetDataStart(_var->Str(), 0);
 }

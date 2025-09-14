@@ -71,11 +71,27 @@ int structlist_c::GetStruct(const char* name) const
 	return -1;
 }
 
-const struct_t* structlist_c::StructInfo(int idx)
+const struct_t* structlist_c::StructInfo(int idx) const
 {
 	if (idx < 0 || idx >= struct_cnt)
 		return NULL;
 	return &structs[idx];
+}
+
+const struct_t* structlist_c::StructInfo(const char* struct_name) const
+{
+	if (!struct_name)
+		return NULL;
+
+	for (int i = 0; i < struct_cnt; ++i)
+	{
+		if (!strcmp(struct_name, structs[i].name))
+			return &structs[i]; // Found it
+	}
+
+	INTERNAL_ASSERT(0, 
+		"Unknown struct %s used to instantiate", struct_name ? struct_name : "???");
+	return NULL; //Never reached
 }
 
 structlist_c::~structlist_c()

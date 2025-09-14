@@ -7,6 +7,7 @@ Output:
 #include "common.h"
 #include "semantics.h"
 #include "asm.h"
+#include "evaluate_expression.h"
 
 /***************************************************************************************************
 										Defines/Typedefs
@@ -17,7 +18,8 @@ typedef struct
 {
 	const tdata_t* data;
 	const tree_c* node;
-	int offset;
+	eval_expr_c::mem_result_t mem;
+	//int offset;
 } op_info_t;
 
 #define INSTR_GEN_FUNC_ARGS	const op_info_t info[], int cnt 
@@ -38,7 +40,7 @@ class generator_c
 	tree_c*		root;
 	cfg_c*		graph; //The root of the control flow graph
 	tdata_t*	tdata;
-	const structlist_c *sl;
+	const structlist_c *slist;
 
 
 	bool	data_decls_allowed;

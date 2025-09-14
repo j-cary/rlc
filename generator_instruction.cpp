@@ -1,5 +1,4 @@
 #include "generator.h"
-#include "evaluate_expression.h"
 
 void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 {
@@ -18,20 +17,18 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 		if (code == CODE::COMMA)
 			continue;
 
-		if (op_cnt > ops_max)
-			Error("TMP: %s has too many ops", Str(node->Get(0)));
+		INTERNAL_ASSERT(op_cnt <= ops_max, "TMP: %s has too many ops", Str(node->Get(0)));
 
 		if (code == CODE::NT_MEMORY_EXPR || code == CODE::NT_MEMORY_PRIMARY_EXPR || code == CODE::TEXT)
 		{
 			tree_c* data; //The actual struct/array instance
 
-			//op_info[op_cnt].offset = Memory_Expression(op, block, func, graph, &data);
-			op_info[op_cnt].offset = eval_expr.Memory(op, block, func, graph, &data);
+			op_info[op_cnt].mem = eval_expr.Memory(op, block, func, graph, slist, &data);
 			op_info[op_cnt].data = Data(block, data);
 		}
 		else
 		{
-			op_info[op_cnt].offset = 0;
+			op_info[op_cnt].mem = { .offset = 0, .ref_level = 0 };
 			op_info[op_cnt].data = NULL;
 		}
 
@@ -42,7 +39,6 @@ void generator_c::CG_Instruction(tree_c* node, cfg_c* block)
 	switch (node->Get(0)->Hash()->Code())
 	{
 	case CODE::LD:
-		//CG_Load(op_data, op_list, op_cnt);
 		CG_Load(op_info, op_cnt);
 		break;
 	case CODE::ADD: break;

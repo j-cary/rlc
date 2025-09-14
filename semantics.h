@@ -57,6 +57,7 @@ typedef struct data_s
 	dataflags_t	flags;
 	int			size;
 	tdatai_t	tdata; //link to respective tdata
+	const char* struct_name; // NULL if this isn't a struct
 } data_t;
 
 //purpose: simplify the parse tree 
@@ -261,8 +262,9 @@ public:
 
 	bool CheckRedef(const char* name, cfg_c* top, cfg_c* root, dataflags_t flags);
 	data_t* ScopedDataEntry(const char* name, cfg_c* top, cfg_c* root, cfg_c** localblock) const;
+#if 0
 	bool IsStructInstance(const char* name, const cfg_c* func, const cfg_c* root) const;
-
+#endif
 	void Disp(bool igraph_disp, igraph_c* igraph, tdata_t* tdata);
 	~cfg_c();
 };
@@ -298,12 +300,14 @@ private:
 
 	//Parms:
 	CODE EvaluateDataModifiers(tree_c* node, bool struct_def, int* iterator, const char** structname, dataflags_t* flags);
+
+	// Evaluate the first bit of data in a decl. 
 	int EvaluateFirstDataSize(tree_c* node, tree_c* struct_, int* iterator, tree_c** data_name, const char** structname, dataflags_t* flags);
 
 	void BuildIGraphs(cfg_c* block);
 
 	data_t* GetDataEntry(tree_c* d, cfg_c* block, cfg_c** localblock);
-	void MakeDataEntry(const kv_c* _var, cfg_c* block, int size, unsigned _flags);
+	void MakeDataEntry(const kv_c* _var, cfg_c* block, int size, unsigned _flags, const char* struct_name);
 	int MakeStructEntry(const kv_c* _var, cfg_c* _block); //returns new struct index
 	//void MakeFunctionEntry(const kv_c* var);
 

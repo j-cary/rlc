@@ -214,7 +214,8 @@ static INSTR_GEN_FUNC(const2stack)
 static INSTR_GEN_FUNC(const2auto)
 {
 	const tdata_t* dst = info[cnt - 2].data;
-	int const_val = eval_expr.Constant(info[cnt - 1].node);
+	const int const_val = eval_expr.Constant(info[cnt - 1].node);
+	const int base = dst->si.local + info[cnt - 2].mem.offset;
 
 	//Store byte by byte
 	for (int i = 0; i < dst->size; ++i)
@@ -237,6 +238,24 @@ static instr_gen_table_t ld_table =
 			{auto2hl,	auto2reg,	auto2stack, auto2auto},
 			{const2hl,	const2reg,	const2stack,const2auto},
 };
+
+/*
+* Array handling:
+*	Simple as adding the constant offset to the location; 
+*	ex. ld i[2], $FF ; Where i is at +1 on the stack
+*		ld (ix+3), $FF
+*	The same can be done for auto arrays
+*		
+* Struct:
+*	Exactly the same as arrays ('..' is an exception)
+* 
+* '..':
+*	Dereference whatever's on the left. Will have to do this for every instance of these
+* 
+* Referencing/Dereferencing:
+*	Occurs after all other operators. Just use the ref_level number. 
+* 
+*/
 
 void generator_c::CG_Load(INSTR_GEN_FUNC_ARGS)
 {
