@@ -35,10 +35,8 @@ const char title_msg[] =
 *	Somehow reconcile the data/tdata split (tdata isn't even close to temporary anymore)
 */
 
-/*
-* Cfg::SetData*
-*	Have to catch and parse expressions still
-*/
+//ERROR: When taking address of something, data start should... update? Maybe keep these around for
+//The liftime of the function...
 
 //TODO:
 //Fix struct/array/ptr parsing in CG_DataDeclaration/CG_StructDeclaration
